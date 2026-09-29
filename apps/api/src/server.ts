@@ -7,19 +7,34 @@ import { Argon2PasswordHasher } from './modules/auth/infrastructure/argon2-passw
 import { LocalJwtAuthentication } from './modules/auth/infrastructure/local-jwt-authentication.js';
 import { DynamoDbUserRepository } from './modules/users/infrastructure/dynamodb-user.repository.js';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { ensureCategoriesTable } from './infrastructure/dynamodb/categories-table.js';
+import { DynamoDbCategoryRepository } from './modules/categories/infrastructure/dynamodb-category.repository.js';
+import { ensureProductsTable } from './infrastructure/dynamodb/products-table.js';
+import { DynamoDbProductRepository } from './modules/products/infrastructure/dynamodb-product.repository.js';
+import { ensureSuppliersTable } from './infrastructure/dynamodb/suppliers-table.js';
+import { DynamoDbSupplierRepository } from './modules/suppliers/infrastructure/dynamodb-supplier.repository.js';
 
 async function start(): Promise<void> {
   const config = loadConfig();
   const dynamoDb = createDynamoDbClient(config);
+  const documentClient = DynamoDBDocumentClient.from(dynamoDb);
   const users = new DynamoDbUserRepository(
-    DynamoDBDocumentClient.from(dynamoDb),
+    documentClient,
     config.usersTableName
   );
   const passwordHasher = new Argon2PasswordHasher();
   const authentication = new LocalJwtAuthentication(config.jwtSecret, config.jwtExpiresIn);
-  const app = await createApp(config, { users, passwordHasher, authentication });
+  const categories = new DynamoDbCategoryRepository(documentClient, config.categoriesTableName);
+  const products = new DynamoDbProductRepository(documentClient, config.productsTableName);
+  const suppliers = new DynamoDbSupplierRepository(documentClient, config.suppliersTableName);
+  const app = await createApp(config, {
+    users, passwordHasher, authentication, categories, products, suppliers
+  });
 
   await ensureUsersTable(dynamoDb, config.usersTableName);
+  await ensureCategoriesTable(dynamoDb, config.categoriesTableName);
+  await ensureProductsTable(dynamoDb, config.productsTableName);
+  await ensureSuppliersTable(dynamoDb, config.suppliersTableName);
   await bootstrapAdmin(users, passwordHasher, config.initialAdminPassword, app.log);
 
   const shutdown = async (): Promise<void> => {

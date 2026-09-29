@@ -20,6 +20,10 @@ services:
       AWS_ACCESS_KEY_ID: local
       AWS_SECRET_ACCESS_KEY: local
       DYNAMODB_USERS_TABLE: lcm-local-users
+      DYNAMODB_CATEGORIES_TABLE: lcm-local-categories
+      DYNAMODB_PRODUCTS_TABLE: lcm-local-products
+      DYNAMODB_SUPPLIERS_TABLE: lcm-local-suppliers
+      DYNAMODB_PURCHASES_TABLE: lcm-local-purchases
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?INITIAL_ADMIN_PASSWORD is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}

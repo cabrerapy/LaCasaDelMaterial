@@ -1,0 +1,92 @@
+<div class="page">
+  <header>
+    <div><a routerLink="/dashboard">← Dashboard</a><p class="eyebrow">Catálogo</p><h1>Productos</h1></div>
+    @if (canCreate) { <button class="primary" type="button" (click)="openCreate()">Nuevo producto</button> }
+  </header>
+
+  <section class="toolbar" aria-label="Filtros de productos">
+    <label>Buscar<input [formControl]="searchControl" type="search" placeholder="Producto, código, SKU o código de barras"></label>
+    <label>Categoría<select [formControl]="categoryControl"><option value="ALL">Todas</option>@for (category of categories(); track category.id) { <option [value]="category.id">{{ category.name }}</option> }</select></label>
+    <label>Estado<select [formControl]="statusControl"><option value="ACTIVE">Activos</option><option value="INACTIVE">Inactivos</option><option value="ALL">Todos</option></select></label>
+  </section>
+
+  @if (successMessage()) { <p class="feedback success" role="status">{{ successMessage() }}</p> }
+  @if (errorMessage()) { <p class="feedback error" role="alert">{{ errorMessage() }}</p> }
+
+  <section class="list-card" aria-label="Listado de productos">
+    <table>
+      <thead><tr><th>Código</th><th>Producto</th><th>Categoría</th><th>Unidad base</th><th>Precio principal</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody>
+        @for (product of products(); track product.id) {
+          <tr [class.inactive]="product.status === 'INACTIVE'">
+            <td data-label="Código"><strong>{{ product.code }}</strong></td>
+            <td data-label="Producto">{{ product.name }}</td>
+            <td data-label="Categoría">{{ product.category.name }}</td>
+            <td data-label="Unidad">{{ unitLabels[product.baseUnit] }}</td>
+            <td data-label="Precio">{{ defaultPrice(product) | guarani }}</td>
+            <td data-label="Estado"><span class="status" [class.off]="product.status === 'INACTIVE'">{{ product.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</span></td>
+            <td data-label="Acciones" class="actions">
+              @if (canUpdate) { <button type="button" (click)="openEdit(product)">Editar</button> }
+              @if (canDisable) { <button type="button" (click)="requestStatusChange(product)">{{ product.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }}</button> }
+            </td>
+          </tr>
+        } @empty { <tr><td colspan="7" class="empty">{{ loading() ? 'Cargando…' : 'No hay productos para estos filtros.' }}</td></tr> }
+      </tbody>
+    </table>
+    @if (nextToken()) { <button class="more" type="button" [disabled]="loading()" (click)="load()">Cargar más</button> }
+  </section>
+</div>
+
+@if (formMode()) {
+  <div class="backdrop" role="presentation" (click)="closeForm()">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="product-form-title" (click)="$event.stopPropagation()">
+      <h2 id="product-form-title">{{ formMode() === 'create' ? 'Nuevo producto' : 'Editar producto' }}</h2>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <fieldset><legend>Información general</legend><div class="form-grid">
+          <label>Código *<input formControlName="code" type="text" placeholder="CEM-CPII"></label>
+          <label>Nombre *<input formControlName="name" type="text"></label>
+          <label>Categoría *<select formControlName="categoryId"><option value="">Seleccionar</option>@for (category of categories(); track category.id) { <option [value]="category.id">{{ category.name }}</option> }</select></label>
+          <label class="wide">Descripción<textarea formControlName="description" rows="3"></textarea></label>
+        </div></fieldset>
+
+        <fieldset><legend>Unidad y stock</legend><div class="form-grid">
+          <label>Unidad base *<select formControlName="baseUnit" (change)="unitChanged(form.controls.baseUnit.value)">@for (unit of baseUnits; track unit) { <option [value]="unit">{{ unitLabels[unit] }}</option> }</select></label>
+          <label>Precisión interna<input formControlName="quantityScale" type="number" min="1"><small>1 para unidades/bolsas; 1000 permite milésimas en m³.</small></label>
+          <label>Stock mínimo<input formControlName="minStock" type="number" min="0" step="any"><small>Expresado en {{ unitLabels[form.controls.baseUnit.value] }}.</small></label>
+          <label class="check"><input formControlName="trackStock" type="checkbox"> Controlar stock en el futuro</label>
+        </div></fieldset>
+
+        <fieldset formArrayName="presentations"><legend>Presentaciones y precios</legend>
+          @for (presentation of presentations.controls; track presentation; let index = $index) {
+            <article class="presentation" [formGroupName]="index" [class.inactive]="presentation.controls.status.value === 'INACTIVE'">
+              <div class="presentation-heading"><strong>Presentación {{ index + 1 }}</strong><div>
+                @if (formMode() === 'edit' && presentation.controls.id.value) { <button type="button" (click)="togglePresentation(index)">{{ presentation.controls.status.value === 'ACTIVE' ? 'Desactivar' : 'Activar' }}</button> }
+                @if (!presentation.controls.id.value && presentations.length > 1) { <button type="button" (click)="removePresentation(index)">Quitar</button> }
+              </div></div>
+              <div class="form-grid">
+                <label>Nombre *<input formControlName="name" type="text" placeholder="Bolsa 50 kg"></label>
+                <label>Cantidad equivalente *<input formControlName="baseQuantity" type="number" min="0" step="any"><small>Internamente: {{ internalPreview(index) }}</small></label>
+                <label>SKU<input formControlName="sku" type="text"></label>
+                <label>Código de barras<input formControlName="barcode" type="text"></label>
+                <label>Precio de venta (Gs.) *<input formControlName="salePriceGuarani" type="number" min="0" step="1" [readOnly]="formMode() === 'edit' && !canManagePrices"></label>
+                <label>Orden<input formControlName="sortOrder" type="number" min="0" step="1"></label>
+                <label class="check"><input formControlName="isDefault" type="checkbox" [disabled]="presentation.controls.status.value === 'INACTIVE'" (change)="selectDefault(index)"> Predeterminada</label>
+              </div>
+            </article>
+          }
+          <button type="button" [disabled]="presentations.length >= 7" (click)="addPresentation()">+ Agregar presentación</button>
+        </fieldset>
+        @if (form.invalid) { <p class="field-error">Revisa los campos obligatorios y sus valores.</p> }
+        <div class="modal-actions"><button type="button" (click)="closeForm()">Cancelar</button><button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar producto' }}</button></div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (statusTarget(); as target) {
+  <div class="backdrop" role="presentation"><section class="confirm" role="alertdialog" aria-modal="true" aria-labelledby="product-status-title">
+    <h2 id="product-status-title">{{ target.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }} producto</h2>
+    <p>¿Confirmas el cambio de estado de <strong>{{ target.name }}</strong>?</p>
+    <div class="modal-actions"><button type="button" (click)="cancelStatusChange()">Cancelar</button><button class="primary" type="button" [disabled]="saving()" (click)="confirmStatusChange()">Confirmar</button></div>
+  </section></div>
+}

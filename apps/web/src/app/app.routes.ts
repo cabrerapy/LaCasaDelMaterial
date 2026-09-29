@@ -25,6 +25,29 @@ export const routes: Routes = [
       import('./features/users/users.component').then((module) => module.UsersComponent)
   },
   {
+    path: 'categories',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'categories.read' },
+    loadComponent: () =>
+      import('./features/categories/categories.component').then(
+        (module) => module.CategoriesComponent
+      )
+  },
+  {
+    path: 'products',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'products.read' },
+    loadComponent: () =>
+      import('./features/products/products.component').then((module) => module.ProductsComponent)
+  },
+  {
+    path: 'suppliers',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'suppliers.read' },
+    loadComponent: () =>
+      import('./features/suppliers/suppliers.component').then((module) => module.SuppliersComponent)
+  },
+  {
     path: 'forbidden',
     canActivate: [authGuard],
     loadComponent: () =>

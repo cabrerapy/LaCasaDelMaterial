@@ -1,7 +1,7 @@
 # Estado del proyecto
 
-- Tarea actual: LCM-003 Users and Roles
+- Tarea actual: LCM-007 Purchases
 - Estado: IN_PROGRESS
-- Funcionalidades implementadas: autenticación local de LCM-002.
-- Decisiones importantes: roles fijos y permisos compartidos entre API y Angular.
-- Pendientes inmediatos: implementar administración y autorización de usuarios.
+- Funcionalidades implementadas: catálogos de proveedores, productos y presentaciones disponibles.
+- Decisiones importantes: compras confirmadas no afectan stock; snapshots y totales se generan en backend.
+- Pendientes inmediatos: implementar borradores, confirmación, cancelación, permisos, API, web y validaciones.

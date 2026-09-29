@@ -1,0 +1,54 @@
+<div class="page">
+  <header><div><a routerLink="/dashboard">← Dashboard</a><p class="eyebrow">Compras</p><h1>Proveedores</h1></div>
+    @if (canCreate) { <button class="primary" type="button" (click)="openCreate()">Nuevo proveedor</button> }
+  </header>
+  <section class="toolbar" aria-label="Filtros de proveedores">
+    <label>Buscar proveedor<input [formControl]="searchControl" type="search" placeholder="Razón social, nombre comercial o RUC"></label>
+    <label>Estado<select [formControl]="statusControl"><option value="ACTIVE">Activos</option><option value="INACTIVE">Inactivos</option><option value="ALL">Todos</option></select></label>
+  </section>
+  @if (successMessage()) { <p class="feedback success" role="status">{{ successMessage() }}</p> }
+  @if (errorMessage()) { <p class="feedback error" role="alert">{{ errorMessage() }}</p> }
+  <section class="list-card" aria-label="Listado de proveedores"><table>
+    <thead><tr><th>Razón social</th><th>Nombre comercial</th><th>RUC</th><th>Teléfono</th><th>Ciudad</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>
+      @for (supplier of suppliers(); track supplier.id) {
+        <tr [class.inactive]="supplier.status === 'INACTIVE'">
+          <td data-label="Razón social"><strong>{{ supplier.businessName }}</strong></td>
+          <td data-label="Nombre comercial">{{ supplier.tradeName || '—' }}</td><td data-label="RUC">{{ supplier.taxId || '—' }}</td>
+          <td data-label="Teléfono">{{ supplier.phone || '—' }}</td><td data-label="Ciudad">{{ supplier.city || '—' }}</td>
+          <td data-label="Estado"><span class="status" [class.off]="supplier.status === 'INACTIVE'">{{ supplier.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</span></td>
+          <td data-label="Acciones" class="actions">
+            @if (canUpdate) { <button type="button" (click)="openEdit(supplier)">Editar</button> }
+            @if (canDisable) { <button type="button" (click)="requestStatusChange(supplier)">{{ supplier.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }}</button> }
+          </td>
+        </tr>
+      } @empty { <tr><td class="empty" colspan="7">{{ loading() ? 'Cargando…' : 'Sin proveedores' }}</td></tr> }
+    </tbody>
+  </table>@if (nextToken()) { <button class="more" type="button" [disabled]="loading()" (click)="load()">Cargar más</button> }</section>
+</div>
+
+@if (formMode()) {
+  <div class="backdrop" role="presentation" (click)="closeForm()"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="supplier-form-title" (click)="$event.stopPropagation()">
+    <h2 id="supplier-form-title">{{ formMode() === 'create' ? 'Nuevo proveedor' : 'Editar proveedor' }}</h2>
+    <form [formGroup]="form" (ngSubmit)="save()"><div class="form-grid">
+      <label class="wide">Razón social *<input formControlName="businessName" type="text"></label>
+      <label>Nombre comercial<input formControlName="tradeName" type="text"></label><label>RUC<input formControlName="taxId" type="text" placeholder="80012345-6"></label>
+      <label>Teléfono<input formControlName="phone" type="tel" placeholder="0981 123456"></label><label>Email<input formControlName="email" type="email"></label>
+      <label class="wide">Dirección<input formControlName="address" type="text"></label><label>Ciudad<input formControlName="city" type="text"></label>
+      <label class="wide">Observaciones<textarea formControlName="notes" rows="4"></textarea></label>
+    </div>
+      @if (form.controls.businessName.touched && form.controls.businessName.invalid) { <small class="field-error">Ingresa una razón social válida.</small> }
+      @if (form.controls.email.touched && form.controls.email.invalid) { <small class="field-error">Ingresa un email válido.</small> }
+      <div class="modal-actions"><button type="button" (click)="closeForm()">Cancelar</button><button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</button></div>
+    </form>
+  </section></div>
+}
+
+@if (statusTarget(); as target) {
+  <div class="backdrop" role="presentation"><section class="confirm" role="alertdialog" aria-modal="true" aria-labelledby="supplier-status-title">
+    <h2 id="supplier-status-title">{{ target.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }} proveedor</h2>
+    <p>¿Deseas {{ target.status === 'ACTIVE' ? 'desactivar' : 'activar' }} <strong>{{ target.businessName }}</strong>?</p>
+    @if (target.status === 'ACTIVE') { <p class="muted">Los proveedores inactivos no podrán utilizarse en nuevas compras.</p> }
+    <div class="modal-actions"><button type="button" (click)="cancelStatusChange()">Cancelar</button><button class="primary" type="button" [disabled]="saving()" (click)="confirmStatusChange()">Confirmar</button></div>
+  </section></div>
+}

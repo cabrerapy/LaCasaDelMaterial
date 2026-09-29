@@ -7,6 +7,9 @@ export interface AppConfig {
   readonly awsRegion: string;
   readonly dynamoDbEndpoint?: string;
   readonly usersTableName: string;
+  readonly categoriesTableName: string;
+  readonly productsTableName: string;
+  readonly suppliersTableName: string;
   readonly initialAdminPassword: string;
   readonly jwtSecret: string;
   readonly jwtExpiresIn: string;
@@ -40,6 +43,9 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     awsRegion: environment['AWS_REGION']?.trim() || 'us-east-1',
     ...(endpoint ? { dynamoDbEndpoint: endpoint } : {}),
     usersTableName: environment['DYNAMODB_USERS_TABLE']?.trim() || 'lcm-local-users',
+    categoriesTableName: environment['DYNAMODB_CATEGORIES_TABLE']?.trim() || 'lcm-local-categories',
+    productsTableName: environment['DYNAMODB_PRODUCTS_TABLE']?.trim() || 'lcm-local-products',
+    suppliersTableName: environment['DYNAMODB_SUPPLIERS_TABLE']?.trim() || 'lcm-local-suppliers',
     initialAdminPassword,
     jwtSecret,
     jwtExpiresIn: environment['JWT_EXPIRES_IN']?.trim() || '8h',

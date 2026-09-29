@@ -10,11 +10,23 @@ import type { UserRepository } from '../modules/users/domain/user.repository.js'
 import { UsersService } from '../modules/users/application/users.service.js';
 import { usersRoutes } from '../modules/users/http/users.routes.js';
 import { registerErrorHandler } from '../shared/error-handler.js';
+import type { CategoryRepository } from '../modules/categories/domain/category.repository.js';
+import { CategoriesService } from '../modules/categories/application/categories.service.js';
+import { categoriesRoutes } from '../modules/categories/http/categories.routes.js';
+import type { ProductRepository } from '../modules/products/domain/product.repository.js';
+import { ProductsService } from '../modules/products/application/products.service.js';
+import { productsRoutes } from '../modules/products/http/products.routes.js';
+import type { SupplierRepository } from '../modules/suppliers/domain/supplier.repository.js';
+import { SuppliersService } from '../modules/suppliers/application/suppliers.service.js';
+import { suppliersRoutes } from '../modules/suppliers/http/suppliers.routes.js';
 
 export interface AppDependencies {
   readonly users: UserRepository;
   readonly passwordHasher: PasswordHasher;
   readonly authentication: AuthenticationProvider;
+  readonly categories: CategoryRepository;
+  readonly products: ProductRepository;
+  readonly suppliers: SupplierRepository;
 }
 
 export async function createApp(
@@ -44,6 +56,21 @@ export async function createApp(
     prefix: '/api/users',
     authService,
     usersService: new UsersService(dependencies.users, dependencies.passwordHasher)
+  });
+  await app.register(categoriesRoutes, {
+    prefix: '/api/categories',
+    authService,
+    categoriesService: new CategoriesService(dependencies.categories)
+  });
+  await app.register(productsRoutes, {
+    prefix: '/api/products',
+    authService,
+    productsService: new ProductsService(dependencies.products, dependencies.categories)
+  });
+  await app.register(suppliersRoutes, {
+    prefix: '/api/suppliers',
+    authService,
+    suppliersService: new SuppliersService(dependencies.suppliers)
   });
 
   return app;

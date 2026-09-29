@@ -1,0 +1,81 @@
+<div class="page">
+  <header>
+    <div>
+      <a routerLink="/dashboard">← Dashboard</a>
+      <p class="eyebrow">Productos</p>
+      <h1>Categorías</h1>
+    </div>
+    @if (canCreate) {
+      <button class="primary" type="button" (click)="openCreate()">Nueva categoría</button>
+    }
+  </header>
+
+  <section class="toolbar" aria-label="Filtros">
+    <label>Buscar categoría<input [formControl]="searchControl" type="search" placeholder="Ej. Arena"></label>
+    <label>Estado
+      <select [formControl]="statusControl">
+        <option value="ALL">Todas</option><option value="ACTIVE">Activas</option><option value="INACTIVE">Inactivas</option>
+      </select>
+    </label>
+  </section>
+
+  @if (successMessage()) { <p class="feedback success" role="status">{{ successMessage() }}</p> }
+  @if (errorMessage()) { <p class="feedback error" role="alert">{{ errorMessage() }}</p> }
+
+  <section class="list-card" aria-label="Listado de categorías">
+    <table>
+      <thead><tr><th>Categoría</th><th>Descripción</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody>
+        @for (category of categories(); track category.id) {
+          <tr [class.inactive]="category.status === 'INACTIVE'">
+            <td data-label="Categoría"><strong>{{ category.name }}</strong><small>{{ category.slug }}</small></td>
+            <td data-label="Descripción">{{ category.description || '—' }}</td>
+            <td data-label="Orden">{{ category.sortOrder }}</td>
+            <td data-label="Estado"><span class="status" [class.off]="category.status === 'INACTIVE'">{{ category.status === 'ACTIVE' ? 'Activa' : 'Inactiva' }}</span></td>
+            <td data-label="Acciones" class="actions">
+              @if (canUpdate) { <button type="button" (click)="openEdit(category)">Editar</button> }
+              @if (canDisable) { <button type="button" (click)="requestStatusChange(category)">{{ category.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }}</button> }
+            </td>
+          </tr>
+        } @empty {
+          <tr><td class="empty" colspan="5">{{ loading() ? 'Cargando…' : 'Sin categorías' }}</td></tr>
+        }
+      </tbody>
+    </table>
+    @if (nextToken()) { <button class="more" type="button" [disabled]="loading()" (click)="load()">Cargar más</button> }
+  </section>
+</div>
+
+@if (formMode()) {
+  <div class="backdrop" role="presentation" (click)="closeForm()">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="category-form-title" (click)="$event.stopPropagation()">
+      <h2 id="category-form-title">{{ formMode() === 'create' ? 'Nueva categoría' : 'Editar categoría' }}</h2>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label>Nombre *<input formControlName="name" type="text" autocomplete="off"></label>
+        @if (form.controls.name.touched && form.controls.name.invalid) { <small class="field-error">Ingresa un nombre de 2 a 100 caracteres.</small> }
+        <label>Descripción<textarea formControlName="description" rows="4"></textarea></label>
+        @if (form.controls.description.touched && form.controls.description.invalid) { <small class="field-error">La descripción admite hasta 500 caracteres.</small> }
+        <label>Orden<input formControlName="sortOrder" type="number" min="0" step="1"></label>
+        @if (form.controls.sortOrder.touched && form.controls.sortOrder.invalid) { <small class="field-error">El orden debe ser un entero entre 0 y 1.000.000.</small> }
+        <div class="modal-actions">
+          <button type="button" (click)="closeForm()">Cancelar</button>
+          <button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (statusTarget(); as target) {
+  <div class="backdrop" role="presentation">
+    <section class="modal" role="alertdialog" aria-modal="true" aria-labelledby="category-status-title">
+      <h2 id="category-status-title">{{ target.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }} categoría</h2>
+      <p>¿Deseas {{ target.status === 'ACTIVE' ? 'desactivar' : 'activar' }} <strong>{{ target.name }}</strong>?</p>
+      @if (target.status === 'ACTIVE') { <p class="muted">Las categorías inactivas no estarán disponibles para nuevos productos.</p> }
+      <div class="modal-actions">
+        <button type="button" (click)="cancelStatusChange()">Cancelar</button>
+        <button class="primary" type="button" [disabled]="saving()" (click)="confirmStatusChange()">Confirmar</button>
+      </div>
+    </section>
+  </div>
+}
