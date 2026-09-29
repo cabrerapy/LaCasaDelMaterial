@@ -1,0 +1,67 @@
+<div class="app-shell">
+  <aside class="sidebar" [class.open]="menuOpen()">
+    <div class="brand">
+      <span class="brand-mark">LCM</span>
+      <span>La Casa del Material</span>
+    </div>
+    <nav aria-label="Navegación principal">
+      @for (item of menuItems; track item.label; let first = $first) {
+        <a href="/dashboard" [class.active]="first">
+          <span aria-hidden="true">{{ item.symbol }}</span>
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+    <a class="logout" routerLink="/login">Cerrar sesión</a>
+  </aside>
+
+  @if (menuOpen()) {
+    <button class="backdrop" type="button" aria-label="Cerrar menú" (click)="toggleMenu()"></button>
+  }
+
+  <div class="workspace">
+    <header>
+      <button class="menu-button" type="button" aria-label="Abrir menú" (click)="toggleMenu()">☰</button>
+      <div>
+        <p>Panel principal</p>
+        <h1>Dashboard</h1>
+      </div>
+      <div class="user">
+        <span class="avatar">A</span>
+        <span><strong>Administrador</strong><small>Control general</small></span>
+      </div>
+    </header>
+
+    <main>
+      <section class="welcome">
+        <div>
+          <p class="eyebrow">Resumen operativo</p>
+          <h2>Bienvenido a La Casa del Material</h2>
+          <p>El espacio de trabajo está listo para incorporar los próximos módulos del sistema.</p>
+        </div>
+        <div class="connection" [attr.data-state]="apiStatus()">
+          <span></span>
+          @switch (apiStatus()) {
+            @case ('connected') { API conectada }
+            @case ('unavailable') { API no disponible }
+            @default { Comprobando API }
+          }
+        </div>
+      </section>
+
+      <section class="summary-grid" aria-label="Resumen inicial">
+        <article><span>01</span><h3>Base técnica</h3><p>Monorepo configurado</p></article>
+        <article><span>02</span><h3>Servicios</h3><p>Web, API y DynamoDB Local</p></article>
+        <article><span>03</span><h3>Próxima etapa</h3><p>Autenticación y acceso</p></article>
+      </section>
+
+      <section class="placeholder-panel">
+        <div>
+          <p class="eyebrow">Actividad</p>
+          <h2>Operación del depósito</h2>
+        </div>
+        <p>Los indicadores y movimientos se habilitarán en las próximas etapas.</p>
+      </section>
+    </main>
+  </div>
+</div>

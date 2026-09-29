@@ -1,0 +1,19 @@
+{
+  "name": "la-casa-del-material",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @lcm/contracts && npm run build --workspace @lcm/api && npm run build --workspace @lcm/web",
+    "lint": "npm run build --workspace @lcm/contracts && npm run lint --workspace @lcm/contracts && npm run lint --workspace @lcm/api && npm run lint --workspace @lcm/web",
+    "test": "npm run test --workspace @lcm/contracts && npm run test --workspace @lcm/api && npm run test --workspace @lcm/web",
+    "dev:web": "npm run start --workspace @lcm/web",
+    "dev:api": "npm run dev --workspace @lcm/api"
+  },
+  "engines": {
+    "node": ">=20 <23"
+  }
+}
