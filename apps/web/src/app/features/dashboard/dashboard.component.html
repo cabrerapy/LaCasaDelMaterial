@@ -5,14 +5,14 @@
       <span>La Casa del Material</span>
     </div>
     <nav aria-label="Navegación principal">
-      @for (item of menuItems; track item.label; let first = $first) {
-        <a href="/dashboard" [class.active]="first">
-          <span aria-hidden="true">{{ item.symbol }}</span>
+      @for (item of menuItems(); track item.label; let first = $first) {
+        <a [routerLink]="item.route" [class.active]="first">
+          <span aria-hidden="true">{{ item.icon }}</span>
           {{ item.label }}
         </a>
       }
     </nav>
-    <a class="logout" routerLink="/login">Cerrar sesión</a>
+    <button class="logout" type="button" (click)="logout()">Cerrar sesión</button>
   </aside>
 
   @if (menuOpen()) {
@@ -27,8 +27,8 @@
         <h1>Dashboard</h1>
       </div>
       <div class="user">
-        <span class="avatar">A</span>
-        <span><strong>Administrador</strong><small>Control general</small></span>
+        <span class="avatar">{{ currentUser()?.name?.charAt(0) ?? 'U' }}</span>
+        <span><strong>{{ currentUser()?.name ?? 'Usuario' }}</strong><small>{{ currentUser()?.role ?? '' }}</small></span>
       </div>
     </header>
 

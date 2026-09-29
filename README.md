@@ -47,3 +47,16 @@ docker compose build
 ```
 
 Las credenciales AWS del entorno local son valores ficticios requeridos por el SDK. No use credenciales reales en `.env`.
+
+## Login local
+
+Antes de iniciar la API, defina en `.env` una contraseña inicial y un secreto JWT propios:
+
+```text
+INITIAL_ADMIN_PASSWORD=<contraseña-local-segura>
+JWT_SECRET=<secreto-local-de-al-menos-32-caracteres>
+```
+
+El usuario inicial es `admin`. En el primer arranque, la API crea este administrador en DynamoDB Local y almacena la contraseña con Argon2id. Los arranques posteriores no cambian su contraseña.
+
+La sesión web usa `sessionStorage` durante el desarrollo local. Este mecanismo y el JWT local serán reemplazados o revisados al incorporar Cognito.

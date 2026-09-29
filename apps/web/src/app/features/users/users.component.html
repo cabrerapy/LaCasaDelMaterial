@@ -1,0 +1,85 @@
+<div class="users-page">
+  <header>
+    <div>
+      <a routerLink="/dashboard">← Dashboard</a>
+      <p class="eyebrow">Administración</p>
+      <h1>Usuarios</h1>
+    </div>
+    <button class="primary" type="button" (click)="openCreate()">Nuevo usuario</button>
+  </header>
+
+  @if (errorMessage()) {
+    <p class="error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  <section class="table-card" aria-label="Listado de usuarios">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Nombre</th><th>Usuario</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          @for (user of users(); track user.id) {
+            <tr [class.inactive]="user.status === 'INACTIVE'">
+              <td data-label="Nombre"><strong>{{ user.name }}</strong></td>
+              <td data-label="Usuario">{{ user.username }}</td>
+              <td data-label="Email">{{ user.email }}</td>
+              <td data-label="Rol">{{ roleLabels[user.role] }}</td>
+              <td data-label="Estado"><span class="status" [class.off]="user.status === 'INACTIVE'">{{ user.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</span></td>
+              <td data-label="Acciones" class="actions">
+                <button type="button" (click)="openEdit(user)">Editar</button>
+                <button type="button" (click)="requestStatusChange(user)">{{ user.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }}</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="empty">{{ loading() ? 'Cargando usuarios…' : 'No hay usuarios.' }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (nextToken()) {
+      <button class="more" type="button" [disabled]="loading()" (click)="load()">Cargar más</button>
+    }
+  </section>
+</div>
+
+@if (formMode()) {
+  <div class="modal-backdrop" role="presentation" (click)="closeForm()">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="user-form-title" (click)="$event.stopPropagation()">
+      <h2 id="user-form-title">{{ formMode() === 'create' ? 'Nuevo usuario' : 'Editar usuario' }}</h2>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label>Nombre<input formControlName="name" type="text" autocomplete="name"></label>
+        @if (form.controls.name.touched && form.controls.name.invalid) { <small class="field-error">Ingresa un nombre válido.</small> }
+        <label>Usuario<input formControlName="username" type="text" autocomplete="username"></label>
+        @if (form.controls.username.touched && form.controls.username.invalid) { <small class="field-error">Usa entre 3 y 40 letras, números, puntos, guiones o guion bajo.</small> }
+        <label>Email<input formControlName="email" type="email" autocomplete="email"></label>
+        @if (form.controls.email.touched && form.controls.email.invalid) { <small class="field-error">Ingresa un email válido.</small> }
+        @if (formMode() === 'create') {
+          <label>Contraseña inicial<input formControlName="password" type="password" autocomplete="new-password"></label>
+          <small>Mínimo 10 caracteres, mayúscula, minúscula y número.</small>
+          @if (form.controls.password.touched && form.controls.password.invalid) { <small class="field-error">La contraseña no cumple los requisitos.</small> }
+        }
+        <label>Rol
+          <select formControlName="role">
+            @for (role of roles; track role) { <option [value]="role">{{ roleLabels[role] }}</option> }
+          </select>
+        </label>
+        <div class="modal-actions">
+          <button type="button" (click)="closeForm()">Cancelar</button>
+          <button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (statusTarget(); as target) {
+  <div class="modal-backdrop" role="presentation">
+    <section class="modal confirm" role="alertdialog" aria-modal="true" aria-labelledby="status-title">
+      <h2 id="status-title">{{ target.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }} usuario</h2>
+      <p>¿Confirmas el cambio de estado para <strong>{{ target.name }}</strong>?</p>
+      <div class="modal-actions">
+        <button type="button" (click)="cancelStatusChange()">Cancelar</button>
+        <button class="primary" type="button" [disabled]="saving()" (click)="confirmStatusChange()">Confirmar</button>
+      </div>
+    </section>
+  </div>
+}

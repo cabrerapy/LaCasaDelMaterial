@@ -6,6 +6,11 @@ export interface AppConfig {
   readonly port: number;
   readonly awsRegion: string;
   readonly dynamoDbEndpoint?: string;
+  readonly usersTableName: string;
+  readonly initialAdminPassword: string;
+  readonly jwtSecret: string;
+  readonly jwtExpiresIn: string;
+  readonly webOrigin: string;
 }
 
 function readPort(value: string | undefined): number {
@@ -18,12 +23,26 @@ function readPort(value: string | undefined): number {
 
 export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppConfig {
   const endpoint = environment['DYNAMODB_ENDPOINT']?.trim();
+  const initialAdminPassword = environment['INITIAL_ADMIN_PASSWORD']?.trim();
+  const jwtSecret = environment['JWT_SECRET']?.trim();
+
+  if (!initialAdminPassword || initialAdminPassword.length < 8) {
+    throw new Error('INITIAL_ADMIN_PASSWORD must contain at least 8 characters');
+  }
+  if (!jwtSecret || jwtSecret.length < 32) {
+    throw new Error('JWT_SECRET must contain at least 32 characters');
+  }
 
   return {
     nodeEnv: environment['NODE_ENV']?.trim() || 'development',
     host: environment['API_HOST']?.trim() || '0.0.0.0',
     port: readPort(environment['API_PORT']),
     awsRegion: environment['AWS_REGION']?.trim() || 'us-east-1',
-    ...(endpoint ? { dynamoDbEndpoint: endpoint } : {})
+    ...(endpoint ? { dynamoDbEndpoint: endpoint } : {}),
+    usersTableName: environment['DYNAMODB_USERS_TABLE']?.trim() || 'lcm-local-users',
+    initialAdminPassword,
+    jwtSecret,
+    jwtExpiresIn: environment['JWT_EXPIRES_IN']?.trim() || '8h',
+    webOrigin: environment['WEB_ORIGIN']?.trim() || 'http://localhost:4200'
   };
 }

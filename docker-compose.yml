@@ -19,11 +19,17 @@ services:
       DYNAMODB_ENDPOINT: http://dynamodb-local:8000
       AWS_ACCESS_KEY_ID: local
       AWS_SECRET_ACCESS_KEY: local
+      DYNAMODB_USERS_TABLE: lcm-local-users
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?INITIAL_ADMIN_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:4200}
     ports:
       - "3000:3000"
     depends_on:
       dynamodb-local:
         condition: service_started
+    restart: on-failure
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 5s
