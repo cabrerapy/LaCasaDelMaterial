@@ -19,6 +19,9 @@ import { productsRoutes } from '../modules/products/http/products.routes.js';
 import type { SupplierRepository } from '../modules/suppliers/domain/supplier.repository.js';
 import { SuppliersService } from '../modules/suppliers/application/suppliers.service.js';
 import { suppliersRoutes } from '../modules/suppliers/http/suppliers.routes.js';
+import type { PurchaseRepository } from '../modules/purchases/domain/purchase.repository.js';
+import { PurchasesService } from '../modules/purchases/application/purchases.service.js';
+import { purchasesRoutes } from '../modules/purchases/http/purchases.routes.js';
 
 export interface AppDependencies {
   readonly users: UserRepository;
@@ -27,6 +30,7 @@ export interface AppDependencies {
   readonly categories: CategoryRepository;
   readonly products: ProductRepository;
   readonly suppliers: SupplierRepository;
+  readonly purchases: PurchaseRepository;
 }
 
 export async function createApp(
@@ -71,6 +75,13 @@ export async function createApp(
     prefix: '/api/suppliers',
     authService,
     suppliersService: new SuppliersService(dependencies.suppliers)
+  });
+  await app.register(purchasesRoutes, {
+    prefix: '/api/purchases',
+    authService,
+    purchasesService: new PurchasesService(
+      dependencies.purchases, dependencies.suppliers, dependencies.products
+    )
   });
 
   return app;

@@ -34,7 +34,10 @@ export const PERMISSIONS = [
   'products.read', 'products.create', 'products.update', 'products.disable',
   'products.prices.manage', 'products.costs.read', 'products.margins.read',
   'suppliers.read', 'suppliers.create', 'suppliers.update', 'suppliers.disable',
-  'purchases.read', 'purchases.create', 'purchases.costs.read',
+  'purchases.read', 'purchases.create', 'purchases.update', 'purchases.confirm',
+  'purchases.cancel', 'purchases.costs.read',
+  'receipts.read', 'receipts.create', 'receipts.update', 'receipts.confirm', 'receipts.cancel',
+  'lots.read', 'lots.costs.read',
   'inventory.read', 'inventory.receive', 'inventory.movements.read', 'inventory.adjust',
   'customers.read', 'customers.create', 'customers.update',
   'sales.read', 'sales.create', 'sales.own.read', 'sales.authorized.read',
@@ -57,7 +60,10 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
     'products.read', 'products.create', 'products.update', 'products.prices.manage',
     'products.costs.read', 'products.margins.read',
     'customers.read', 'suppliers.read', 'suppliers.create', 'suppliers.update',
-    'purchases.read', 'purchases.costs.read',
+    'purchases.read', 'purchases.create', 'purchases.update', 'purchases.confirm',
+    'purchases.cancel', 'purchases.costs.read',
+    'receipts.read', 'receipts.create', 'receipts.update', 'receipts.confirm', 'receipts.cancel',
+    'lots.read', 'lots.costs.read',
     'inventory.read', 'inventory.movements.read', 'sales.read', 'sales.authorized.read',
     'trucks.read', 'trips.access', 'trips.read', 'fuel.access', 'fuel.read', 'reports.read'
   ],
@@ -69,11 +75,15 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
   PURCHASING: [
     'dashboard.read', 'categories.read', 'categories.create', 'categories.update',
     'products.read', 'products.create', 'products.update', 'suppliers.read', 'suppliers.create',
-    'suppliers.update', 'purchases.read', 'purchases.create', 'purchases.costs.read',
+    'suppliers.update', 'purchases.read', 'purchases.create', 'purchases.update',
+    'purchases.confirm', 'purchases.costs.read',
+    'receipts.read', 'lots.read', 'lots.costs.read',
     'products.costs.read', 'inventory.read'
   ],
   WAREHOUSE: [
-    'dashboard.read', 'categories.read', 'products.read', 'suppliers.read', 'inventory.read', 'inventory.receive',
+    'dashboard.read', 'categories.read', 'products.read', 'suppliers.read', 'purchases.read',
+    'receipts.read', 'receipts.create', 'receipts.update', 'receipts.confirm', 'receipts.cancel', 'lots.read',
+    'inventory.read', 'inventory.receive',
     'inventory.movements.read', 'inventory.adjust', 'loads.pending.read'
   ],
   LOGISTICS: [
@@ -307,3 +317,149 @@ export interface CreateSupplierRequest {
 
 export type UpdateSupplierRequest = Partial<CreateSupplierRequest>;
 export interface UpdateSupplierStatusRequest { readonly status: SupplierStatus; }
+
+export const PURCHASE_STATUSES = [
+  'DRAFT', 'CONFIRMED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CANCELLED'
+] as const;
+export type PurchaseStatus = (typeof PURCHASE_STATUSES)[number];
+
+export interface SupplierSnapshot {
+  readonly businessName: string;
+  readonly tradeName?: string;
+  readonly taxId?: string;
+}
+export interface ProductSnapshot {
+  readonly code: string;
+  readonly name: string;
+  readonly baseUnit: BaseUnit;
+  readonly quantityScale: number;
+}
+export interface PresentationSnapshot {
+  readonly name: string;
+  readonly sku?: string;
+  readonly baseQuantityInternal: number;
+}
+export interface PurchaseItemResponse {
+  readonly id: string;
+  readonly productId: string;
+  readonly presentationId: string;
+  readonly productSnapshot: ProductSnapshot;
+  readonly presentationSnapshot: PresentationSnapshot;
+  readonly quantity: number;
+  readonly quantityBaseInternal: number;
+  readonly orderedQuantityBaseInternal: number;
+  readonly receivedQuantityBaseInternal: number;
+  readonly allocatedReceivedCostGuarani?: number;
+  readonly unitPurchasePriceGuarani?: number;
+  readonly lineSubtotalGuarani?: number;
+  readonly notes?: string;
+  readonly sortOrder: number;
+}
+export interface PurchaseResponse {
+  readonly id: string;
+  readonly purchaseNumber: string;
+  readonly supplierId: string;
+  readonly supplierSnapshot: SupplierSnapshot;
+  readonly supplierInvoiceNumber?: string;
+  readonly purchaseDate: string;
+  readonly expectedDeliveryDate?: string;
+  readonly status: PurchaseStatus;
+  readonly notes?: string;
+  readonly cancellationReason?: string;
+  readonly items: readonly PurchaseItemResponse[];
+  readonly subtotalGuarani?: number;
+  readonly discountGuarani?: number;
+  readonly additionalCostsGuarani?: number;
+  readonly totalGuarani?: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly confirmedAt?: string;
+  readonly cancelledAt?: string;
+  readonly confirmedBy?: string;
+  readonly cancelledBy?: string;
+}
+export interface PurchasesPageResponse {
+  readonly items: readonly PurchaseResponse[];
+  readonly nextToken?: string;
+}
+export interface PurchaseItemInput {
+  readonly productId: string;
+  readonly presentationId: string;
+  readonly quantity: number;
+  readonly unitPurchasePriceGuarani: number;
+  readonly notes?: string;
+  readonly sortOrder?: number;
+}
+export interface CreatePurchaseRequest {
+  readonly supplierId: string;
+  readonly supplierInvoiceNumber?: string;
+  readonly purchaseDate: string;
+  readonly expectedDeliveryDate?: string;
+  readonly discountGuarani?: number;
+  readonly additionalCostsGuarani?: number;
+  readonly notes?: string;
+  readonly items: readonly PurchaseItemInput[];
+}
+export interface UpdatePurchaseRequest {
+  readonly supplierId?: string;
+  readonly supplierInvoiceNumber?: string;
+  readonly purchaseDate?: string;
+  readonly expectedDeliveryDate?: string | null;
+  readonly discountGuarani?: number;
+  readonly additionalCostsGuarani?: number;
+  readonly notes?: string;
+  readonly items?: readonly PurchaseItemInput[];
+}
+export interface CancelPurchaseRequest { readonly reason?: string; }
+
+export const PURCHASE_RECEIPT_STATUSES = ['DRAFT', 'CONFIRMED', 'CANCELLED'] as const;
+export type PurchaseReceiptStatus = (typeof PURCHASE_RECEIPT_STATUSES)[number];
+export interface PurchaseReceiptLineInput {
+  readonly purchaseItemId: string;
+  readonly receivedQuantity: string;
+  readonly notes?: string;
+}
+export interface CreatePurchaseReceiptRequest {
+  readonly purchaseId: string;
+  readonly receiptDate: string;
+  readonly deliveryDocumentNumber?: string;
+  readonly notes?: string;
+  readonly lines: readonly PurchaseReceiptLineInput[];
+}
+export type UpdatePurchaseReceiptRequest = Omit<Partial<CreatePurchaseReceiptRequest>, 'purchaseId'>;
+export interface PurchaseReceiptLineResponse {
+  readonly id: string; readonly receiptId: string; readonly purchaseId: string; readonly purchaseItemId: string;
+  readonly productId: string; readonly presentationId: string; readonly receivedQuantityBaseInternal: number;
+  readonly receivedQuantity: string; readonly directPurchaseCostGuarani?: number;
+  readonly productSnapshot: ProductSnapshot; readonly presentationSnapshot: PresentationSnapshot; readonly notes?: string;
+}
+export interface PurchaseReceiptResponse {
+  readonly id: string; readonly receiptNumber: string; readonly purchaseId: string; readonly purchaseNumber: string;
+  readonly supplierId: string; readonly supplierSnapshot: SupplierSnapshot; readonly receiptDate: string;
+  readonly status: PurchaseReceiptStatus; readonly deliveryDocumentNumber?: string; readonly notes?: string;
+  readonly lines: readonly PurchaseReceiptLineResponse[]; readonly createdAt: string; readonly updatedAt: string;
+  readonly confirmedAt?: string; readonly cancelledAt?: string; readonly createdBy: string; readonly updatedBy: string;
+  readonly confirmedBy?: string; readonly cancelledBy?: string;
+}
+export interface PurchaseReceiptsPageResponse { readonly items: readonly PurchaseReceiptResponse[]; readonly nextToken?: string; }
+export interface PurchaseItemReceivingStatus {
+  readonly purchaseItemId: string; readonly productId: string; readonly presentationId: string;
+  readonly productSnapshot: ProductSnapshot; readonly presentationSnapshot: PresentationSnapshot;
+  readonly orderedQuantityBaseInternal: number; readonly receivedQuantityBaseInternal: number;
+  readonly pendingQuantityBaseInternal: number; readonly orderedQuantity: string; readonly receivedQuantity: string;
+  readonly pendingQuantity: string;
+}
+export interface PurchaseReceivingStatusResponse {
+  readonly purchaseId: string; readonly purchaseNumber: string; readonly status: PurchaseStatus;
+  readonly items: readonly PurchaseItemReceivingStatus[];
+}
+export interface PurchaseLotResponse {
+  readonly id: string; readonly lotNumber: string; readonly purchaseId: string; readonly purchaseNumber: string;
+  readonly purchaseItemId: string; readonly receiptId: string; readonly receiptNumber: string; readonly receiptLineId: string;
+  readonly supplierId: string; readonly productId: string; readonly presentationId: string;
+  readonly receivedQuantityBaseInternal: number; readonly receivedQuantity: string;
+  readonly directPurchaseCostGuarani?: number; readonly productSnapshot: ProductSnapshot;
+  readonly presentationSnapshot: PresentationSnapshot; readonly supplierSnapshot: SupplierSnapshot;
+  readonly receivedAt: string; readonly createdAt: string; readonly createdBy: string;
+}
+export interface PurchaseLotsPageResponse { readonly items: readonly PurchaseLotResponse[]; readonly nextToken?: string; }

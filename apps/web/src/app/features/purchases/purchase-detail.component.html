@@ -1,0 +1,62 @@
+<div class="page"><header><div><a routerLink="/purchases">← Compras</a><p class="eyebrow">Abastecimiento</p>
+  <h1>{{ isNew ? 'Nueva compra' : purchase()?.purchaseNumber || 'Compra' }}</h1></div>
+  @if (purchase(); as current) { <span class="status" [attr.data-status]="current.status">{{ statusLabels[current.status] }}</span> }
+</header>
+@if (successMessage()) { <p class="feedback success" role="status">{{ successMessage() }}</p> }
+@if (errorMessage()) { <p class="feedback error" role="alert">{{ errorMessage() }}</p> }
+
+@if (isNew || (editing && purchase()?.status === 'DRAFT')) {
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <section class="card"><h2>Información de compra</h2><div class="form-grid">
+      <label>Buscar proveedor<input [formControl]="supplierSearchControl" type="search" placeholder="Razón social o RUC"></label>
+      <label>Proveedor *<select formControlName="supplierId"><option value="">Seleccionar</option>@for (supplier of suppliers(); track supplier.id) { <option [value]="supplier.id">{{ supplier.businessName }}{{ supplier.taxId ? ' · ' + supplier.taxId : '' }}</option> }</select></label>
+      <label>Fecha *<input formControlName="purchaseDate" type="date"></label><label>Entrega esperada<input formControlName="expectedDeliveryDate" type="date"></label>
+      <label>Factura del proveedor<input formControlName="supplierInvoiceNumber" type="text" placeholder="001-001-0001234"></label>
+    </div></section>
+    <section class="card" formArrayName="items"><div class="section-heading"><div><h2>Productos</h2><p>El costo corresponde a una presentación.</p></div><input class="product-search" [formControl]="productSearchControl" type="search" placeholder="Buscar producto"></div>
+      @for (item of items.controls; track item; let index = $index) {
+        <article class="item" [formGroupName]="index"><div class="item-heading"><strong>Producto {{ index + 1 }}</strong><button type="button" (click)="removeItem(index)">Quitar</button></div>
+          <div class="item-grid">
+            <label>Producto *<select formControlName="productId" (change)="productChanged(index)"><option value="">Seleccionar</option>@for (product of products(); track product.id) { <option [value]="product.id">{{ product.code }} · {{ product.name }}</option> }</select></label>
+            <label>Presentación *<select formControlName="presentationId"><option value="">Seleccionar</option>@for (presentation of presentationsFor(index); track presentation.id) { <option [value]="presentation.id">{{ presentation.name }}{{ presentation.sku ? ' · ' + presentation.sku : '' }}</option> }</select></label>
+            <label>Cantidad *<input formControlName="quantity" type="number" min="1" step="1"></label>
+            <label>Costo unitario (Gs.) *<input formControlName="unitPurchasePriceGuarani" type="number" min="0" step="1"></label>
+            <label class="wide">Observación<input formControlName="notes" type="text"></label>
+            <p class="line-total">Subtotal: <strong>{{ lineSubtotal(index) | guarani }}</strong></p>
+          </div>
+        </article>
+      } @empty { <p class="empty">Aún no agregaste productos.</p> }
+      <button type="button" [disabled]="items.length >= 10" (click)="addItem()">+ Agregar producto</button>
+    </section>
+    <section class="card totals"><h2>Totales</h2><label>Descuento (Gs.)<input formControlName="discountGuarani" type="number" min="0" step="1"></label>
+      <label>Otros costos (Gs.)<input formControlName="additionalCostsGuarani" type="number" min="0" step="1"></label>
+      <p><span>Subtotal</span><strong>{{ subtotal() | guarani }}</strong></p><p><span>Descuento</span><strong>- {{ form.controls.discountGuarani.value | guarani }}</strong></p>
+      <p><span>Otros costos</span><strong>{{ form.controls.additionalCostsGuarani.value | guarani }}</strong></p><p class="grand"><span>Total</span><strong>{{ total() | guarani }}</strong></p>
+    </section>
+    <section class="card"><h2>Observaciones</h2><textarea formControlName="notes" rows="4"></textarea></section>
+    @if (form.invalid) { <p class="feedback error">Revisa los datos obligatorios y los importes enteros.</p> }
+    <div class="form-actions"><a class="button" routerLink="/purchases">Cancelar</a><button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar borrador' }}</button></div>
+  </form>
+} @else { @if (purchase(); as current) {
+  <section class="card detail-grid"><div><small>Proveedor</small><strong>{{ current.supplierSnapshot.businessName }}</strong><span>{{ current.supplierSnapshot.taxId || 'Sin RUC' }}</span></div>
+    <div><small>Fecha</small><strong>{{ current.purchaseDate }}</strong><span>Entrega: {{ current.expectedDeliveryDate || 'Sin definir' }}</span></div>
+    <div><small>Factura</small><strong>{{ current.supplierInvoiceNumber || 'Sin factura' }}</strong></div>
+  </section>
+  <section class="card"><h2>Productos</h2><div class="detail-items">@for (item of current.items; track item.id) {
+    <article><div><strong>{{ item.productSnapshot.code }} · {{ item.productSnapshot.name }}</strong><span>{{ item.quantity }} × {{ item.presentationSnapshot.name }}</span><small>Cantidad base interna: {{ item.quantityBaseInternal }}</small></div>
+      @if (canReadCosts) { <div class="cost"><span>{{ item.unitPurchasePriceGuarani | guarani }}</span><strong>{{ item.lineSubtotalGuarani | guarani }}</strong></div> }
+    </article>
+  } @empty { <p class="empty">Compra sin productos.</p> }</div></section>
+  @if (canReadCosts) { <section class="card totals readonly"><p><span>Subtotal</span><strong>{{ current.subtotalGuarani | guarani }}</strong></p><p><span>Descuento</span><strong>- {{ current.discountGuarani | guarani }}</strong></p><p><span>Otros costos</span><strong>{{ current.additionalCostsGuarani | guarani }}</strong></p><p class="grand"><span>Total</span><strong>{{ current.totalGuarani | guarani }}</strong></p></section> }
+  @if (current.notes) { <section class="card"><h2>Observaciones</h2><p>{{ current.notes }}</p></section> }
+  @if (current.cancellationReason) { <p class="feedback error">Motivo de cancelación: {{ current.cancellationReason }}</p> }
+  <div class="form-actions">
+    @if (canUpdate && current.status === 'DRAFT') { <a class="button" [routerLink]="['/purchases', current.id, 'edit']">Editar borrador</a> }
+    @if (canConfirm && current.status === 'DRAFT') { <button class="primary" type="button" (click)="confirmOpen.set(true)">Confirmar compra</button> }
+    @if (canCancel && (current.status === 'DRAFT' || current.status === 'CONFIRMED')) { <button class="danger" type="button" (click)="cancelOpen.set(true)">Cancelar compra</button> }
+  </div>
+} @else { <section class="card empty">{{ loading() ? 'Cargando…' : 'Compra no disponible.' }}</section> } }
+</div>
+
+@if (confirmOpen()) { <div class="backdrop"><section class="modal" role="alertdialog" aria-modal="true"><h2>Confirmar compra</h2><p>Una vez confirmada, los productos y costos no podrán modificarse directamente.</p><p class="muted">La confirmación todavía no ingresará mercadería al stock.</p><div class="modal-actions"><button type="button" (click)="confirmOpen.set(false)">Volver</button><button class="primary" type="button" [disabled]="saving()" (click)="confirm()">Confirmar</button></div></section></div> }
+@if (cancelOpen()) { <div class="backdrop"><section class="modal" role="alertdialog" aria-modal="true"><h2>Cancelar compra</h2><label>Motivo<textarea [formControl]="cancelReasonControl" rows="3" placeholder="Opcional"></textarea></label><div class="modal-actions"><button type="button" (click)="cancelOpen.set(false)">Volver</button><button class="danger" type="button" [disabled]="saving()" (click)="cancel()">Cancelar compra</button></div></section></div> }

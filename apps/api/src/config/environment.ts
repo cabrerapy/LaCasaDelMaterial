@@ -10,6 +10,7 @@ export interface AppConfig {
   readonly categoriesTableName: string;
   readonly productsTableName: string;
   readonly suppliersTableName: string;
+  readonly purchasesTableName: string;
   readonly initialAdminPassword: string;
   readonly jwtSecret: string;
   readonly jwtExpiresIn: string;
@@ -46,6 +47,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     categoriesTableName: environment['DYNAMODB_CATEGORIES_TABLE']?.trim() || 'lcm-local-categories',
     productsTableName: environment['DYNAMODB_PRODUCTS_TABLE']?.trim() || 'lcm-local-products',
     suppliersTableName: environment['DYNAMODB_SUPPLIERS_TABLE']?.trim() || 'lcm-local-suppliers',
+    purchasesTableName: environment['DYNAMODB_PURCHASES_TABLE']?.trim() || 'lcm-local-purchases',
     initialAdminPassword,
     jwtSecret,
     jwtExpiresIn: environment['JWT_EXPIRES_IN']?.trim() || '8h',

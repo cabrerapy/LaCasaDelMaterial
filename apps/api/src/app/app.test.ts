@@ -14,6 +14,7 @@ import { InMemoryCategoryRepository } from '../modules/categories/infrastructure
 import { InMemoryProductRepository } from '../modules/products/infrastructure/in-memory-product.repository.js';
 import { toDisplayQuantity, toInternalQuantity } from '../modules/products/domain/product.js';
 import { InMemorySupplierRepository } from '../modules/suppliers/infrastructure/in-memory-supplier.repository.js';
+import { InMemoryPurchaseRepository } from '../modules/purchases/infrastructure/in-memory-purchase.repository.js';
 
 const adminPassword = 'LocalTestPassword123!';
 const jwtSecret = 'test-secret-with-at-least-thirty-two-characters';
@@ -22,12 +23,14 @@ let users: InMemoryUserRepository;
 let categories: InMemoryCategoryRepository;
 let products: InMemoryProductRepository;
 let suppliers: InMemorySupplierRepository;
+let purchases: InMemoryPurchaseRepository;
 
 before(async () => {
   users = new InMemoryUserRepository();
   categories = new InMemoryCategoryRepository();
   products = new InMemoryProductRepository();
   suppliers = new InMemorySupplierRepository();
+  purchases = new InMemoryPurchaseRepository();
   const now = new Date().toISOString();
   await users.create({
     id: 'b052fa5e-e405-4460-82c8-6887137c885a',
@@ -68,6 +71,13 @@ before(async () => {
     updatedBy: 'b052fa5e-e405-4460-82c8-6887137c885a'
   });
   await users.create({
+    id: 'f9f29261-d432-41ce-b44a-9d42df8a7f90', name: 'Depósito', username: 'warehouse',
+    email: 'warehouse@lacasadelmaterial.local', passwordHash: await argon2.hash(adminPassword),
+    role: 'WAREHOUSE', status: 'ACTIVE', createdAt: now, updatedAt: now,
+    createdBy: 'b052fa5e-e405-4460-82c8-6887137c885a',
+    updatedBy: 'b052fa5e-e405-4460-82c8-6887137c885a'
+  });
+  await users.create({
     id: '0f67e992-05df-4412-a909-91224f478c47',
     name: 'Chofer',
     username: 'driver',
@@ -92,6 +102,7 @@ before(async () => {
     categories,
     products,
     suppliers,
+    purchases,
     passwordHasher: new Argon2PasswordHasher(),
     authentication: new LocalJwtAuthentication(config.jwtSecret, config.jwtExpiresIn)
   });
@@ -640,6 +651,159 @@ test('supplier endpoints return 401 without login and 403 without permission', a
   assert.equal(unauthenticated.statusCode, 401); assert.equal(forbidden.statusCode, 403);
 });
 
+let purchaseId = '';
+let purchaseNumber = '';
+
+test('ADMIN creates a DRAFT and backend calculates cement, pallet and arena quantities and costs', async () => {
+  const cement = await products.findByCode('CEM-CPII'); assert.ok(cement);
+  const cementPresentations = await products.listPresentations(cement.id);
+  const bag = cementPresentations[0]; assert.ok(bag);
+  const palletResponse = await app.inject({
+    method: 'POST', url: `/api/products/${cement.id}/presentations`, headers: await authorizationHeader('admin'),
+    payload: { name: 'Pallet 40 bolsas', sku: 'CEM-CPII-P40', baseQuantity: 40, salePriceGuarani: 2500000 }
+  });
+  assert.equal(palletResponse.statusCode, 201);
+  const response = await createPurchase({
+    supplierId, purchaseDate: '2026-09-29', expectedDeliveryDate: '2026-09-30',
+    supplierInvoiceNumber: '001-001-0001234', discountGuarani: 0, additionalCostsGuarani: 150000,
+    notes: 'Entrega prevista por la mañana', items: [
+      { productId: cement.id, presentationId: bag.id, quantity: 200, unitPurchasePriceGuarani: 52000 },
+      { productId: cement.id, presentationId: palletResponse.json().id, quantity: 5, unitPurchasePriceGuarani: 2000000 },
+      { productId: arenaProductId, presentationId: arenaHalfPresentationId, quantity: 4, unitPurchasePriceGuarani: 90000 }
+    ]
+  });
+  assert.equal(response.statusCode, 201); assert.equal(response.json().status, 'DRAFT');
+  assert.match(response.json().purchaseNumber, /^CMP-2026-[A-F0-9]{8}$/);
+  assert.deepEqual(response.json().items.map((item: { quantityBaseInternal: number }) => item.quantityBaseInternal), [200, 200, 2000]);
+  assert.deepEqual(response.json().items.map((item: { lineSubtotalGuarani: number }) => item.lineSubtotalGuarani), [10400000, 10000000, 360000]);
+  assert.equal(response.json().subtotalGuarani, 20760000); assert.equal(response.json().totalGuarani, 20910000);
+  assert.equal(Number.isInteger(response.json().totalGuarani), true);
+  purchaseId = response.json().id as string; purchaseNumber = response.json().purchaseNumber as string;
+});
+
+test('PURCHASING creates a DRAFT and purchase numbers are unique', async () => {
+  const response = await createPurchase({ supplierId, purchaseDate: '2026-09-29', items: [] }, 'purchasing');
+  assert.equal(response.statusCode, 201); assert.notEqual(response.json().purchaseNumber, purchaseNumber);
+});
+
+test('purchase creation rejects missing or inactive supplier', async () => {
+  const missing = await createPurchase({
+    supplierId: '00000000-0000-4000-8000-000000000001', purchaseDate: '2026-09-29', items: []
+  });
+  assert.equal(missing.statusCode, 400);
+  const inactiveSupplier = await createSupplier({ businessName: 'Proveedor compra inactivo' });
+  const inactiveId = inactiveSupplier.json().id as string;
+  await app.inject({ method: 'PATCH', url: `/api/suppliers/${inactiveId}/status`, headers: await authorizationHeader('admin'), payload: { status: 'INACTIVE' } });
+  const inactive = await createPurchase({ supplierId: inactiveId, purchaseDate: '2026-09-29', items: [] });
+  assert.equal(inactive.statusCode, 409);
+});
+
+test('purchase validates products, presentations, quantities and prices', async () => {
+  const missingProduct = await createPurchase({
+    supplierId, purchaseDate: '2026-09-29', items: [{
+      productId: '00000000-0000-4000-8000-000000000002', presentationId: arenaHalfPresentationId,
+      quantity: 1, unitPurchasePriceGuarani: 1
+    }]
+  });
+  assert.equal(missingProduct.statusCode, 400);
+  const invalidPresentation = await createPurchase({
+    supplierId, purchaseDate: '2026-09-29', items: [{
+      productId: arenaProductId, presentationId: '00000000-0000-4000-8000-000000000003',
+      quantity: 1, unitPurchasePriceGuarani: 1
+    }]
+  });
+  assert.equal(invalidPresentation.statusCode, 400);
+  const base = { supplierId, purchaseDate: '2026-09-29', items: [{
+    productId: arenaProductId, presentationId: arenaHalfPresentationId, quantity: 0, unitPurchasePriceGuarani: 1
+  }] };
+  assert.equal((await createPurchase(base)).statusCode, 400);
+  assert.equal((await createPurchase({ ...base, items: [{ ...base.items[0], quantity: -1 }] })).statusCode, 400);
+  assert.equal((await createPurchase({ ...base, items: [{ ...base.items[0], quantity: 1, unitPurchasePriceGuarani: -1 }] })).statusCode, 400);
+
+  const inactiveProduct = await createProduct(basicProduct('PURCHASE-INACTIVE', categoryId));
+  const inactiveProductId = inactiveProduct.json().id as string;
+  const inactivePresentationId = inactiveProduct.json().presentations[0].id as string;
+  await app.inject({ method: 'PATCH', url: `/api/products/${inactiveProductId}/status`, headers: await authorizationHeader('admin'), payload: { status: 'INACTIVE' } });
+  const inactive = await createPurchase({
+    supplierId, purchaseDate: '2026-09-29', items: [{
+      productId: inactiveProductId, presentationId: inactivePresentationId, quantity: 1, unitPurchasePriceGuarani: 1
+    }]
+  });
+  assert.equal(inactive.statusCode, 409);
+});
+
+test('DRAFT can be modified and backend recalculates totals', async () => {
+  const response = await app.inject({
+    method: 'PATCH', url: `/api/purchases/${purchaseId}`, headers: await authorizationHeader('purchasing'),
+    payload: { discountGuarani: 10000, additionalCostsGuarani: 200000 }
+  });
+  assert.equal(response.statusCode, 200); assert.equal(response.json().totalGuarani, 20950000);
+});
+
+test('zero-item DRAFT cannot be confirmed', async () => {
+  const draft = await createPurchase({ supplierId, purchaseDate: '2026-09-29', items: [] });
+  const response = await app.inject({
+    method: 'POST', url: `/api/purchases/${draft.json().id}/confirm`, headers: await authorizationHeader('admin')
+  });
+  assert.equal(response.statusCode, 409);
+});
+
+test('confirmation creates definitive snapshots and audit but no stock, movements, lots or receipts', async () => {
+  const response = await app.inject({
+    method: 'POST', url: `/api/purchases/${purchaseId}/confirm`, headers: await authorizationHeader('manager')
+  });
+  assert.equal(response.statusCode, 200); assert.equal(response.json().status, 'CONFIRMED');
+  assert.equal(response.json().supplierSnapshot.businessName, 'Distribuidora Central S.A.');
+  assert.equal(response.json().items[0].productSnapshot.code, 'CEM-CPII');
+  assert.equal(response.json().items[0].presentationSnapshot.name, 'Bolsa 50 kg');
+  assert.equal(response.json().confirmedBy, 'b7f19320-9b5e-48a1-bfc2-7224a69682e4');
+  assert.equal(response.body.includes('InventoryMovement'), false);
+  assert.equal(response.body.includes('lot'), false); assert.equal(response.body.includes('receipt'), false);
+});
+
+test('CONFIRMED purchase cannot be modified', async () => {
+  const response = await app.inject({
+    method: 'PATCH', url: `/api/purchases/${purchaseId}`, headers: await authorizationHeader('admin'), payload: { notes: 'No permitido' }
+  });
+  assert.equal(response.statusCode, 409);
+});
+
+test('WAREHOUSE reads purchases but backend omits all costs', async () => {
+  const response = await app.inject({
+    method: 'GET', url: `/api/purchases/${purchaseId}`, headers: await authorizationHeader('warehouse')
+  });
+  assert.equal(response.statusCode, 200); assert.equal(response.body.includes('unitPurchasePriceGuarani'), false);
+  assert.equal(response.body.includes('lineSubtotalGuarani'), false); assert.equal(response.body.includes('totalGuarani'), false);
+  assert.equal(response.json().items[0].quantity, 200);
+});
+
+test('purchase list supports search, supplier, status and date filters', async () => {
+  const query = `/api/purchases?search=${purchaseNumber}&supplierId=${supplierId}&status=CONFIRMED&dateFrom=2026-09-01&dateTo=2026-09-30`;
+  const response = await app.inject({ method: 'GET', url: query, headers: await authorizationHeader('admin') });
+  assert.equal(response.statusCode, 200); assert.equal(response.json().items[0].id, purchaseId);
+});
+
+test('ADMIN cancels DRAFT or CONFIRMED while PURCHASING cannot cancel', async () => {
+  const draft = await createPurchase({ supplierId, purchaseDate: '2026-09-29', items: [] });
+  const denied = await app.inject({
+    method: 'POST', url: `/api/purchases/${draft.json().id}/cancel`,
+    headers: await authorizationHeader('purchasing'), payload: { reason: 'Sin autorización' }
+  });
+  assert.equal(denied.statusCode, 403);
+  const cancelled = await app.inject({
+    method: 'POST', url: `/api/purchases/${draft.json().id}/cancel`,
+    headers: await authorizationHeader('admin'), payload: { reason: 'Proveedor no pudo cumplir' }
+  });
+  assert.equal(cancelled.statusCode, 200); assert.equal(cancelled.json().status, 'CANCELLED');
+  assert.equal(cancelled.json().cancellationReason, 'Proveedor no pudo cumplir');
+});
+
+test('purchase endpoints distinguish unauthenticated and forbidden users', async () => {
+  const unauthenticated = await app.inject({ method: 'GET', url: '/api/purchases' });
+  const forbidden = await app.inject({ method: 'GET', url: '/api/purchases', headers: await authorizationHeader('cashier') });
+  assert.equal(unauthenticated.statusCode, 401); assert.equal(forbidden.statusCode, 403);
+});
+
 function loginToken(response: { json(): { accessToken: string } }): string {
   return response.json().accessToken;
 }
@@ -685,4 +849,8 @@ function basicProduct(code: string, selectedCategoryId: string): Record<string, 
 
 async function createSupplier(payload: Record<string, unknown>) {
   return app.inject({ method: 'POST', url: '/api/suppliers', headers: await authorizationHeader('admin'), payload });
+}
+
+async function createPurchase(payload: Record<string, unknown>, username = 'admin') {
+  return app.inject({ method: 'POST', url: '/api/purchases', headers: await authorizationHeader(username), payload });
 }

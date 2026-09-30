@@ -1,0 +1,21 @@
+<div class="page"><header><div><a routerLink="/dashboard">← Dashboard</a><p class="eyebrow">Abastecimiento</p><h1>Compras</h1></div>
+  @if (canCreate) { <a class="primary button" routerLink="/purchases/new">Nueva compra</a> }
+</header>
+<section class="toolbar" aria-label="Filtros de compras">
+  <label>Buscar<input [formControl]="searchControl" type="search" placeholder="Número, factura o proveedor"></label>
+  <label>Proveedor<select [formControl]="supplierControl"><option value="ALL">Todos</option>@for (supplier of suppliers(); track supplier.id) { <option [value]="supplier.id">{{ supplier.businessName }}</option> }</select></label>
+  <label>Estado<select [formControl]="statusControl"><option value="ALL">Todos</option>@for (status of statuses; track status) { <option [value]="status">{{ statusLabels[status] }}</option> }</select></label>
+  <label>Desde<input [formControl]="dateFromControl" type="date"></label><label>Hasta<input [formControl]="dateToControl" type="date"></label>
+</section>
+@if (errorMessage()) { <p class="feedback error" role="alert">{{ errorMessage() }}</p> }
+<section class="list-card"><table><thead><tr><th>Número</th><th>Fecha</th><th>Proveedor</th><th>Factura</th><th>Estado</th>@if (canReadCosts) { <th>Total</th> }<th>Acciones</th></tr></thead>
+  <tbody>@for (purchase of purchases(); track purchase.id) {
+    <tr [class.cancelled]="purchase.status === 'CANCELLED'"><td data-label="Número"><strong>{{ purchase.purchaseNumber }}</strong></td><td data-label="Fecha">{{ purchase.purchaseDate }}</td>
+      <td data-label="Proveedor">{{ purchase.supplierSnapshot.businessName }}</td><td data-label="Factura">{{ purchase.supplierInvoiceNumber || '—' }}</td>
+      <td data-label="Estado"><span class="status" [attr.data-status]="purchase.status">{{ statusLabels[purchase.status] }}</span></td>
+      @if (canReadCosts) { <td data-label="Total">{{ purchase.totalGuarani | guarani }}</td> }
+      <td data-label="Acciones" class="actions"><a class="button" [routerLink]="['/purchases', purchase.id]">Ver</a>
+        @if (canUpdate && purchase.status === 'DRAFT') { <a class="button" [routerLink]="['/purchases', purchase.id, 'edit']">Editar</a> }
+      </td></tr>
+  } @empty { <tr><td class="empty" [attr.colspan]="canReadCosts ? 7 : 6">{{ loading() ? 'Cargando…' : 'Sin compras' }}</td></tr> }</tbody>
+</table>@if (nextToken()) { <button class="more" type="button" [disabled]="loading()" (click)="load()">Cargar más</button> }</section></div>

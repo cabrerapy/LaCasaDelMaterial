@@ -48,6 +48,26 @@ export const routes: Routes = [
       import('./features/suppliers/suppliers.component').then((module) => module.SuppliersComponent)
   },
   {
+    path: 'purchases/new', canActivate: [authGuard, permissionGuard],
+    data: { permission: 'purchases.create' },
+    loadComponent: () => import('./features/purchases/purchase-detail.component').then((module) => module.PurchaseDetailComponent)
+  },
+  {
+    path: 'purchases/:id/edit', canActivate: [authGuard, permissionGuard],
+    data: { permission: 'purchases.update' },
+    loadComponent: () => import('./features/purchases/purchase-detail.component').then((module) => module.PurchaseDetailComponent)
+  },
+  {
+    path: 'purchases/:id', canActivate: [authGuard, permissionGuard],
+    data: { permission: 'purchases.read' },
+    loadComponent: () => import('./features/purchases/purchase-detail.component').then((module) => module.PurchaseDetailComponent)
+  },
+  {
+    path: 'purchases', canActivate: [authGuard, permissionGuard],
+    data: { permission: 'purchases.read' },
+    loadComponent: () => import('./features/purchases/purchases.component').then((module) => module.PurchasesComponent)
+  },
+  {
     path: 'forbidden',
     canActivate: [authGuard],
     loadComponent: () =>

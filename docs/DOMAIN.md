@@ -35,3 +35,9 @@ Las cantidades persistidas son enteros escalados: `internalQuantity = displayQua
 ## Suppliers
 
 `Supplier` conserva razón social, nombre comercial, RUC opcional, contacto, dirección, observaciones, estado lógico y auditoría. El RUC se normaliza y, cuando existe, es único. Los proveedores se desactivan sin borrarse; aquellos con compras históricas nunca se eliminarán y los inactivos no podrán seleccionarse para nuevas compras cuando se implemente LCM-007.
+
+## Purchases
+
+`Purchase` representa un documento comercial con estados `DRAFT`, `CONFIRMED`, `PARTIALLY_RECEIVED`, `RECEIVED` y `CANCELLED`; LCM-007 solo genera borradores, confirmaciones y cancelaciones. `PurchaseItem` guarda cantidad de presentaciones, cantidad base interna, precio unitario entero y subtotal calculado por backend.
+
+Al confirmar se guardan `SupplierSnapshot`, `ProductSnapshot` y `PresentationSnapshot`, además de totales y auditoría definitiva. Una compra `CONFIRMED` no equivale a mercadería recibida: no crea stock, recepción, lote ni `InventoryMovement`. La entrada física comenzará en LCM-008.
