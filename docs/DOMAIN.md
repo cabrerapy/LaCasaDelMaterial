@@ -26,6 +26,12 @@ Confirmar una recepción crea, en una transacción, sus lotes, un movimiento PUR
 
 Los comandos explícitos de mantenimiento están descritos en [INVENTORY.md](INVENTORY.md). No se ejecutan al iniciar. No hay ajustes manuales, consumo de lotes, FIFO ni stock reservado.
 
+## Stock queries (LCM-010)
+
+El stock operativo proviene exclusivamente de `InventoryBalance.onHandInternal`; el ledger continúa siendo la fuente histórica. El estado es derivado: `NOT_TRACKED` cuando el producto no controla stock, `OUT_OF_STOCK` para saldo menor o igual a cero, `LOW_STOCK` para saldo positivo menor o igual al mínimo y `OK` por encima del mínimo.
+
+La ausencia de balance equivale a cero para un producto controlado y no es inconsistencia. Los saldos negativos se muestran y se reportan en la verificación. La disponibilidad actual equivale al saldo disponible; cuando existan reservas será `onHand - reserved`. No existe valorización, FIFO, consumo de lotes ni mutación de stock desde las consultas.
+
 ## Categories
 
 LCM-004 administra categorías ordenables con nombre y slug únicos, descripción opcional, estado activo/inactivo y auditoría básica. La asociación con productos se implementará posteriormente.

@@ -99,6 +99,27 @@ export class DynamoDbProductRepository implements ProductRepository {
     return [...new Set((result.Items ?? []).map((item) => item['productId']).filter((id): id is string => typeof id === 'string'))].slice(0, 20);
   }
   async create(product: Product, presentations: readonly ProductPresentation[]): Promise<void> {
+    return this.createProduct(product, presentations);
+  }
+  async presentationsForProducts(ids: readonly string[]): Promise<readonly ProductPresentation[]> {
+    if (!ids.length) return [];
+    const items: ProductPresentation[] = [];
+    let key: Record<string, unknown> | undefined;
+    const values: Record<string, unknown> = { ':type': presentationType };
+    const placeholders = [...new Set(ids)].map((id, index) => { values[`:id${index}`] = id; return `:id${index}`; });
+    do {
+      const page = await this.client.send(new ScanCommand({
+        TableName: this.tableName, Limit: 100,
+        FilterExpression: '#type = :type AND productId IN (' + placeholders.join(',') + ')',
+        ExpressionAttributeNames: { '#type': 'entityType' }, ExpressionAttributeValues: values,
+        ...(key ? { ExclusiveStartKey: key } : {})
+      }));
+      items.push(...(page.Items ?? []).map(toPresentation).filter((item): item is ProductPresentation => item !== null));
+      key = page.LastEvaluatedKey;
+    } while (key);
+    return items.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+  }
+  private async createProduct(product: Product, presentations: readonly ProductPresentation[]): Promise<void> {
     const items: NonNullable<TransactWriteCommandInput['TransactItems']> = [
       putUnique(toProductItem(product)), putUnique(lockItem(codeKey(product.code), 'PRODUCT_CODE', { productId: product.id })),
       putUnique(lockItem(nameKey(product.normalizedName), 'PRODUCT_NAME', { productId: product.id }))
@@ -217,7 +238,7 @@ function encodeToken(key: Record<string, unknown>): string {
 function decodeToken(token: string): Record<string, unknown> {
   try {
     const value: unknown = JSON.parse(Buffer.from(token, 'base64url').toString('utf8'));
-    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error();
+    if (!value || typeof value !== 'object' || Array.isArray(value) || typeof (value as Record<string, unknown>)['pk'] !== 'string') throw new Error();
     return value as Record<string, unknown>;
-  } catch { throw new Error('Invalid pagination token'); }
+  } catch { throw Object.assign(new Error('Cursor inválido'), { statusCode: 400 }); }
 }

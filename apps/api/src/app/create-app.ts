@@ -30,6 +30,9 @@ import { ReceivingService } from '../modules/receiving/application/receiving.ser
 import { receivingRoutes } from '../modules/receiving/http/receiving.routes.js';
 import { lotsRoutes } from '../modules/receiving/http/lots.routes.js';
 import { purchaseReceivingRoutes } from '../modules/receiving/http/purchase-receiving.routes.js';
+import type { CustomerRepository } from '../modules/customers/domain/customer.repository.js';
+import { CustomersService } from '../modules/customers/application/customers.service.js';
+import { customersRoutes } from '../modules/customers/http/customers.routes.js';
 
 export interface AppDependencies {
   readonly users: UserRepository;
@@ -41,6 +44,7 @@ export interface AppDependencies {
   readonly purchases: PurchaseRepository;
   readonly receiving: ReceivingRepository;
   readonly inventory: InventoryRepository;
+  readonly customers: CustomerRepository;
 }
 
 export async function createApp(
@@ -86,6 +90,8 @@ export async function createApp(
     authService,
     suppliersService: new SuppliersService(dependencies.suppliers)
   });
+  await app.register(customersRoutes, { prefix: '/api/customers', authService,
+    service: new CustomersService(dependencies.customers) });
   await app.register(purchasesRoutes, {
     prefix: '/api/purchases',
     authService,
@@ -94,6 +100,8 @@ export async function createApp(
     )
   });
   const inventory = new InventoryService(dependencies.inventory);
+  await app.register(stockRoutes, { prefix: '/api/inventory', authService,
+    stock: new StockService(dependencies.products, dependencies.categories, dependencies.inventory) });
   const receivingService = new ReceivingService(dependencies.receiving, dependencies.purchases, inventory);
   await app.register(inventoryRoutes, { prefix: '/api/inventory', authService, inventory });
   await app.register(purchaseReceivingRoutes, { prefix: '/api/purchases', authService, service: receivingService });
@@ -102,3 +110,5 @@ export async function createApp(
 
   return app;
 }
+import { StockService } from '../modules/inventory/application/stock.service.js';
+import { stockRoutes } from '../modules/inventory/http/stock.routes.js';

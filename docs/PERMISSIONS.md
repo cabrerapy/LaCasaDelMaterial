@@ -1,6 +1,8 @@
 # Roles y permisos
 
-LCM-009: ADMIN, MANAGER y PURCHASING tienen `inventory.movements.read` e `inventory.costs.read`; WAREHOUSE solo lectura de movimientos. CASHIER conserva `inventory.read`, pero no consulta ledger ni costos. LOGISTICS y DRIVER no acceden. API lista/detalle omite `costGuarani` sin permiso. No hay endpoints de creación, edición ni eliminación de movimientos, ni ajustes manuales.
+LCM-010: ADMIN, MANAGER, PURCHASING, WAREHOUSE, CASHIER y LOGISTICS consultan stock con `inventory.read`; DRIVER no accede. Solo los roles con `inventory.movements.read` reciben historial reciente y solo `inventory.costs.read` habilita sus costos históricos. CASHIER y LOGISTICS consultan disponibilidad sin ledger ni costos. Las consultas de stock no permiten mutaciones.
+
+LCM-009: ADMIN, MANAGER y PURCHASING tienen `inventory.movements.read` e `inventory.costs.read`; WAREHOUSE solo lectura de movimientos. API lista/detalle omite `costGuarani` sin permiso. No hay endpoints de creación, edición ni eliminación de movimientos, ni ajustes manuales.
 
 La fuente de verdad ejecutable es `ROLE_PERMISSIONS` en `@lcm/contracts`. Los roles son fijos.
 

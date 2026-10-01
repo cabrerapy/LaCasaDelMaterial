@@ -19,6 +19,9 @@ export class DynamoDbInventoryRepository implements InventoryRepository {
     const result = await this.client.send(new GetCommand({ TableName: this.tableName, Key: { pk: `BALANCE#${productId}` }, ConsistentRead: true }));
     return result.Item ? balanceFromRecord(result.Item) : null;
   }
+  async getBalances(ids: readonly string[]): Promise<readonly InventoryBalance[]> {
+    return (await batchRead(this.client, this.tableName, ids.map((id) => `BALANCE#${id}`))).map(balanceFromRecord);
+  }
   private async read<T>(pk: string): Promise<T | null> {
     const result = await this.client.send(new GetCommand({ TableName: this.tableName, Key: { pk }, ConsistentRead: true }));
     return result.Item ? result.Item['data'] as T : null;
@@ -97,3 +100,4 @@ export class DynamoDbInventoryRepository implements InventoryRepository {
 function balanceFromRecord(item: Record<string, unknown>): InventoryBalance {
   return { productId: item['productId'] as string, onHandInternal: item['onHandInternal'] as number, version: item['version'] as number, updatedAt: item['updatedAt'] as string };
 }
+import { batchRead } from '../../../infrastructure/dynamodb/batch-read.js';

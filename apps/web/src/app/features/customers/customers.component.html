@@ -1,0 +1,45 @@
+<div class="page">
+  <header><div><a routerLink="/dashboard">← Dashboard</a><p class="eyebrow">Comercial</p><h1>Clientes</h1></div>
+    @if (canCreate) { <button class="primary" type="button" (click)="openCreate()">Nuevo cliente</button> }
+  </header>
+  <section class="toolbar" aria-label="Filtros de clientes">
+    <label>Buscar cliente<input [formControl]="search" type="search" placeholder="Nombre, empresa, CI, RUC o teléfono"></label>
+    <label>Tipo<select [formControl]="typeFilter"><option value="ALL">Todos</option><option value="PERSON">Persona</option><option value="COMPANY">Empresa</option></select></label>
+    <label>Estado<select [formControl]="statusFilter"><option value="ACTIVE">Activos</option><option value="INACTIVE">Inactivos</option><option value="ALL">Todos</option></select></label>
+  </section>
+  @if (success()) { <p class="feedback success" role="status">{{ success() }}</p> }
+  @if (error()) { <p class="feedback error" role="alert">{{ error() }}</p> }
+  <section class="list-card" aria-label="Listado de clientes"><table>
+    <thead><tr><th>Cliente</th><th>Documento</th><th>RUC</th><th>Teléfono</th><th>Ciudad</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>@for (c of items(); track c.id) {
+      <tr [class.inactive]="c.status === 'INACTIVE'"><td data-label="Cliente"><strong>{{ c.displayName }}</strong></td>
+        <td data-label="Documento">{{ c.documentType && c.documentNumber ? c.documentType + ' ' + c.documentNumber : '—' }}</td>
+        <td data-label="RUC">{{ c.taxId || '—' }}</td><td data-label="Teléfono">{{ c.phone || '—' }}</td><td data-label="Ciudad">{{ c.city || '—' }}</td>
+        <td data-label="Tipo">{{ c.type === 'PERSON' ? 'Persona' : 'Empresa' }}</td>
+        <td data-label="Estado"><span class="status" [class.off]="c.status === 'INACTIVE'">{{ c.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</span></td>
+        <td data-label="Acciones" class="actions">@if (canUpdate) { <button type="button" (click)="openEdit(c)">Editar</button> }
+          @if (canDisable) { <button type="button" (click)="requestStatus(c)">{{ c.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }}</button> }</td>
+      </tr>
+    } @empty { <tr><td colspan="8" class="empty">{{ loading() ? 'Cargando…' : 'Sin clientes' }}</td></tr> }</tbody>
+  </table>@if (nextToken()) { <button class="more" type="button" [disabled]="loading()" (click)="load()">Cargar más</button> }</section>
+</div>
+@if (mode()) {
+  <div class="backdrop" role="presentation" (click)="close()"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="customer-title" (click)="$event.stopPropagation()">
+    <h2 id="customer-title">{{ mode() === 'create' ? 'Nuevo cliente' : 'Editar cliente' }}</h2><form [formGroup]="form" (ngSubmit)="save()"><div class="form-grid">
+      <label>Tipo *<select formControlName="type" [attr.disabled]="mode() === 'edit' ? '' : null"><option value="PERSON">Persona</option><option value="COMPANY">Empresa</option></select></label>
+      @if (form.controls.type.value === 'PERSON') { <label>Nombre *<input formControlName="firstName"></label><label>Apellido<input formControlName="lastName"></label> }
+      @else { <label class="wide">Razón social *<input formControlName="businessName"></label> }
+      <label>Tipo documento<select formControlName="documentType"><option value="">Sin documento</option><option value="CI">Cédula</option><option value="RUC">RUC</option><option value="PASSPORT">Pasaporte</option><option value="OTHER">Otro</option></select></label>
+      <label>Documento<input formControlName="documentNumber"></label><label>RUC<input formControlName="taxId"></label>
+      <label>Teléfono<input formControlName="phone"></label><label>Email<input type="email" formControlName="email"></label><label>Ciudad<input formControlName="city"></label>
+      <label class="wide">Dirección<input formControlName="address"></label><label class="wide">Observaciones<textarea rows="3" formControlName="notes"></textarea></label>
+    </div><div class="modal-actions"><button type="button" (click)="close()">Cancelar</button><button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</button></div></form>
+  </section></div>
+}
+@if (statusTarget(); as c) {
+  <div class="backdrop"><section class="confirm" role="alertdialog" aria-modal="true"><h2>{{ c.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }} cliente</h2>
+    <p>¿Deseas {{ c.status === 'ACTIVE' ? 'desactivar' : 'activar' }} <strong>{{ c.displayName }}</strong>?</p>
+    @if (c.status === 'ACTIVE') { <p class="muted">Continuará en el histórico, pero no podrá seleccionarse para nuevas ventas.</p> }
+    <div class="modal-actions"><button type="button" (click)="cancelStatus()">Cancelar</button><button class="primary" type="button" (click)="confirmStatus()">Confirmar</button></div>
+  </section></div>
+}

@@ -15,6 +15,7 @@ export interface CategoryPage {
 
 export interface CategoryRepository {
   findById(id: string): Promise<ProductCategory | null>;
+  findByIds(ids: readonly string[]): Promise<readonly ProductCategory[]>;
   findBySlug(slug: string): Promise<ProductCategory | null>;
   list(options: CategoryListOptions): Promise<CategoryPage>;
   create(category: ProductCategory): Promise<void>;

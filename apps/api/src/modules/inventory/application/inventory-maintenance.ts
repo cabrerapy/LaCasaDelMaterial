@@ -5,7 +5,7 @@ import { InventoryService } from './inventory.service.js';
 
 export class InventoryMaintenance {
   private readonly service: InventoryService;
-  constructor(private readonly inventory: InventoryRepository, private readonly receiving: ReceivingRepository) {
+  constructor(private readonly inventory: InventoryRepository, private readonly receiving: ReceivingRepository, private readonly products?: ProductRepository) {
     this.service = new InventoryService(inventory);
   }
   async backfill(): Promise<{ created: number; skipped: number; issues: readonly string[] }> {
@@ -61,6 +61,10 @@ export class InventoryMaintenance {
         || !source.receipts.some((receipt) => receipt.id === lot.receiptId && receipt.status === 'CONFIRMED')) issues.push(`Lote huérfano ${lot.id}`);
     }
     const ids = new Set([...totals.keys(), ...balances.map((item) => item.productId), ...before.map((item) => item.productId)]);
+    for (const balance of balances) {
+      if (balance.onHandInternal < 0) issues.push(`Saldo negativo para producto ${balance.productId}: ${balance.onHandInternal}`);
+      if (this.products && !await this.products.findById(balance.productId)) issues.push(`Balance huérfano: producto ${balance.productId} inexistente`);
+    }
     for (const id of ids) {
       const balance = balances.find((item) => item.productId === id); const old = before.find((item) => item.productId === id);
       if (balance?.version !== old?.version) { issues.push(`Producto ${id}: cambió durante la verificación; repetir en reposo`); continue; }
@@ -69,3 +73,4 @@ export class InventoryMaintenance {
     return issues;
   }
 }
+import type { ProductRepository } from '../../products/domain/product.repository.js';

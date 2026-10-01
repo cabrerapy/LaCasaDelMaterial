@@ -14,6 +14,7 @@ export interface InventoryRepository {
   bySource(receiptId: string, lineId: string): Promise<InventoryMovement | null>;
   list(filters: InventoryMovementFilters): Promise<InventoryPage>;
   getBalance(productId: string): Promise<InventoryBalance | null>;
+  getBalances(ids: readonly string[]): Promise<readonly InventoryBalance[]>;
   append(movements: readonly InventoryMovement[]): Promise<void>;
   allMovements(): Promise<readonly InventoryMovement[]>;
   allBalances(): Promise<readonly InventoryBalance[]>;

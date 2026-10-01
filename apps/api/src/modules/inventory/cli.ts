@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   const document = DynamoDBDocumentClient.from(client);
   const inventory = new DynamoDbInventoryRepository(document, config.inventoryTableName);
   const receipts = new DynamoDbReceivingRepository(document, config.purchasesTableName, inventory);
-  const maintenance = new InventoryMaintenance(inventory, receipts);
+  const maintenance = new InventoryMaintenance(inventory, receipts, new DynamoDbProductRepository(document, config.productsTableName));
   const action = process.argv[2];
   try {
     if (action === 'backfill' || action === 'rebuild') await ensureInventoryTable(client, config.inventoryTableName);
@@ -26,3 +26,4 @@ async function main(): Promise<void> {
   } finally { client.destroy(); }
 }
 void main().catch((error: unknown) => { console.error(error instanceof Error ? error.message : 'Error de inventario'); process.exitCode = 1; });
+import { DynamoDbProductRepository } from '../products/infrastructure/dynamodb-product.repository.js';

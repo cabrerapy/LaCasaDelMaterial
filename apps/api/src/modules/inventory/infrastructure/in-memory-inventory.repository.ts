@@ -10,6 +10,7 @@ export class InMemoryInventoryRepository implements InventoryRepository {
   async byNumber(number: string) { return [...this.movements.values()].find((item) => item.movementNumber === number) ?? null; }
   async bySource(receiptId: string, lineId: string) { return this.movements.get(this.sources.get(sourceKey(receiptId, lineId)) ?? '') ?? null; }
   async getBalance(productId: string) { return this.balances.get(productId) ?? null; }
+  async getBalances(ids: readonly string[]) { return [...this.balances.values()].filter((item) => ids.includes(item.productId)); }
   async allMovements() { return [...this.movements.values()]; }
   async allBalances() { return [...this.balances.values()]; }
   async list(filters: InventoryMovementFilters) {

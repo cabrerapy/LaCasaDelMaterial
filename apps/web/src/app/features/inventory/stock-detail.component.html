@@ -1,0 +1,35 @@
+<main class="page"><a routerLink="/inventory">← Stock</a>
+@if (loading()) { <p role="status">Consultando producto…</p> }
+@if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+@if (item(); as product) {
+<header><div><p class="eyebrow">Inventario · Detalle</p><h1>{{ product.name }}</h1><p>{{ product.code }} · {{ product.category.name }}</p></div><span class="badge" [attr.data-status]="product.stockStatus">{{ labels[product.stockStatus] }}</span></header>
+<section class="card detail" aria-label="Disponibilidad">
+<div><span>Stock actual</span><strong>{{ current(product) }}</strong></div>
+<div><span>Stock mínimo</span><strong>{{ product.trackStock ? quantity(product.minStockInternal, product.quantityScale, product.baseUnit) : 'No aplica' }}</strong></div>
+<div><span>Faltante hasta mínimo</span><strong>{{ product.trackStock ? quantity(product.shortageInternal, product.quantityScale, product.baseUnit) : 'No aplica' }}</strong></div>
+<div><span>Estado del producto</span><strong>{{ product.productStatus === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</strong></div></section>
+<section class="card"><h2>Presentaciones activas</h2><ul class="presentation-list">
+@for (presentation of product.presentations; track presentation.id) {
+<li><strong>{{ presentation.name }}</strong> · {{ quantity(presentation.baseQuantityInternal, product.quantityScale, product.baseUnit) }}
+@if (presentation.isDefault) { <small> · Predeterminada</small> }
+@if (presentation.sku) { <small> · SKU {{ presentation.sku }}</small> }</li>
+} @empty { <li>Sin presentaciones activas.</li> }
+</ul><p class="muted">Equivalencias informativas; el stock se conserva en la unidad base.</p></section>
+@if (permissions.has('inventory.movements.read')) {
+<section class="card"><h2>Últimos movimientos</h2>
+@if (product.lastReceipt; as receipt) { <p>Última recepción conocida:
+@if (permissions.has('receipts.read')) { <a [routerLink]="['/purchase-receipts', receipt.id]">{{ receipt.referenceNumber }}</a> } @else { {{ receipt.referenceNumber }} }
+</p> }
+<div class="history">
+@for (movement of product.recentMovements; track movement.id) {
+<article><p>{{ movement.occurredAt | date:'dd/MM/yyyy':'UTC' }} · {{ movementLabels[movement.type] }} · <strong>{{ movementQuantity(movement) }}</strong></p>
+<p class="history-links"><a [routerLink]="['/inventory/movements', movement.id]">{{ movement.movementNumber }}</a>
+@if (permissions.has('lots.read')) { <a [routerLink]="['/lots', movement.lotId]">{{ movement.lotNumber }}</a> } @else { <span>{{ movement.lotNumber }}</span> }
+<span>{{ movement.referenceNumber }}</span></p><p class="identifier">Usuario: {{ movement.createdBy }}</p>
+@if (permissions.has('inventory.costs.read') && movement.costGuarani !== undefined) { <p>Costo histórico: {{ movement.costGuarani | guarani }}</p> }
+</article>
+} @empty { <p>Sin movimientos registrados</p> }
+</div><p class="muted">Hasta 10 movimientos recientes. Los costos históricos no son una valorización actual.</p></section>
+} @else { <p class="muted">El historial requiere permiso de lectura de movimientos.</p> }
+<p class="muted">Consulta de solo lectura. No modifica existencias.</p>
+}</main>

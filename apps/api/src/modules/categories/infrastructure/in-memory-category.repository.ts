@@ -8,6 +8,7 @@ import type { ProductCategory } from '../domain/product-category.js';
 
 export class InMemoryCategoryRepository implements CategoryRepository {
   private readonly categories = new Map<string, ProductCategory>();
+  async findByIds(ids: readonly string[]) { return [...this.categories.values()].filter((item) => ids.includes(item.id)); }
 
   async findById(id: string): Promise<ProductCategory | null> {
     return this.categories.get(id) ?? null;

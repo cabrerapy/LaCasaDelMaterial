@@ -31,6 +31,12 @@ export class DynamoDbCategoryRepository implements CategoryRepository {
   }
 
   async findBySlug(slug: string): Promise<ProductCategory | null> {
+    return this.findSlug(slug);
+  }
+  async findByIds(ids: readonly string[]): Promise<readonly ProductCategory[]> {
+    return (await batchRead(this.client, this.tableName, ids.map(categoryKey))).map(toCategory).filter((item): item is ProductCategory => item !== null);
+  }
+  private async findSlug(slug: string): Promise<ProductCategory | null> {
     const lock = await this.client.send(new GetCommand({
       TableName: this.tableName,
       Key: { pk: slugKey(slug) }
@@ -165,3 +171,4 @@ function decodeToken(token: string): Record<string, unknown> {
     throw new Error('Invalid pagination token');
   }
 }
+import { batchRead } from '../../../infrastructure/dynamodb/batch-read.js';

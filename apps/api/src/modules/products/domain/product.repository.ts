@@ -19,6 +19,7 @@ export interface ProductRepository {
   findByCode(code: string): Promise<Product | null>;
   list(options: ProductListOptions): Promise<ProductPage>;
   listPresentations(productId: string): Promise<readonly ProductPresentation[]>;
+  presentationsForProducts(ids: readonly string[]): Promise<readonly ProductPresentation[]>;
   findPresentationById(productId: string, id: string): Promise<ProductPresentation | null>;
   findPresentationBySku(sku: string): Promise<ProductPresentation | null>;
   findPresentationByBarcode(barcode: string): Promise<ProductPresentation | null>;

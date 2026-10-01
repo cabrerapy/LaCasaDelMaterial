@@ -12,6 +12,12 @@ Las líneas usadas al confirmar se leen mediante Scan fuerte en páginas de 100 
 
 Mantenimiento recorre páginas fuertes de 100, sin índices eventuales. Rebuild toma versión antes de recorrer el ledger y aplica CAS al final: si hubo entradas concurrentes reintenta, sin perder incrementos. Verify informa cambios concurrentes para repetir en reposo.
 
+## Consultas de stock LCM-010
+
+El listado pagina primero el catálogo con sus filtros existentes (estado, categoría y búsqueda por código/nombre/SKU/barcode). Por cada página obtiene balances y categorías mediante `BatchGet` fuerte, reintentando claves no procesadas, y presentaciones de los productos del conjunto en un recorrido acotado. Esto evita consultas individuales de saldo/categoría. La última actividad usa el índice `MovementProductIndex` con límite uno y concurrencia máxima de cinco; es el único enriquecimiento por producto y queda como candidato a snapshot denormalizado si el volumen lo exige.
+
+Los filtros derivados `stockStatus` y `trackStock`, y el orden visual, se aplican dentro de la página del catálogo; por ello puede existir una página vacía con cursor siguiente. No se agregó un GSI para estados derivados. El resumen recorre productos activos en páginas de 100 y obtiene sus balances por lote. El detalle consulta un producto, su balance fuerte, presentaciones y hasta diez movimientos recientes por el índice de producto.
+
 Antes de definir tablas o índices DynamoDB se detallarán volumen, orden, filtros y consistencia de cada patrón.
 
 - Obtener usuario por ID para resolver una sesión autenticada.

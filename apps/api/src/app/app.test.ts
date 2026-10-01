@@ -17,6 +17,7 @@ import { toDisplayQuantity, toInternalQuantity } from '../modules/products/domai
 import { InMemorySupplierRepository } from '../modules/suppliers/infrastructure/in-memory-supplier.repository.js';
 import { InMemoryPurchaseRepository } from '../modules/purchases/infrastructure/in-memory-purchase.repository.js';
 import { InMemoryReceivingRepository } from '../modules/receiving/infrastructure/in-memory-receiving.repository.js';
+import { InMemoryCustomerRepository } from '../modules/customers/infrastructure/in-memory-customer.repository.js';
 
 const adminPassword = 'LocalTestPassword123!';
 const jwtSecret = 'test-secret-with-at-least-thirty-two-characters';
@@ -27,6 +28,7 @@ let products: InMemoryProductRepository;
 let suppliers: InMemorySupplierRepository;
 let purchases: InMemoryPurchaseRepository;
 let inventory: InMemoryInventoryRepository;
+let customers: InMemoryCustomerRepository;
 
 before(async () => {
   users = new InMemoryUserRepository();
@@ -35,6 +37,7 @@ before(async () => {
   suppliers = new InMemorySupplierRepository();
   purchases = new InMemoryPurchaseRepository();
   inventory = new InMemoryInventoryRepository();
+  customers = new InMemoryCustomerRepository();
   const now = new Date().toISOString();
   await users.create({
     id: 'b052fa5e-e405-4460-82c8-6887137c885a',
@@ -107,7 +110,7 @@ before(async () => {
     products,
     suppliers,
     purchases,
-    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory,
+    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory, customers,
     passwordHasher: new Argon2PasswordHasher(),
     authentication: new LocalJwtAuthentication(config.jwtSecret, config.jwtExpiresIn)
   });
@@ -875,6 +878,71 @@ test('inventory HTTP is read-only and costs require inventory.costs.read', async
   for (const balance of await inventory.allBalances()) {
     assert.equal(balance.onHandInternal, ledger.filter((item) => item.productId === balance.productId).reduce((sum, item) => sum + item.quantityDeltaInternal, 0));
   }
+});
+
+test('stock HTTP exposes operational quantities with role-safe recent movements', async () => {
+  const managerHeaders = await authorizationHeader('manager');
+  const listing = await app.inject({ method: 'GET', url: '/api/inventory/stock?productStatus=ACTIVE&sort=code&pageSize=10', headers: managerHeaders });
+  assert.equal(listing.statusCode, 200); assert.ok(listing.json().items.length > 0);
+  const arena = listing.json().items.find((item: { productId: string }) => item.productId === arenaProductId);
+  assert.equal(arena.onHandInternal, 6500); assert.equal(arena.quantityScale, 1000);
+  assert.equal(typeof arena.stockStatus, 'string'); assert.equal('costGuarani' in arena, false);
+  const summary = await app.inject({ method: 'GET', url: '/api/inventory/summary', headers: await authorizationHeader('cashier') });
+  assert.equal(summary.statusCode, 200); assert.equal(typeof summary.json().totalTrackedProducts, 'number');
+  const cashier = await app.inject({ method: 'GET', url: `/api/inventory/stock/${arenaProductId}`, headers: await authorizationHeader('cashier') });
+  assert.equal(cashier.statusCode, 200); assert.deepEqual(cashier.json().recentMovements, []); assert.equal(cashier.body.includes('costGuarani'), false);
+  const warehouse = await app.inject({ method: 'GET', url: `/api/inventory/stock/${arenaProductId}`, headers: await authorizationHeader('warehouse') });
+  assert.ok(warehouse.json().recentMovements.length > 0); assert.equal(warehouse.body.includes('costGuarani'), false);
+  const manager = await app.inject({ method: 'GET', url: `/api/inventory/stock/${arenaProductId}`, headers: managerHeaders });
+  assert.equal(manager.body.includes('costGuarani'), true);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/inventory/stock' })).statusCode, 401);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/inventory/stock', headers: await authorizationHeader('driver') })).statusCode, 403);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/inventory/stock?stockStatus=INVALID', headers: managerHeaders })).statusCode, 400);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/inventory/stock', headers: managerHeaders })).statusCode, 404);
+});
+
+test('customers support person/company, uniqueness, search, audit and permissions', async () => {
+  const admin = await authorizationHeader('admin'); const cashier = await authorizationHeader('cashier');
+  assert.equal((await app.inject({ method: 'GET', url: '/api/customers' })).statusCode, 401);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/customers', headers: await authorizationHeader('purchasing') })).statusCode, 403);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/customers', headers: cashier })).statusCode, 200);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/customers', headers: cashier, payload: { type: 'PERSON' } })).statusCode, 400);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/customers', headers: admin, payload: { type: 'COMPANY' } })).statusCode, 400);
+  const person = await app.inject({ method: 'POST', url: '/api/customers', headers: cashier, payload: {
+    type: 'PERSON', firstName: ' Juan ', lastName: ' Pérez ', documentType: 'CI', documentNumber: ' 123 4567 ',
+    phone: '0981 123456', email: 'JUAN@example.com', city: 'Limpio'
+  } });
+  assert.equal(person.statusCode, 201); assert.equal(person.json().displayName, 'Juan Pérez');
+  const storedPerson = await customers.findById(person.json().id); assert.equal(storedPerson?.createdBy, '50f4b568-e60a-4381-a7c3-c6d635c1b767');
+  const company = await app.inject({ method: 'POST', url: '/api/customers', headers: admin, payload: {
+    type: 'COMPANY', businessName: 'Constructora ABC S.A.', documentType: 'RUC', documentNumber: '80012345-6',
+    taxId: '80012345-6', phone: '021 123456', city: 'Asunción'
+  } });
+  assert.equal(company.statusCode, 201); assert.equal(company.json().displayName, 'Constructora ABC S.A.');
+  assert.equal((await app.inject({ method: 'POST', url: '/api/customers', headers: admin, payload: {
+    type: 'PERSON', firstName: 'Duplicado', documentType: 'CI', documentNumber: '1234567'
+  } })).statusCode, 409);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/customers', headers: admin, payload: {
+    type: 'COMPANY', businessName: 'Duplicada', taxId: '80012345-6'
+  } })).statusCode, 409);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/customers', headers: admin, payload: {
+    type: 'PERSON', firstName: 'Sin documento'
+  } })).statusCode, 201);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/customers', headers: admin, payload: {
+    type: 'PERSON', firstName: 'Email', email: 'invalido'
+  } })).statusCode, 400);
+  for (const search of ['Juan', '123 4567', '0981 123456']) {
+    const found = await app.inject({ method: 'GET', url: `/api/customers?search=${encodeURIComponent(search)}`, headers: admin });
+    assert.equal(found.json().items.some((item: { id: string }) => item.id === person.json().id), true);
+  }
+  const updated = await app.inject({ method: 'PATCH', url: `/api/customers/${person.json().id}`, headers: cashier, payload: { city: 'San Lorenzo' } });
+  assert.equal(updated.statusCode, 200); assert.equal(updated.json().city, 'San Lorenzo');
+  assert.equal((await app.inject({ method: 'PATCH', url: `/api/customers/${person.json().id}`, headers: cashier, payload: { type: 'COMPANY' } })).statusCode, 400);
+  assert.equal((await app.inject({ method: 'PATCH', url: `/api/customers/${person.json().id}/status`, headers: cashier, payload: { status: 'INACTIVE' } })).statusCode, 403);
+  const disabled = await app.inject({ method: 'PATCH', url: `/api/customers/${person.json().id}/status`, headers: admin, payload: { status: 'INACTIVE' } });
+  assert.equal(disabled.json().status, 'INACTIVE');
+  const enabled = await app.inject({ method: 'PATCH', url: `/api/customers/${person.json().id}/status`, headers: admin, payload: { status: 'ACTIVE' } });
+  assert.equal(enabled.json().status, 'ACTIVE');
 });
 
 async function authorizationHeader(username: string): Promise<{ authorization: string }> {

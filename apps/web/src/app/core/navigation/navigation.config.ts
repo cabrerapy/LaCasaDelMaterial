@@ -13,7 +13,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { label: 'Compras', route: '/purchases', icon: '▣', requiredPermission: 'purchases.read' },
   { label: 'Recepciones', route: '/purchase-receipts', icon: '▤', requiredPermission: 'receipts.read' },
   { label: 'Lotes', route: '/lots', icon: '▧', requiredPermission: 'lots.read' },
-  { label: 'Inventario', route: '/inventory', icon: '◈', requiredPermission: 'inventory.read' },
+  { label: 'Inventario · Stock', route: '/inventory', icon: '◈', requiredPermission: 'inventory.read' },
   { label: 'Inventario · Movimientos', route: '/inventory/movements', icon: '≡', requiredPermission: 'inventory.movements.read' },
   { label: 'Categorías', route: '/categories', icon: '◌', requiredPermission: 'categories.read' },
   { label: 'Productos', route: '/products', icon: '◇', requiredPermission: 'products.read' },

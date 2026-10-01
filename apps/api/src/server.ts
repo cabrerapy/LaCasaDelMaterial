@@ -18,6 +18,8 @@ import { DynamoDbSupplierRepository } from './modules/suppliers/infrastructure/d
 import { ensurePurchasesTable } from './infrastructure/dynamodb/purchases-table.js';
 import { DynamoDbPurchaseRepository } from './modules/purchases/infrastructure/dynamodb-purchase.repository.js';
 import { DynamoDbReceivingRepository } from './modules/receiving/infrastructure/dynamodb-receiving.repository.js';
+import { ensureCustomersTable } from './infrastructure/dynamodb/customers-table.js';
+import { DynamoDbCustomerRepository } from './modules/customers/infrastructure/dynamodb-customer.repository.js';
 
 async function start(): Promise<void> {
   const config = loadConfig();
@@ -35,8 +37,9 @@ async function start(): Promise<void> {
   const purchases = new DynamoDbPurchaseRepository(documentClient, config.purchasesTableName);
   const inventory = new DynamoDbInventoryRepository(documentClient, config.inventoryTableName);
   const receiving = new DynamoDbReceivingRepository(documentClient, config.purchasesTableName, inventory);
+  const customers = new DynamoDbCustomerRepository(documentClient, config.customersTableName);
   const app = await createApp(config, {
-    users, passwordHasher, authentication, categories, products, suppliers, purchases, receiving, inventory
+    users, passwordHasher, authentication, categories, products, suppliers, purchases, receiving, inventory, customers
   });
 
   await ensureUsersTable(dynamoDb, config.usersTableName);
@@ -45,6 +48,7 @@ async function start(): Promise<void> {
   await ensureSuppliersTable(dynamoDb, config.suppliersTableName);
   await ensurePurchasesTable(dynamoDb, config.purchasesTableName);
   await ensureInventoryTable(dynamoDb, config.inventoryTableName);
+  await ensureCustomersTable(dynamoDb, config.customersTableName);
   await bootstrapAdmin(users, passwordHasher, config.initialAdminPassword, app.log);
 
   const shutdown = async (): Promise<void> => {

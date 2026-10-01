@@ -25,8 +25,12 @@ export class InMemoryProductRepository implements ProductRepository {
       .filter((item) => item.productId === productId)
       .sort((left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name));
   }
+  async presentationsForProducts(ids: readonly string[]) {
+    return [...this.presentations.values()].filter((item) => ids.includes(item.productId)).sort((a, b) => a.sortOrder - b.sortOrder);
+  }
   async list(options: ProductListOptions): Promise<ProductPage> {
     const start = options.nextToken ? Number(options.nextToken) : 0;
+    if (!Number.isSafeInteger(start) || start < 0) throw Object.assign(new Error('Cursor inválido'), { statusCode: 400 });
     const search = options.search?.toLocaleLowerCase('es');
     const matches = async (product: Product): Promise<boolean> => {
       if (!search) return true;

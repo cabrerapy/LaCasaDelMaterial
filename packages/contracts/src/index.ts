@@ -41,7 +41,7 @@ export const PERMISSIONS = [
   'lots.read', 'lots.costs.read',
   'inventory.read', 'inventory.receive', 'inventory.movements.read', 'inventory.adjust',
   'inventory.costs.read',
-  'customers.read', 'customers.create', 'customers.update',
+  'customers.read', 'customers.create', 'customers.update', 'customers.disable',
   'sales.read', 'sales.create', 'sales.own.read', 'sales.authorized.read',
   'cash.read',
   'trucks.read', 'trucks.manage',
@@ -61,7 +61,8 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
     'dashboard.read', 'categories.read', 'categories.create', 'categories.update',
     'products.read', 'products.create', 'products.update', 'products.prices.manage',
     'products.costs.read', 'products.margins.read',
-    'customers.read', 'suppliers.read', 'suppliers.create', 'suppliers.update',
+    'customers.read', 'customers.create', 'customers.update', 'customers.disable',
+    'suppliers.read', 'suppliers.create', 'suppliers.update',
     'purchases.read', 'purchases.create', 'purchases.update', 'purchases.confirm',
     'purchases.cancel', 'purchases.costs.read',
     'receipts.read', 'receipts.create', 'receipts.update', 'receipts.confirm', 'receipts.cancel',
@@ -90,7 +91,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
     'inventory.movements.read', 'inventory.adjust', 'loads.pending.read'
   ],
   LOGISTICS: [
-    'dashboard.read', 'products.read', 'trucks.read', 'trucks.manage', 'drivers.read', 'trips.read',
+    'dashboard.read', 'products.read', 'inventory.read', 'trucks.read', 'trucks.manage', 'drivers.read', 'trips.read',
     'trips.access', 'trips.manage', 'loads.read', 'fuel.access', 'fuel.read', 'fuel.create', 'deliveries.read'
   ],
   DRIVER: [
@@ -466,3 +467,5 @@ export interface PurchaseLotResponse {
   readonly receivedAt: string; readonly createdAt: string; readonly createdBy: string;
 }
 export interface PurchaseLotsPageResponse { readonly items: readonly PurchaseLotResponse[]; readonly nextToken?: string; }
+export * from './stock.js';
+export * from './customers.js';

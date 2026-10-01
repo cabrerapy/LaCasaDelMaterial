@@ -1,0 +1,37 @@
+<main class="page">
+<a routerLink="/dashboard">← Inicio</a>
+<header><div><p class="eyebrow">Inventario</p><h1>Stock</h1><p class="muted">Disponibilidad actual, mínimos y productos por reponer.</p></div>
+@if (permissions.has('inventory.movements.read')) { <a routerLink="/inventory/movements">Ver movimientos</a> }</header>
+@if (summary(); as totals) {
+<section class="indicators" aria-label="Resumen de productos activos">
+<div class="card"><span>Productos controlados</span><strong>{{ totals.totalTrackedProducts }}</strong></div>
+<div class="card"><span>Stock bajo</span><strong>{{ totals.lowStockProducts }}</strong></div>
+<div class="card"><span>Agotados</span><strong>{{ totals.outOfStockProducts }}</strong></div>
+<div class="card"><span>Sin control</span><strong>{{ totals.notTrackedProducts }}</strong></div></section>
+<p class="muted">Resumen de productos activos; independiente de los filtros.</p>
+}
+@if (summaryError()) { <p class="error" role="alert">{{ summaryError() }}</p> }
+@if (categoryError()) { <p class="error" role="alert">{{ categoryError() }}</p> }
+<form class="card filters" [formGroup]="form" (ngSubmit)="apply()">
+<label>Buscar producto<input type="search" formControlName="search" placeholder="Código, nombre, SKU o código de barras"></label>
+<label>Categoría<select formControlName="categoryId"><option value="">Todas</option>@for (category of categories(); track category.id) { <option [value]="category.id">{{ category.name }}</option> }</select></label>
+<label>Estado stock<select formControlName="stockStatus"><option value="">Todos</option><option value="OK">Disponible</option><option value="LOW_STOCK">Stock bajo</option><option value="OUT_OF_STOCK">Agotado</option><option value="NOT_TRACKED">No controlado</option></select></label>
+<label>Estado producto<select formControlName="productStatus"><option value="ACTIVE">Activos</option><option value="INACTIVE">Inactivos</option><option value="ALL">Todos</option></select></label>
+<label>Orden dentro de la página<select formControlName="sort"><option value="name">Nombre</option><option value="code">Código</option><option value="stockStatus">Estado stock</option></select></label>
+<button class="primary" type="submit" [disabled]="loading()">Aplicar filtros</button></form>
+@if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+@if (loading()) { <p role="status">Consultando stock…</p> }
+<section class="card ledger" aria-label="Stock de productos" [attr.aria-busy]="loading()">
+<table><thead><tr><th>Código</th><th>Producto</th><th>Categoría</th><th>Stock actual</th><th>Stock mínimo</th><th>Faltante hasta mínimo</th><th>Estado</th><th>Último movimiento</th><th>Acciones</th></tr></thead><tbody>
+@for (item of items(); track item.productId) {
+<tr><td data-label="Código">{{ item.code }}</td><td data-label="Producto"><strong>{{ item.name }}</strong>@if (item.productStatus === 'INACTIVE') { <small>Inactivo</small> }</td>
+<td data-label="Categoría">{{ item.category.name }}</td><td data-label="Stock actual">{{ current(item) }}</td>
+<td data-label="Mínimo">{{ item.trackStock ? quantity(item.minStockInternal, item.quantityScale, item.baseUnit) : 'No aplica' }}</td>
+<td data-label="Faltante">{{ item.trackStock ? quantity(item.shortageInternal, item.quantityScale, item.baseUnit) : 'No aplica' }}</td>
+<td data-label="Estado"><span class="badge" [attr.data-status]="item.stockStatus">{{ labels[item.stockStatus] }}</span></td>
+<td data-label="Movimiento">{{ item.lastMovementAt ? (item.lastMovementAt | date:'dd/MM/yyyy':'UTC') : 'Sin movimientos registrados' }}</td>
+<td data-label="Acciones"><a [routerLink]="['/inventory', item.productId]" [attr.aria-label]="'Ver detalle de ' + item.name">Ver detalle</a></td></tr>
+} @empty { <tr><td colspan="9" class="empty">{{ nextToken() ? 'Sin coincidencias en esta página. Continúa con Siguiente.' : 'Sin productos para estos filtros.' }}</td></tr> }
+</tbody></table></section>
+<nav class="pagination" aria-label="Paginación"><button (click)="previous()" [disabled]="page() === 1 || loading()">Anterior</button><span>Página {{ page() }}</span><button (click)="next()" [disabled]="!nextToken() || loading()">Siguiente</button></nav>
+</main>

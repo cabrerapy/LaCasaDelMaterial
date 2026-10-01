@@ -6,6 +6,14 @@ export const routes: Routes = [
   { path: 'inventory/movements/:id', canActivate: [authGuard, permissionGuard], data: { permission: 'inventory.movements.read' }, loadComponent: () => import('./features/inventory/movement-detail.component').then((module) => module.MovementDetailComponent) },
   { path: 'inventory/movements', canActivate: [authGuard, permissionGuard], data: { permission: 'inventory.movements.read' }, loadComponent: () => import('./features/inventory/movements.component').then((module) => module.MovementsComponent) },
   {
+    path: 'inventory', canActivate: [authGuard, permissionGuard], data: { permission: 'inventory.read' },
+    loadComponent: () => import('./features/inventory/stock.component').then((module) => module.StockComponent)
+  },
+  {
+    path: 'inventory/:productId', canActivate: [authGuard, permissionGuard], data: { permission: 'inventory.read' },
+    loadComponent: () => import('./features/inventory/stock-detail.component').then((module) => module.StockDetailComponent)
+  },
+  {
     path: 'login',
     canActivate: [guestGuard],
     loadComponent: () =>
@@ -48,6 +56,10 @@ export const routes: Routes = [
     data: { permission: 'suppliers.read' },
     loadComponent: () =>
       import('./features/suppliers/suppliers.component').then((module) => module.SuppliersComponent)
+  },
+  {
+    path: 'customers', canActivate: [authGuard, permissionGuard], data: { permission: 'customers.read' },
+    loadComponent: () => import('./features/customers/customers.component').then((module) => module.CustomersComponent)
   },
   {
     path: 'purchases/new', canActivate: [authGuard, permissionGuard],
