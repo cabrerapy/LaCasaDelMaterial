@@ -3,6 +3,9 @@ import { authGuard, guestGuard } from './core/auth/auth.guard';
 import { permissionGuard } from './core/permissions/permission.guard';
 
 export const routes: Routes = [
+  { path: 'pos', canActivate: [authGuard, permissionGuard], data: { permission: 'sales.create' }, loadComponent: () => import('./features/sales/pos.component').then(m => m.PosComponent) },
+  { path: 'sales/:id', canActivate: [authGuard, permissionGuard], data: { permission: 'sales.authorized.read' }, loadComponent: () => import('./features/sales/sales.component').then(m => m.SalesComponent) },
+  { path: 'sales', canActivate: [authGuard, permissionGuard], data: { permission: 'sales.authorized.read' }, loadComponent: () => import('./features/sales/sales.component').then(m => m.SalesComponent) },
   { path: 'inventory/movements/:id', canActivate: [authGuard, permissionGuard], data: { permission: 'inventory.movements.read' }, loadComponent: () => import('./features/inventory/movement-detail.component').then((module) => module.MovementDetailComponent) },
   { path: 'inventory/movements', canActivate: [authGuard, permissionGuard], data: { permission: 'inventory.movements.read' }, loadComponent: () => import('./features/inventory/movements.component').then((module) => module.MovementsComponent) },
   {

@@ -33,6 +33,9 @@ import { purchaseReceivingRoutes } from '../modules/receiving/http/purchase-rece
 import type { CustomerRepository } from '../modules/customers/domain/customer.repository.js';
 import { CustomersService } from '../modules/customers/application/customers.service.js';
 import { customersRoutes } from '../modules/customers/http/customers.routes.js';
+import type { SaleRepository } from '../modules/sales/domain/sale.repository.js';
+import { SalesService } from '../modules/sales/application/sales.service.js';
+import { salesRoutes } from '../modules/sales/http/sales.routes.js';
 
 export interface AppDependencies {
   readonly users: UserRepository;
@@ -45,6 +48,7 @@ export interface AppDependencies {
   readonly receiving: ReceivingRepository;
   readonly inventory: InventoryRepository;
   readonly customers: CustomerRepository;
+  readonly sales: SaleRepository;
 }
 
 export async function createApp(
@@ -107,6 +111,8 @@ export async function createApp(
   await app.register(purchaseReceivingRoutes, { prefix: '/api/purchases', authService, service: receivingService });
   await app.register(receivingRoutes, { prefix: '/api/purchase-receipts', authService, service: receivingService });
   await app.register(lotsRoutes, { prefix: '/api/lots', authService, service: receivingService });
+  await app.register(salesRoutes, { prefix: '/api/sales', authService,
+    service: new SalesService(dependencies.sales, dependencies.products, dependencies.customers, dependencies.inventory) });
 
   return app;
 }

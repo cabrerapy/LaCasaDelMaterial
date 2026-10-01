@@ -24,6 +24,12 @@ Tabla separada con `CUSTOMER#{id}` para detalle, `DOCUMENT#{type}#{normalizedNum
 
 El listado inicial usa Scan limitado y cursor opaco sobre la tabla exclusiva de clientes. Estado, tipo, ciudad y búsqueda por nombre visible, documento, RUC o teléfono se aplican como filtros acotados. No se agregan GSIs hasta que el volumen justifique índices concretos.
 
+## Sales LCM-012
+
+Tabla separada con `SALE#{id}` y reserva condicional `SALE_NUMBER#{number}`. La venta contiene hasta diez líneas embebidas para que detalle, edición y transición de estado sean una lectura/escritura consistente. El listado inicial usa Scan limitado y cursor opaco, con filtros acotados por fecha, estado, cliente, usuario y forma de pago; número y cliente forman el texto normalizado de búsqueda.
+
+Confirmación y anulación reemplazan la venta mediante condición sobre `updatedAt` y anexan en la misma `TransactWrite` los movimientos y actualizaciones de saldo. Los descuentos de stock se agrupan por producto y condicionan `onHandInternal >= cantidad`; esto impide sobreventa concurrente. El máximo de diez líneas mantiene la transacción bajo el límite de DynamoDB. Los índices por fecha/estado/cliente/usuario se añadirán cuando el volumen real lo justifique.
+
 Antes de definir tablas o índices DynamoDB se detallarán volumen, orden, filtros y consistencia de cada patrón.
 
 - Obtener usuario por ID para resolver una sesión autenticada.

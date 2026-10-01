@@ -1,5 +1,7 @@
 # Roles y permisos
 
+LCM-012: ADMIN y MANAGER leen todas las ventas, crean/editan/confirman, anulan y aplican descuentos. CASHIER crea, edita y confirma, pero solo consulta ventas propias/autorizadas, no aplica descuentos ni anula. Los endpoints aplican `sales.read/create/update/confirm/void/discount`, `sales.own.read` y `sales.authorized.read`; la UI no reemplaza la autorización del backend.
+
 LCM-011: ADMIN y MANAGER administran clientes y estado; CASHIER consulta, crea y actualiza durante el flujo comercial, pero no activa/desactiva. PURCHASING, WAREHOUSE, LOGISTICS y DRIVER no acceden al CRUD general. Se aplican `customers.read/create/update/disable` desde la matriz central.
 
 LCM-010: ADMIN, MANAGER, PURCHASING, WAREHOUSE, CASHIER y LOGISTICS consultan stock con `inventory.read`; DRIVER no accede. Solo los roles con `inventory.movements.read` reciben historial reciente y solo `inventory.costs.read` habilita sus costos históricos. CASHIER y LOGISTICS consultan disponibilidad sin ledger ni costos. Las consultas de stock no permiten mutaciones.

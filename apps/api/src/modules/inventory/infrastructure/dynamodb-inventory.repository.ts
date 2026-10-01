@@ -11,8 +11,8 @@ export class DynamoDbInventoryRepository implements InventoryRepository {
     const lock = await this.read<{ movementId: string }>(`MOVEMENT_NUMBER#${number}`);
     return lock ? this.get(lock.movementId) : null;
   }
-  async bySource(receiptId: string, lineId: string): Promise<InventoryMovement | null> {
-    const lock = await this.read<{ movementId: string }>(sourceKey(receiptId, lineId));
+  async bySource(sourceType: InventoryMovement['sourceType'], sourceId: string, lineId: string): Promise<InventoryMovement | null> {
+    const lock = await this.read<{ movementId: string }>(sourceKey(sourceType, sourceId, lineId));
     return lock ? this.get(lock.movementId) : null;
   }
   async getBalance(productId: string): Promise<InventoryBalance | null> {
@@ -58,17 +58,18 @@ export class DynamoDbInventoryRepository implements InventoryRepository {
       this.unique({ pk: `MOVEMENT#${movement.id}`, entityType: 'MOVEMENT', productId: movement.productId, lotId: movement.lotId,
         type: movement.type, sourceType: movement.sourceType, chronology: `${movement.occurredAt}#${movement.createdAt}#${movement.id}`,
         searchText: `${movement.movementNumber} ${movement.referenceNumber}`.toLowerCase(), data: movement }),
-      this.unique({ pk: sourceKey(movement.sourceId, movement.sourceLineId), entityType: 'SOURCE', data: { movementId: movement.id } }),
+      this.unique({ pk: sourceKey(movement.sourceType, movement.sourceId, movement.sourceLineId), entityType: 'SOURCE', data: { movementId: movement.id } }),
       this.unique({ pk: `MOVEMENT_NUMBER#${movement.movementNumber}`, entityType: 'NUMBER', data: { movementId: movement.id } })
     ]);
     for (const [productId, delta] of totals) {
-      // Flat projection attributes permit atomic ADD; never read/modify/write a live balance.
+      // Flat projection attributes permit atomic ADD; sales reject insufficient stock in the same transaction.
+      const negative = delta < 0;
       result.push({ Update: {
         TableName: this.tableName, Key: { pk: `BALANCE#${productId}` },
         UpdateExpression: 'SET entityType = :entity, productId = :product, updatedAt = :now ADD onHandInternal :delta, #version :one',
-        ConditionExpression: 'attribute_not_exists(onHandInternal) OR (onHandInternal >= :zero AND onHandInternal <= :maximum)',
+        ConditionExpression: negative ? 'attribute_exists(onHandInternal) AND onHandInternal >= :required' : 'attribute_not_exists(onHandInternal) OR onHandInternal <= :maximum',
         ExpressionAttributeNames: { '#version': 'version' },
-        ExpressionAttributeValues: { ':entity': 'BALANCE', ':product': productId, ':now': new Date().toISOString(), ':delta': delta, ':one': 1, ':zero': 0, ':maximum': Number.MAX_SAFE_INTEGER - delta }
+        ExpressionAttributeValues: { ':entity': 'BALANCE', ':product': productId, ':now': new Date().toISOString(), ':delta': delta, ':one': 1, ...(negative ? { ':required': -delta } : { ':maximum': Number.MAX_SAFE_INTEGER - delta }) }
       } });
     }
     return result;

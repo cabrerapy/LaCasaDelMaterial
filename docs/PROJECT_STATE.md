@@ -1,7 +1,7 @@
 # Estado del proyecto
 
-- Tarea actual: LCM-011 Customers
+- Tarea actual: LCM-012 Sales / POS
 - Estado: BLOCKED (implementación terminada; validación Docker Compose pendiente por permisos del entorno).
-- Funcionalidades implementadas: clientes Persona/Empresa, nombre visible, documentos y RUC únicos, búsqueda/filtros/paginación, edición, estado lógico, auditoría, permisos y UI responsive con formulario dinámico. Validación: 79 tests API, 60 web, flujo real DynamoDB Local, lint y builds correctos.
-- Decisiones importantes: tipo inmutable, documento y RUC opcionales, baja lógica y dirección principal editable. Ventas podrán usar consumidor final o snapshot de cliente; no hay ventas, crédito, deuda ni cuenta corriente. No se creó commit ni push.
-- Pendientes inmediatos: ejecutar `docker compose build` desde una terminal con acceso a Docker Desktop. Tras validar Docker, cerrar LCM-011 y continuar con LCM-012 Sales.
+- Funcionalidades implementadas: POS responsive, borrador/confirmación/anulación, consumidor final o snapshot de cliente, precios y cantidades exactas, descuentos autorizados, flete, entrega, metadatos de pago, historial, permisos y ledger `SALE`/`SALE_VOID` con control atómico de stock. Validación: 80 tests API, 60 web y lint correctos; build Angular y Docker bloqueados por acceso del entorno a rutas de OneDrive/Docker Desktop.
+- Decisiones importantes: venta con máximo diez líneas embebidas, stock agregado por producto y condicionado dentro de la transición; productos sin control de stock no generan movimiento. Costeo `PENDING`/`NOT_APPLICABLE`; FIFO, COGS, utilidad, caja, deuda y cuenta corriente no implementados. No se creó commit ni push.
+- Pendientes inmediatos: ejecutar `docker compose build` desde una terminal con acceso a Docker Desktop. Próxima tarea: LCM-013 FIFO Costing.

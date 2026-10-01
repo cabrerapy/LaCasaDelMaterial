@@ -23,10 +23,10 @@ export class InventoryService {
     });
   }
   async backfillLot(lot: PurchaseLot): Promise<boolean> {
-    if (await this.repository.bySource(lot.receiptId, lot.receiptLineId)) return false;
+    if (await this.repository.bySource('PURCHASE_RECEIPT', lot.receiptId, lot.receiptLineId)) return false;
     try { await this.repository.append(this.prepareReceipt([lot])); return true; }
     catch (error: unknown) {
-      if (error instanceof InventoryConflictError && await this.repository.bySource(lot.receiptId, lot.receiptLineId)) return false;
+      if (error instanceof InventoryConflictError && await this.repository.bySource('PURCHASE_RECEIPT', lot.receiptId, lot.receiptLineId)) return false;
       throw error;
     }
   }
@@ -57,5 +57,5 @@ export class InventoryService {
 }
 function response(movement: InventoryMovement, costs: boolean): InventoryMovementResponse {
   const { costGuarani, ...safe } = movement;
-  return { ...safe, ...(costs ? { costGuarani } : {}) };
+  return { ...safe, ...(costs && costGuarani !== undefined ? { costGuarani } : {}) };
 }

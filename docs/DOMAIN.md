@@ -38,6 +38,12 @@ La ausencia de balance equivale a cero para un producto controlado y no es incon
 
 Una venta futura podrá operar sin cliente como consumidor final. Cuando tenga cliente, guardará un snapshot mínimo con nombre visible, tipo/número de documento y RUC; la dirección de entrega también será snapshot de la venta y no dependerá permanentemente de la dirección principal.
 
+## Sales and POS (LCM-012)
+
+`Sale` conserva borradores editables y ventas confirmadas/anuladas, número único, snapshots de cliente/producto/presentación, precio unitario vigente al agregar la línea y totales enteros calculados por backend. La ausencia de cliente representa Consumidor Final. Entrega y forma de pago son metadatos; esta tarea no crea movimientos de caja, deuda ni cuenta corriente.
+
+Confirmar descuenta stock mediante movimientos inmutables `SALE`; anular genera `SALE_VOID` compensatorio. Las líneas del mismo producto se agregan antes de validar saldo y la venta cambia de estado en la misma transacción DynamoDB que el ledger. Productos sin control de stock no generan movimiento. El estado de costeo es `PENDING` cuando hay movimientos y `NOT_APPLICABLE` en caso contrario. FIFO, costo de venta y utilidad no están implementados.
+
 ## Categories
 
 LCM-004 administra categorías ordenables con nombre y slug únicos, descripción opcional, estado activo/inactivo y auditoría básica. La asociación con productos se implementará posteriormente.

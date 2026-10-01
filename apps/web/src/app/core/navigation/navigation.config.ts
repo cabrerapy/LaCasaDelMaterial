@@ -9,6 +9,7 @@ export interface NavigationItem {
 
 export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { label: 'Dashboard', route: '/dashboard', icon: '▦', requiredPermission: 'dashboard.read' },
+  { label: 'Punto de venta', route: '/pos', icon: '▦', requiredPermission: 'sales.create' },
   { label: 'Ventas', route: '/sales', icon: '◫', requiredPermission: 'sales.authorized.read' },
   { label: 'Compras', route: '/purchases', icon: '▣', requiredPermission: 'purchases.read' },
   { label: 'Recepciones', route: '/purchase-receipts', icon: '▤', requiredPermission: 'receipts.read' },

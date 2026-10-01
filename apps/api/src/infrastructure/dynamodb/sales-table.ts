@@ -1,0 +1,2 @@
+import { CreateTableCommand, DescribeTableCommand, ResourceNotFoundException, type DynamoDBClient } from '@aws-sdk/client-dynamodb';
+export async function ensureSalesTable(client:DynamoDBClient,tableName:string):Promise<void>{try{await client.send(new DescribeTableCommand({TableName:tableName}));return;}catch(e){if(!(e instanceof ResourceNotFoundException))throw e;}await client.send(new CreateTableCommand({TableName:tableName,BillingMode:'PAY_PER_REQUEST',AttributeDefinitions:[{AttributeName:'pk',AttributeType:'S'}],KeySchema:[{AttributeName:'pk',KeyType:'HASH'}]}));}

@@ -1,6 +1,6 @@
 import type { InventoryMovementResponse, InventoryMovementFilters } from '@lcm/contracts';
 
-export interface InventoryMovement extends InventoryMovementResponse { readonly costGuarani: number; }
+export interface InventoryMovement extends InventoryMovementResponse { readonly costGuarani?: number; }
 export interface InventoryBalance {
   readonly productId: string;
   readonly onHandInternal: number;
@@ -11,7 +11,7 @@ export interface InventoryPage { readonly items: readonly InventoryMovement[]; r
 export interface InventoryRepository {
   get(id: string): Promise<InventoryMovement | null>;
   byNumber(number: string): Promise<InventoryMovement | null>;
-  bySource(receiptId: string, lineId: string): Promise<InventoryMovement | null>;
+  bySource(sourceType: InventoryMovement['sourceType'], sourceId: string, lineId: string): Promise<InventoryMovement | null>;
   list(filters: InventoryMovementFilters): Promise<InventoryPage>;
   getBalance(productId: string): Promise<InventoryBalance | null>;
   getBalances(ids: readonly string[]): Promise<readonly InventoryBalance[]>;
@@ -29,12 +29,14 @@ export function safeSum(a: number, b: number): number {
   if (!Number.isSafeInteger(sum)) throw new Error('Cantidad de inventario fuera del rango seguro');
   return sum;
 }
-export function sourceKey(receiptId: string, lineId: string): string { return `SOURCE#PURCHASE_RECEIPT#${receiptId}#${lineId}`; }
+export function sourceKey(sourceType: InventoryMovement['sourceType'], sourceId: string, lineId: string): string { return `SOURCE#${sourceType}#${sourceId}#${lineId}`; }
 export function aggregate(movements: readonly InventoryMovement[]): Map<string, number> {
   const totals = new Map<string, number>();
   for (const movement of movements) {
-    if (movement.type !== 'PURCHASE_RECEIPT' || !Number.isSafeInteger(movement.quantityDeltaInternal) || movement.quantityDeltaInternal <= 0
-      || !Number.isSafeInteger(movement.costGuarani) || movement.costGuarani < 0) throw new Error('Movimiento de inventario inválido');
+    if (!Number.isSafeInteger(movement.quantityDeltaInternal) || movement.quantityDeltaInternal === 0
+      || (movement.type === 'PURCHASE_RECEIPT' && (!Number.isSafeInteger(movement.costGuarani) || (movement.costGuarani ?? -1) < 0))
+      || (movement.type === 'SALE' && movement.quantityDeltaInternal > 0)
+      || (movement.type === 'SALE_VOID' && movement.quantityDeltaInternal < 0)) throw new Error('Movimiento de inventario inválido');
     totals.set(movement.productId, safeSum(totals.get(movement.productId) ?? 0, movement.quantityDeltaInternal));
   }
   return totals;

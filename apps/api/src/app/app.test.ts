@@ -18,6 +18,7 @@ import { InMemorySupplierRepository } from '../modules/suppliers/infrastructure/
 import { InMemoryPurchaseRepository } from '../modules/purchases/infrastructure/in-memory-purchase.repository.js';
 import { InMemoryReceivingRepository } from '../modules/receiving/infrastructure/in-memory-receiving.repository.js';
 import { InMemoryCustomerRepository } from '../modules/customers/infrastructure/in-memory-customer.repository.js';
+import { InMemorySaleRepository } from '../modules/sales/infrastructure/in-memory-sale.repository.js';
 
 const adminPassword = 'LocalTestPassword123!';
 const jwtSecret = 'test-secret-with-at-least-thirty-two-characters';
@@ -29,6 +30,7 @@ let suppliers: InMemorySupplierRepository;
 let purchases: InMemoryPurchaseRepository;
 let inventory: InMemoryInventoryRepository;
 let customers: InMemoryCustomerRepository;
+let sales: InMemorySaleRepository;
 
 before(async () => {
   users = new InMemoryUserRepository();
@@ -38,6 +40,7 @@ before(async () => {
   purchases = new InMemoryPurchaseRepository();
   inventory = new InMemoryInventoryRepository();
   customers = new InMemoryCustomerRepository();
+  sales = new InMemorySaleRepository(inventory);
   const now = new Date().toISOString();
   await users.create({
     id: 'b052fa5e-e405-4460-82c8-6887137c885a',
@@ -110,7 +113,7 @@ before(async () => {
     products,
     suppliers,
     purchases,
-    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory, customers,
+    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory, customers, sales,
     passwordHasher: new Argon2PasswordHasher(),
     authentication: new LocalJwtAuthentication(config.jwtSecret, config.jwtExpiresIn)
   });
@@ -946,6 +949,26 @@ test('customers support person/company, uniqueness, search, audit and permission
   assert.equal(disabled.json().status, 'INACTIVE');
   const enabled = await app.inject({ method: 'PATCH', url: `/api/customers/${person.json().id}/status`, headers: admin, payload: { status: 'ACTIVE' } });
   assert.equal(enabled.json().status, 'ACTIVE');
+});
+
+test('sales POS confirms stock atomically, restricts discounts and void restores stock once', async () => {
+  const cement = await products.findByCode('CEM-CPII'); assert.ok(cement);
+  const bag = (await products.listPresentations(cement.id)).find((value) => value.baseQuantityInternal === 1); assert.ok(bag);
+  const before = (await inventory.getBalance(cement.id))?.onHandInternal ?? 0; assert.ok(before >= 1);
+  const payload = { saleDate: '2026-10-01', deliveryType: 'PICKUP', paymentMethod: 'CASH',
+    items: [{ productId: cement.id, presentationId: bag.id, quantity: '1' }] };
+  const discountDenied = await app.inject({ method: 'POST', url: '/api/sales', headers: await authorizationHeader('cashier'), payload: { ...payload, discountGuarani: 1 } });
+  assert.equal(discountDenied.statusCode, 403);
+  const draft = await app.inject({ method: 'POST', url: '/api/sales', headers: await authorizationHeader('cashier'), payload });
+  assert.equal(draft.statusCode, 201); assert.equal(draft.json().status, 'DRAFT'); assert.match(draft.json().saleNumber, /^VTA-2026-/);
+  const confirmed = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/confirm`, headers: await authorizationHeader('cashier') });
+  assert.equal(confirmed.statusCode, 200); assert.equal(confirmed.json().status, 'CONFIRMED'); assert.equal(confirmed.json().costingStatus, 'PENDING');
+  assert.equal((await inventory.getBalance(cement.id))?.onHandInternal, before - 1);
+  const repeated = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/confirm`, headers: await authorizationHeader('cashier') }); assert.equal(repeated.statusCode, 409);
+  const voided = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/void`, headers: await authorizationHeader('admin'), payload: { reason: 'Prueba de anulación' } });
+  assert.equal(voided.statusCode, 200); assert.equal(voided.json().status, 'VOIDED'); assert.equal((await inventory.getBalance(cement.id))?.onHandInternal, before);
+  const doubleVoid = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/void`, headers: await authorizationHeader('admin'), payload: { reason: 'otra' } }); assert.equal(doubleVoid.statusCode, 409);
+  const movements = await inventory.allMovements(); assert.equal(movements.filter((m) => m.saleId === draft.json().id && m.type === 'SALE').length, 1); assert.equal(movements.filter((m) => m.saleId === draft.json().id && m.type === 'SALE_VOID').length, 1);
 });
 
 async function authorizationHeader(username: string): Promise<{ authorization: string }> {

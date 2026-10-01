@@ -8,7 +8,7 @@ export class InMemoryInventoryRepository implements InventoryRepository {
   private queue: Promise<void> = Promise.resolve();
   async get(id: string) { return this.movements.get(id) ?? null; }
   async byNumber(number: string) { return [...this.movements.values()].find((item) => item.movementNumber === number) ?? null; }
-  async bySource(receiptId: string, lineId: string) { return this.movements.get(this.sources.get(sourceKey(receiptId, lineId)) ?? '') ?? null; }
+  async bySource(sourceType: InventoryMovement['sourceType'], sourceId: string, lineId: string) { return this.movements.get(this.sources.get(sourceKey(sourceType, sourceId, lineId)) ?? '') ?? null; }
   async getBalance(productId: string) { return this.balances.get(productId) ?? null; }
   async getBalances(ids: readonly string[]) { return [...this.balances.values()].filter((item) => ids.includes(item.productId)); }
   async allMovements() { return [...this.movements.values()]; }
@@ -34,7 +34,7 @@ export class InMemoryInventoryRepository implements InventoryRepository {
     try {
       const totals = aggregate(movements); const seen = new Set<string>();
       for (const item of movements) {
-        const key = sourceKey(item.sourceId, item.sourceLineId);
+        const key = sourceKey(item.sourceType, item.sourceId, item.sourceLineId);
         if (this.sources.has(key) || seen.has(key) || this.movements.has(item.id)
           || [...this.movements.values()].some((old) => old.movementNumber === item.movementNumber)) throw new InventoryConflictError();
         seen.add(key);
@@ -44,7 +44,7 @@ export class InMemoryInventoryRepository implements InventoryRepository {
         version: (this.balances.get(productId)?.version ?? 0) + 1, updatedAt: new Date().toISOString()
       }));
       await participant();
-      for (const item of movements) { this.movements.set(item.id, item); this.sources.set(sourceKey(item.sourceId, item.sourceLineId), item.id); }
+      for (const item of movements) { this.movements.set(item.id, item); this.sources.set(sourceKey(item.sourceType, item.sourceId, item.sourceLineId), item.id); }
       for (const balance of balances) this.balances.set(balance.productId, balance);
     } finally { release(); }
   }
