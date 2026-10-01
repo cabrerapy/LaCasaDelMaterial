@@ -13,6 +13,9 @@
     "inventory:backfill-receipts": "npm run inventory:backfill-receipts --workspace @lcm/api",
     "inventory:rebuild-balances": "npm run inventory:rebuild-balances --workspace @lcm/api",
     "inventory:verify": "npm run inventory:verify --workspace @lcm/api",
+    "costing:backfill": "npm run costing:backfill --workspace @lcm/api",
+    "costing:rebuild-lot-balances": "npm run costing:rebuild-lot-balances --workspace @lcm/api",
+    "costing:verify": "npm run costing:verify --workspace @lcm/api",
     "dev:web": "npm run start --workspace @lcm/web",
     "dev:api": "npm run dev --workspace @lcm/api"
   },

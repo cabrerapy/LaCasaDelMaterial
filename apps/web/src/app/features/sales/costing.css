@@ -1,0 +1,6 @@
+.sale-item{border-bottom:1px solid var(--border-secondary)}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;padding:.6rem 0;font-size:.8rem;color:var(--text-secondary)}
+.metrics strong{display:block;color:var(--text-primary)}
+.profit,.fifo{margin-top:1rem;padding:1rem;background:var(--construction-50);border-radius:10px}
+.profit h3,.fifo h3{margin-top:0}
+@media(max-width:650px){.metrics{grid-template-columns:1fr 1fr}}

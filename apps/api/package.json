@@ -9,10 +9,13 @@
     "start": "node dist/server.js",
     "lint": "tsc -p tsconfig.json --noEmit",
     "pretest": "npm run build",
-    "test": "node --test dist/app/app.test.js dist/modules/inventory/inventory.test.js dist/modules/inventory/stock.test.js",
+    "test": "node --test dist/app/app.test.js dist/modules/inventory/inventory.test.js dist/modules/inventory/stock.test.js dist/modules/costing/costing.test.js",
     "inventory:backfill-receipts": "npm run build && node dist/modules/inventory/cli.js backfill",
     "inventory:rebuild-balances": "npm run build && node dist/modules/inventory/cli.js rebuild",
     "inventory:verify": "npm run build && node dist/modules/inventory/cli.js verify",
+    "costing:backfill": "npm run build && node dist/modules/costing/cli.js backfill",
+    "costing:rebuild-lot-balances": "npm run build && node dist/modules/costing/cli.js rebuild",
+    "costing:verify": "npm run build && node dist/modules/costing/cli.js verify",
     "test:dynamodb": "npm run build && node --test dist/modules/inventory/dynamodb.integration.test.js"
   },
   "dependencies": {

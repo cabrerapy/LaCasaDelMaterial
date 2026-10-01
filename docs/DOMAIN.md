@@ -30,7 +30,7 @@ Los comandos explícitos de mantenimiento están descritos en [INVENTORY.md](INV
 
 El stock operativo proviene exclusivamente de `InventoryBalance.onHandInternal`; el ledger continúa siendo la fuente histórica. El estado es derivado: `NOT_TRACKED` cuando el producto no controla stock, `OUT_OF_STOCK` para saldo menor o igual a cero, `LOW_STOCK` para saldo positivo menor o igual al mínimo y `OK` por encima del mínimo.
 
-La ausencia de balance equivale a cero para un producto controlado y no es inconsistencia. Los saldos negativos se muestran y se reportan en la verificación. La disponibilidad actual equivale al saldo disponible; cuando existan reservas será `onHand - reserved`. No existe valorización, FIFO, consumo de lotes ni mutación de stock desde las consultas.
+La ausencia de balance equivale a cero para un producto controlado y no es inconsistencia. Los saldos negativos se muestran y se reportan en la verificación. La disponibilidad actual equivale al saldo disponible; cuando existan reservas será `onHand - reserved`. Las consultas no mutan stock; el costeo FIFO se describe en LCM-013.
 
 ## Customers (LCM-011)
 
@@ -42,7 +42,15 @@ Una venta futura podrá operar sin cliente como consumidor final. Cuando tenga c
 
 `Sale` conserva borradores editables y ventas confirmadas/anuladas, número único, snapshots de cliente/producto/presentación, precio unitario vigente al agregar la línea y totales enteros calculados por backend. La ausencia de cliente representa Consumidor Final. Entrega y forma de pago son metadatos; esta tarea no crea movimientos de caja, deuda ni cuenta corriente.
 
-Confirmar descuenta stock mediante movimientos inmutables `SALE`; anular genera `SALE_VOID` compensatorio. Las líneas del mismo producto se agregan antes de validar saldo y la venta cambia de estado en la misma transacción DynamoDB que el ledger. Productos sin control de stock no generan movimiento. El estado de costeo es `PENDING` cuando hay movimientos y `NOT_APPLICABLE` en caso contrario. FIFO, costo de venta y utilidad no están implementados.
+Confirmar descuenta stock mediante movimientos inmutables `SALE`; anular genera `SALE_VOID` compensatorio. Las líneas del mismo producto se agregan antes de validar saldo y la venta cambia de estado en la misma transacción DynamoDB que el ledger. Productos sin control de stock no generan movimiento. LCM-013 completa el estado de costeo, COGS y rentabilidad.
+
+## FIFO costing (LCM-013)
+
+`SaleLotAllocation` es el histórico inmutable del consumo FIFO y `LotCostBalance` su proyección operacional por lote. FIFO trabaja exclusivamente en cantidades base internas y consume por `PurchaseLot.receivedAt ASC`, con `lotNumber` como desempate. `PurchaseLot` continúa inmutable.
+
+El costo directo (Direct COGS) usa solamente `PurchaseLot.directPurchaseCostGuarani`. El costo proporcional, la distribución de descuento y el margen se calculan con aritmética `BigInt`, preservando cada guaraní; el margen se persiste en basis points. Ingreso neto de mercadería excluye el flete cobrado. Los costos adicionales y flete general de compra todavía no se distribuyen, por lo que no existe landed cost.
+
+Una anulación marca allocations como `REVERSED` y restituye `LotCostBalance`, sin borrar el histórico. El ledger global de inventario y FIFO siguen siendo responsabilidades separadas y su coincidencia se verifica explícitamente.
 
 ## Categories
 

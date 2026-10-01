@@ -1,5 +1,7 @@
 # Roles y permisos
 
+LCM-013: `sales.costs.read` protege COGS y detalle de lotes FIFO; `sales.margins.read` protege ingreso neto, utilidad y margen. ADMIN posee ambos y puede reintentar costeo; MANAGER posee ambos. CASHIER conserva importes comerciales, pero la API omite costos, allocations, utilidad y margen. PURCHASING, WAREHOUSE, LOGISTICS y DRIVER no reciben rentabilidad de ventas.
+
 LCM-012: ADMIN y MANAGER leen todas las ventas, crean/editan/confirman, anulan y aplican descuentos. CASHIER crea, edita y confirma, pero solo consulta ventas propias/autorizadas, no aplica descuentos ni anula. Los endpoints aplican `sales.read/create/update/confirm/void/discount`, `sales.own.read` y `sales.authorized.read`; la UI no reemplaza la autorización del backend.
 
 LCM-011: ADMIN y MANAGER administran clientes y estado; CASHIER consulta, crea y actualiza durante el flujo comercial, pero no activa/desactiva. PURCHASING, WAREHOUSE, LOGISTICS y DRIVER no acceden al CRUD general. Se aplican `customers.read/create/update/disable` desde la matriz central.

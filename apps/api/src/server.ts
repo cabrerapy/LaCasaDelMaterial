@@ -22,6 +22,8 @@ import { ensureCustomersTable } from './infrastructure/dynamodb/customers-table.
 import { DynamoDbCustomerRepository } from './modules/customers/infrastructure/dynamodb-customer.repository.js';
 import { ensureSalesTable } from './infrastructure/dynamodb/sales-table.js';
 import { DynamoDbSaleRepository } from './modules/sales/infrastructure/dynamodb-sale.repository.js';
+import { ensureCostingTable } from './infrastructure/dynamodb/costing-table.js';
+import { DynamoDbCostingRepository } from './modules/costing/infrastructure/dynamodb-costing.repository.js';
 
 async function start(): Promise<void> {
   const config = loadConfig();
@@ -41,8 +43,9 @@ async function start(): Promise<void> {
   const receiving = new DynamoDbReceivingRepository(documentClient, config.purchasesTableName, inventory);
   const customers = new DynamoDbCustomerRepository(documentClient, config.customersTableName);
   const sales = new DynamoDbSaleRepository(documentClient, config.salesTableName, inventory);
+  const costing = new DynamoDbCostingRepository(documentClient, config.costingTableName);
   const app = await createApp(config, {
-    users, passwordHasher, authentication, categories, products, suppliers, purchases, receiving, inventory, customers, sales
+    users, passwordHasher, authentication, categories, products, suppliers, purchases, receiving, inventory, customers, sales, costing
   });
 
   await ensureUsersTable(dynamoDb, config.usersTableName);
@@ -53,6 +56,7 @@ async function start(): Promise<void> {
   await ensureInventoryTable(dynamoDb, config.inventoryTableName);
   await ensureCustomersTable(dynamoDb, config.customersTableName);
   await ensureSalesTable(dynamoDb, config.salesTableName);
+  await ensureCostingTable(dynamoDb, config.costingTableName);
   await bootstrapAdmin(users, passwordHasher, config.initialAdminPassword, app.log);
 
   const shutdown = async (): Promise<void> => {

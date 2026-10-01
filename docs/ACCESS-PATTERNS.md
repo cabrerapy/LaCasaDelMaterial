@@ -30,6 +30,12 @@ Tabla separada con `SALE#{id}` y reserva condicional `SALE_NUMBER#{number}`. La 
 
 Confirmación y anulación reemplazan la venta mediante condición sobre `updatedAt` y anexan en la misma `TransactWrite` los movimientos y actualizaciones de saldo. Los descuentos de stock se agrupan por producto y condicionan `onHandInternal >= cantidad`; esto impide sobreventa concurrente. El máximo de diez líneas mantiene la transacción bajo el límite de DynamoDB. Los índices por fecha/estado/cliente/usuario se añadirán cuando el volumen real lo justifique.
 
+## FIFO Costing LCM-013
+
+Tabla de costeo separada: `LOT_BALANCE#{lotId}` obtiene la proyección fuerte por lote y `ALLOCATION#{saleItemId}#{lotId}` garantiza idempotencia. `OpenLotsIndex` es sparse: partición `OPENLOT#PRODUCT#{productId}` y orden `receivedAt#lotNumber`; los lotes agotados dejan de proyectar esas claves. `SaleAllocationsIndex` usa `saleId` y `saleItemId#receivedAt#lotNumber` para detalle y reversión.
+
+Cada allocation y actualización del balance se escriben en una transacción condicional por versión y cantidad restante. Las allocations por venta/item/lote y activas por lote se derivan de los registros de allocation; ventas confirmadas `PENDING` se recorren paginadas y se ordenan por confirmación/número para backfill. Rebuild usa `PurchaseLot - allocations ACTIVE`; verify compara lotes, items, venta e `InventoryBalance` sin corregir silenciosamente.
+
 Antes de definir tablas o índices DynamoDB se detallarán volumen, orden, filtros y consistencia de cada patrón.
 
 - Obtener usuario por ID para resolver una sesión autenticada.

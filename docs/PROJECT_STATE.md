@@ -1,7 +1,7 @@
 # Estado del proyecto
 
-- Tarea actual: LCM-012 Sales / POS
-- Estado: BLOCKED (implementación terminada; validación Docker Compose pendiente por permisos del entorno).
-- Funcionalidades implementadas: POS responsive, borrador/confirmación/anulación, consumidor final o snapshot de cliente, precios y cantidades exactas, descuentos autorizados, flete, entrega, metadatos de pago, historial, permisos y ledger `SALE`/`SALE_VOID` con control atómico de stock. Validación: 80 tests API, 60 web y lint correctos; build Angular y Docker bloqueados por acceso del entorno a rutas de OneDrive/Docker Desktop.
-- Decisiones importantes: venta con máximo diez líneas embebidas, stock agregado por producto y condicionado dentro de la transición; productos sin control de stock no generan movimiento. Costeo `PENDING`/`NOT_APPLICABLE`; FIFO, COGS, utilidad, caja, deuda y cuenta corriente no implementados. No se creó commit ni push.
-- Pendientes inmediatos: ejecutar `docker compose build` desde una terminal con acceso a Docker Desktop. Próxima tarea: LCM-013 FIFO Costing.
+- Tarea actual: LCM-013 FIFO Costing
+- Estado: BLOCKED (implementación terminada; build Angular y Docker Compose bloqueados por permisos del entorno).
+- Funcionalidades implementadas: allocations FIFO, balances de costo por lote, Direct COGS por item/venta, utilidad, margen BPS, descuento distribuido, reversión al anular, reintento idempotente, backfill, rebuild, verify, permisos y UI de rentabilidad. Validación: lint completo, 83 tests API y 60 tests web correctos; builds contracts/API correctos.
+- Decisiones importantes: FIFO usa cantidad base y `PurchaseLot.receivedAt`; `SaleLotAllocation` es histórico y `LotCostBalance` proyección. Solo se usa costo directo del lote; costos adicionales generales de compra no forman landed cost.
+- Pendientes inmediatos: ejecutar build web/Docker y comandos de mantenimiento en una terminal con acceso completo; después continuar con LCM-014 Cash.

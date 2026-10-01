@@ -43,7 +43,7 @@ export const PERMISSIONS = [
   'inventory.costs.read',
   'customers.read', 'customers.create', 'customers.update', 'customers.disable',
   'sales.read', 'sales.create', 'sales.update', 'sales.confirm', 'sales.void', 'sales.discount',
-  'sales.own.read', 'sales.authorized.read',
+  'sales.own.read', 'sales.authorized.read', 'sales.costs.read', 'sales.margins.read',
   'cash.read',
   'trucks.read', 'trucks.manage',
   'drivers.read',
@@ -68,7 +68,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
     'purchases.cancel', 'purchases.costs.read',
     'receipts.read', 'receipts.create', 'receipts.update', 'receipts.confirm', 'receipts.cancel',
     'lots.read', 'lots.costs.read',
-    'inventory.read', 'inventory.movements.read', 'sales.read', 'sales.create', 'sales.update', 'sales.confirm', 'sales.void', 'sales.discount', 'sales.authorized.read',
+    'inventory.read', 'inventory.movements.read', 'sales.read', 'sales.create', 'sales.update', 'sales.confirm', 'sales.void', 'sales.discount', 'sales.authorized.read', 'sales.costs.read', 'sales.margins.read',
     'inventory.costs.read',
     'trucks.read', 'trips.access', 'trips.read', 'fuel.access', 'fuel.read', 'reports.read'
   ],

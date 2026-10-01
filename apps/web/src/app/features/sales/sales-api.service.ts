@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import type { CreateSaleRequest, SaleCatalogResponse, SaleResponse, SalesPageResponse, SaleStatus } from '@lcm/contracts';
+import type { CreateSaleRequest, SaleCatalogResponse, SaleCostingResponse, SaleResponse, SalesPageResponse, SaleStatus } from '@lcm/contracts';
 @Injectable({providedIn:'root'}) export class SalesApiService{
  private readonly http=inject(HttpClient);
  catalog(search=''){return this.http.get<SaleCatalogResponse>('/api/sales/catalog',{params:search?new HttpParams().set('search',search):undefined});}
@@ -9,4 +9,6 @@ import type { CreateSaleRequest, SaleCatalogResponse, SaleResponse, SalesPageRes
  create(value:CreateSaleRequest){return this.http.post<SaleResponse>('/api/sales',value);}
  confirm(id:string){return this.http.post<SaleResponse>(`/api/sales/${id}/confirm`,{});}
  void(id:string,reason:string){return this.http.post<SaleResponse>(`/api/sales/${id}/void`,{reason});}
+ costing(id:string){return this.http.get<SaleCostingResponse>(`/api/sales/${id}/costing`);}
+ retryCosting(id:string){return this.http.post<SaleResponse>(`/api/sales/${id}/retry-costing`,{});}
 }

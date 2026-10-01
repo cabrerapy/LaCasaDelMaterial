@@ -19,6 +19,7 @@ import { InMemoryPurchaseRepository } from '../modules/purchases/infrastructure/
 import { InMemoryReceivingRepository } from '../modules/receiving/infrastructure/in-memory-receiving.repository.js';
 import { InMemoryCustomerRepository } from '../modules/customers/infrastructure/in-memory-customer.repository.js';
 import { InMemorySaleRepository } from '../modules/sales/infrastructure/in-memory-sale.repository.js';
+import { InMemoryCostingRepository } from '../modules/costing/infrastructure/in-memory-costing.repository.js';
 
 const adminPassword = 'LocalTestPassword123!';
 const jwtSecret = 'test-secret-with-at-least-thirty-two-characters';
@@ -31,6 +32,7 @@ let purchases: InMemoryPurchaseRepository;
 let inventory: InMemoryInventoryRepository;
 let customers: InMemoryCustomerRepository;
 let sales: InMemorySaleRepository;
+let costing: InMemoryCostingRepository;
 
 before(async () => {
   users = new InMemoryUserRepository();
@@ -41,6 +43,7 @@ before(async () => {
   inventory = new InMemoryInventoryRepository();
   customers = new InMemoryCustomerRepository();
   sales = new InMemorySaleRepository(inventory);
+  costing = new InMemoryCostingRepository();
   const now = new Date().toISOString();
   await users.create({
     id: 'b052fa5e-e405-4460-82c8-6887137c885a',
@@ -113,7 +116,7 @@ before(async () => {
     products,
     suppliers,
     purchases,
-    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory, customers, sales,
+    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory, customers, sales, costing,
     passwordHasher: new Argon2PasswordHasher(),
     authentication: new LocalJwtAuthentication(config.jwtSecret, config.jwtExpiresIn)
   });
@@ -962,7 +965,11 @@ test('sales POS confirms stock atomically, restricts discounts and void restores
   const draft = await app.inject({ method: 'POST', url: '/api/sales', headers: await authorizationHeader('cashier'), payload });
   assert.equal(draft.statusCode, 201); assert.equal(draft.json().status, 'DRAFT'); assert.match(draft.json().saleNumber, /^VTA-2026-/);
   const confirmed = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/confirm`, headers: await authorizationHeader('cashier') });
-  assert.equal(confirmed.statusCode, 200); assert.equal(confirmed.json().status, 'CONFIRMED'); assert.equal(confirmed.json().costingStatus, 'PENDING');
+  assert.equal(confirmed.statusCode, 200); assert.equal(confirmed.json().status, 'CONFIRMED'); assert.equal(confirmed.json().costingStatus, 'COSTED');
+  assert.equal(confirmed.json().directCogsGuarani, undefined);
+  const managerDetail = await app.inject({ method: 'GET', url: `/api/sales/${draft.json().id}`, headers: await authorizationHeader('manager') });
+  assert.equal(managerDetail.statusCode, 200); assert.equal(typeof managerDetail.json().directCogsGuarani, 'number'); assert.equal(typeof managerDetail.json().grossMarginBps, 'number');
+  const cashierCosting = await app.inject({ method: 'GET', url: `/api/sales/${draft.json().id}/costing`, headers: await authorizationHeader('cashier') }); assert.equal(cashierCosting.statusCode, 403);
   assert.equal((await inventory.getBalance(cement.id))?.onHandInternal, before - 1);
   const repeated = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/confirm`, headers: await authorizationHeader('cashier') }); assert.equal(repeated.statusCode, 409);
   const voided = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/void`, headers: await authorizationHeader('admin'), payload: { reason: 'Prueba de anulación' } });
