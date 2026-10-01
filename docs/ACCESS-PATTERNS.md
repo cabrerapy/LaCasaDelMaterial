@@ -18,6 +18,12 @@ El listado pagina primero el catálogo con sus filtros existentes (estado, categ
 
 Los filtros derivados `stockStatus` y `trackStock`, y el orden visual, se aplican dentro de la página del catálogo; por ello puede existir una página vacía con cursor siguiente. No se agregó un GSI para estados derivados. El resumen recorre productos activos en páginas de 100 y obtiene sus balances por lote. El detalle consulta un producto, su balance fuerte, presentaciones y hasta diez movimientos recientes por el índice de producto.
 
+## Customers LCM-011
+
+Tabla separada con `CUSTOMER#{id}` para detalle, `DOCUMENT#{type}#{normalizedNumber}` y `TAX_ID#{normalizedTaxId}` como reservas únicas. Altas y cambios de documento/RUC usan transacciones condicionales, incluyendo liberación de reservas anteriores.
+
+El listado inicial usa Scan limitado y cursor opaco sobre la tabla exclusiva de clientes. Estado, tipo, ciudad y búsqueda por nombre visible, documento, RUC o teléfono se aplican como filtros acotados. No se agregan GSIs hasta que el volumen justifique índices concretos.
+
 Antes de definir tablas o índices DynamoDB se detallarán volumen, orden, filtros y consistencia de cada patrón.
 
 - Obtener usuario por ID para resolver una sesión autenticada.

@@ -41,7 +41,7 @@ function cleanFields(input: CreateCustomerRequest): Omit<Customer, 'id'|'type'|'
   const address = optional(input.address);
   return { ...(firstName ? { firstName } : {}), ...(lastName ? { lastName } : {}), ...(businessName ? { businessName } : {}),
     ...(documentType ? { documentType } : {}), ...(documentNumber ? { documentNumber, normalizedDocument: documentNumber.toUpperCase().replace(/\s+/g, '') } : {}),
-    ...(taxId ? { taxId } : {}), ...(phone ? { phone, normalizedPhone: normalize(phone) } : {}), ...(email ? { email } : {}),
+    ...(taxId ? { taxId } : {}), ...(phone ? { phone, normalizedPhone: normalize(phone).replace(/\s+/g, '') } : {}), ...(email ? { email } : {}),
     ...(address ? { address } : {}), ...(city ? { city, normalizedCity: normalize(city) } : {}),
     ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}) };
 }

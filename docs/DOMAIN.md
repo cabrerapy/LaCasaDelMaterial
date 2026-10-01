@@ -32,6 +32,12 @@ El stock operativo proviene exclusivamente de `InventoryBalance.onHandInternal`;
 
 La ausencia de balance equivale a cero para un producto controlado y no es inconsistencia. Los saldos negativos se muestran y se reportan en la verificación. La disponibilidad actual equivale al saldo disponible; cuando existan reservas será `onHand - reserved`. No existe valorización, FIFO, consumo de lotes ni mutación de stock desde las consultas.
 
+## Customers (LCM-011)
+
+`Customer` representa una persona o empresa, con nombre visible centralizado, documento/RUC opcionales, contacto, dirección principal, estado lógico y auditoría. La combinación tipo/número de documento y el RUC son únicos cuando existen. No se elimina físicamente ni contiene saldo, deuda o límite de crédito.
+
+Una venta futura podrá operar sin cliente como consumidor final. Cuando tenga cliente, guardará un snapshot mínimo con nombre visible, tipo/número de documento y RUC; la dirección de entrega también será snapshot de la venta y no dependerá permanentemente de la dirección principal.
+
 ## Categories
 
 LCM-004 administra categorías ordenables con nombre y slug únicos, descripción opcional, estado activo/inactivo y auditoría básica. La asociación con productos se implementará posteriormente.

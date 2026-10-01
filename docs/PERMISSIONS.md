@@ -1,5 +1,7 @@
 # Roles y permisos
 
+LCM-011: ADMIN y MANAGER administran clientes y estado; CASHIER consulta, crea y actualiza durante el flujo comercial, pero no activa/desactiva. PURCHASING, WAREHOUSE, LOGISTICS y DRIVER no acceden al CRUD general. Se aplican `customers.read/create/update/disable` desde la matriz central.
+
 LCM-010: ADMIN, MANAGER, PURCHASING, WAREHOUSE, CASHIER y LOGISTICS consultan stock con `inventory.read`; DRIVER no accede. Solo los roles con `inventory.movements.read` reciben historial reciente y solo `inventory.costs.read` habilita sus costos históricos. CASHIER y LOGISTICS consultan disponibilidad sin ledger ni costos. Las consultas de stock no permiten mutaciones.
 
 LCM-009: ADMIN, MANAGER y PURCHASING tienen `inventory.movements.read` e `inventory.costs.read`; WAREHOUSE solo lectura de movimientos. API lista/detalle omite `costGuarani` sin permiso. No hay endpoints de creación, edición ni eliminación de movimientos, ni ajustes manuales.

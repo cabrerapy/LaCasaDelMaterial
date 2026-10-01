@@ -919,6 +919,9 @@ test('customers support person/company, uniqueness, search, audit and permission
     taxId: '80012345-6', phone: '021 123456', city: 'Asunción'
   } });
   assert.equal(company.statusCode, 201); assert.equal(company.json().displayName, 'Constructora ABC S.A.');
+  const updatedCompany = await app.inject({ method: 'PATCH', url: `/api/customers/${company.json().id}`, headers: admin,
+    payload: { businessName: 'Constructora ABC Renovada S.A.' } });
+  assert.equal(updatedCompany.statusCode, 200); assert.equal(updatedCompany.json().displayName, 'Constructora ABC Renovada S.A.');
   assert.equal((await app.inject({ method: 'POST', url: '/api/customers', headers: admin, payload: {
     type: 'PERSON', firstName: 'Duplicado', documentType: 'CI', documentNumber: '1234567'
   } })).statusCode, 409);
