@@ -9,16 +9,16 @@
   place-items: center;
   padding: 1.5rem;
   background:
-    radial-gradient(circle at top right, rgb(220 173 64 / 22%), transparent 35%),
-    linear-gradient(145deg, #173c2a, #0d281c);
+    radial-gradient(circle at top right, var(--construction-glow), transparent 35%),
+    linear-gradient(145deg, var(--green-900), var(--green-900));
 }
 
 .login-card {
   width: min(100%, 27rem);
   padding: 2.5rem;
   border-radius: 1.25rem;
-  background: #fff;
-  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 25%);
+  background: var(--surface);
+  box-shadow: 0 1.5rem 4rem var(--shadow);
 }
 
 .brand-mark {
@@ -27,14 +27,14 @@
   display: grid;
   place-items: center;
   border-radius: 0.85rem;
-  background: #d7a92f;
-  color: #173c2a;
+  background: var(--construction-500);
+  color: var(--green-900);
   font-weight: 900;
 }
 
 .eyebrow {
   margin: 1.5rem 0 0.35rem;
-  color: #8a6814;
+  color: var(--construction-700);
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -43,13 +43,13 @@
 
 h1 {
   margin: 0;
-  color: #173c2a;
+  color: var(--green-900);
   font-size: clamp(1.8rem, 6vw, 2.35rem);
 }
 
 .intro {
   margin: 0.6rem 0 1.75rem;
-  color: #5d685f;
+  color: var(--text-secondary);
 }
 
 form {
@@ -59,7 +59,7 @@ form {
 
 label {
   margin-top: 0.55rem;
-  color: #243c2f;
+  color: var(--text-primary);
   font-size: 0.85rem;
   font-weight: 700;
 }
@@ -67,22 +67,22 @@ label {
 input {
   width: 100%;
   padding: 0.85rem 1rem;
-  border: 1px solid #ccd5ce;
+  border: 1px solid var(--border-control);
   border-radius: 0.65rem;
   font: inherit;
 }
 
 input:focus {
-  outline: 3px solid rgb(215 169 47 / 24%);
-  border-color: #b58a1f;
+  outline: 3px solid var(--construction-focus);
+  border-color: var(--construction-700);
 }
 
 .primary-button {
   margin-top: 1rem;
   padding: 0.9rem;
   border-radius: 0.65rem;
-  background: #1f5136;
-  color: #fff;
+  background: var(--green-700);
+  color: var(--surface);
   font-weight: 800;
   text-align: center;
   text-decoration: none;
@@ -92,20 +92,20 @@ input:focus {
 
 .primary-button:disabled { cursor: wait; opacity: 0.65; }
 
-.field-error { color: #a1322d; font-size: 0.78rem; }
+.field-error { color: var(--error); font-size: 0.78rem; }
 
 .form-error {
   margin: 0.75rem 0 0;
   padding: 0.75rem;
   border-radius: 0.55rem;
-  background: #fff0ef;
-  color: #922c27;
+  background: var(--error-background);
+  color: var(--error);
   font-size: 0.85rem;
 }
 
 small {
   display: block;
   margin-top: 1.25rem;
-  color: #7c847e;
+  color: var(--text-muted);
   text-align: center;
 }

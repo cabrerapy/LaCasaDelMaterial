@@ -3,9 +3,71 @@
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+
+  /* Corporate palette */
+  --green-900: #173c2a;
+  --green-700: #1f5136;
+  --green-600: #2b6748;
+
+  /* Construction accents */
+  --construction-700: #8a6500;
+  --construction-600: #c98f00;
+  --construction-500: #f2b705;
+  --construction-400: #ffc928;
+  --construction-200: #ffe28a;
+  --construction-100: #fff4cc;
+  --construction-50: #fff9e8;
+
+  /* Surfaces and typography */
+  --background: #f3f5f1;
+  --surface: #ffffff;
+  --surface-subtle: #f8faf8;
+  --surface-muted: #fafbfa;
+  --text-primary: #203329;
+  --text-secondary: #718078;
+  --text-muted: #77827c;
+  --text-on-dark: #ffffff;
+  --border: #dce2dd;
+  --border-secondary: #e0e6e1;
+  --border-control: #cbd5ce;
+  --border-subtle: #edf0ed;
+
+  /* Feedback and states */
+  --success: #1d6538;
+  --success-background: #e4f5ea;
+  --warning-text: #775a00;
+  --warning-background: #fff2cb;
+  --error: #922c27;
+  --error-background: #fff0ef;
+  --disabled: #666666;
+  --disabled-background: #eeeeee;
+
+  /* Overlays and elevated surfaces */
+  --overlay: rgb(9 24 16 / 55%);
+  --overlay-medium: rgb(9 24 16 / 50%);
+  --overlay-light: rgb(255 255 255 / 12%);
+  --overlay-hover: rgb(255 255 255 / 11%);
+  --shadow: rgb(0 0 0 / 25%);
+  --shadow-soft: rgb(0 0 0 / 18%);
+  --green-shadow: rgb(23 60 42 / 15%);
+  --green-shadow-subtle: rgb(23 60 42 / 12%);
+  --construction-glow: rgb(242 183 5 / 22%);
+  --construction-focus: rgb(242 183 5 / 24%);
 }
 
 * { box-sizing: border-box; }
 html, body { min-height: 100%; margin: 0; }
-body { min-width: 320px; background: #f3f5f1; }
+body { min-width: 320px; background: var(--background); color: var(--text-primary); }
 button, input { font: inherit; }
+
+button.primary:hover:not(:disabled),
+a.primary:hover,
+.primary-button:hover:not(:disabled) {
+  background: var(--green-600);
+  border-color: var(--green-600);
+}
+
+table th {
+  background: var(--green-900);
+  color: var(--text-on-dark);
+}
