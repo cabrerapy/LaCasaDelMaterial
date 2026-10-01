@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { InMemoryInventoryRepository } from '../modules/inventory/infrastructure/in-memory-inventory.repository.js';
 import { after, before, test } from 'node:test';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
@@ -15,6 +16,7 @@ import { InMemoryProductRepository } from '../modules/products/infrastructure/in
 import { toDisplayQuantity, toInternalQuantity } from '../modules/products/domain/product.js';
 import { InMemorySupplierRepository } from '../modules/suppliers/infrastructure/in-memory-supplier.repository.js';
 import { InMemoryPurchaseRepository } from '../modules/purchases/infrastructure/in-memory-purchase.repository.js';
+import { InMemoryReceivingRepository } from '../modules/receiving/infrastructure/in-memory-receiving.repository.js';
 
 const adminPassword = 'LocalTestPassword123!';
 const jwtSecret = 'test-secret-with-at-least-thirty-two-characters';
@@ -24,6 +26,7 @@ let categories: InMemoryCategoryRepository;
 let products: InMemoryProductRepository;
 let suppliers: InMemorySupplierRepository;
 let purchases: InMemoryPurchaseRepository;
+let inventory: InMemoryInventoryRepository;
 
 before(async () => {
   users = new InMemoryUserRepository();
@@ -31,6 +34,7 @@ before(async () => {
   products = new InMemoryProductRepository();
   suppliers = new InMemorySupplierRepository();
   purchases = new InMemoryPurchaseRepository();
+  inventory = new InMemoryInventoryRepository();
   const now = new Date().toISOString();
   await users.create({
     id: 'b052fa5e-e405-4460-82c8-6887137c885a',
@@ -103,6 +107,7 @@ before(async () => {
     products,
     suppliers,
     purchases,
+    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory,
     passwordHasher: new Argon2PasswordHasher(),
     authentication: new LocalJwtAuthentication(config.jwtSecret, config.jwtExpiresIn)
   });
@@ -804,9 +809,73 @@ test('purchase endpoints distinguish unauthenticated and forbidden users', async
   assert.equal(unauthenticated.statusCode, 401); assert.equal(forbidden.statusCode, 403);
 });
 
+test('WAREHOUSE performs partial and complete receipts with immutable exact-cost lots', async () => {
+  const cement = await products.findByCode('CEM-CPII'); assert.ok(cement); const bag = (await products.listPresentations(cement.id)).find((value) => value.baseQuantityInternal === 1); assert.ok(bag);
+  const draft = await createPurchase({ supplierId, purchaseDate: '2026-09-29', items: [{ productId: cement.id, presentationId: bag.id, quantity: 200, unitPurchasePriceGuarani: 52000 }] });
+  const confirmed = await app.inject({ method: 'POST', url: `/api/purchases/${draft.json().id}/confirm`, headers: await authorizationHeader('admin') });
+  const itemId = confirmed.json().items[0].id as string;
+  const first = await app.inject({ method: 'POST', url: '/api/purchase-receipts', headers: await authorizationHeader('warehouse'), payload: { purchaseId: draft.json().id, receiptDate: '2026-09-29', lines: [{ purchaseItemId: itemId, receivedQuantity: '120' }] } });
+  assert.equal(first.statusCode, 201); assert.equal(first.json().status, 'DRAFT'); assert.equal(first.body.includes('directPurchaseCostGuarani'), false);
+  const firstConfirmed = await app.inject({ method: 'POST', url: `/api/purchase-receipts/${first.json().id}/confirm`, headers: await authorizationHeader('warehouse') });
+  assert.equal(firstConfirmed.statusCode, 200); assert.equal(firstConfirmed.body.includes('directPurchaseCostGuarani'), false);
+  const partial = await app.inject({ method: 'GET', url: `/api/purchases/${draft.json().id}/receiving-status`, headers: await authorizationHeader('warehouse') });
+  assert.equal(partial.json().status, 'PARTIALLY_RECEIVED'); assert.equal(partial.json().items[0].receivedQuantityBaseInternal, 120); assert.equal(partial.json().items[0].pendingQuantityBaseInternal, 80);
+  const over = await app.inject({ method: 'POST', url: '/api/purchase-receipts', headers: await authorizationHeader('warehouse'), payload: { purchaseId: draft.json().id, receiptDate: '2026-09-29', lines: [{ purchaseItemId: itemId, receivedQuantity: '90' }] } });
+  assert.equal(over.statusCode, 201); const overConfirm = await app.inject({ method: 'POST', url: `/api/purchase-receipts/${over.json().id}/confirm`, headers: await authorizationHeader('warehouse') }); assert.equal(overConfirm.statusCode, 409);
+  const second = await app.inject({ method: 'POST', url: '/api/purchase-receipts', headers: await authorizationHeader('warehouse'), payload: { purchaseId: draft.json().id, receiptDate: '2026-09-30', lines: [{ purchaseItemId: itemId, receivedQuantity: '80' }] } });
+  const secondConfirmed = await app.inject({ method: 'POST', url: `/api/purchase-receipts/${second.json().id}/confirm`, headers: await authorizationHeader('warehouse') }); assert.equal(secondConfirmed.statusCode, 200);
+  const complete = await app.inject({ method: 'GET', url: `/api/purchases/${draft.json().id}/receiving-status`, headers: await authorizationHeader('warehouse') }); assert.equal(complete.json().status, 'RECEIVED'); assert.equal(complete.json().items[0].pendingQuantityBaseInternal, 0);
+  const duplicate = await app.inject({ method: 'POST', url: `/api/purchase-receipts/${second.json().id}/confirm`, headers: await authorizationHeader('warehouse') }); assert.equal(duplicate.statusCode, 409);
+  const warehouseLots = await app.inject({ method: 'GET', url: `/api/lots?purchaseId=${draft.json().id}`, headers: await authorizationHeader('warehouse') }); assert.equal(warehouseLots.json().items.length, 2); assert.equal(warehouseLots.body.includes('directPurchaseCostGuarani'), false);
+  const managerLots = await app.inject({ method: 'GET', url: `/api/lots?purchaseId=${draft.json().id}`, headers: await authorizationHeader('manager') }); assert.deepEqual(managerLots.json().items.map((lot: { directPurchaseCostGuarani: number }) => lot.directPurchaseCostGuarani).sort((a: number, b: number) => a - b), [4160000, 6240000]);
+});
+
+test('receipt permissions, draft cancellation and confirmed immutability are enforced', async () => {
+  assert.equal((await app.inject({ method: 'GET', url: '/api/purchase-receipts' })).statusCode, 401);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/purchase-receipts', headers: await authorizationHeader('cashier') })).statusCode, 403);
+  const cement = await products.findByCode('CEM-CPII'); assert.ok(cement); const bag = (await products.listPresentations(cement.id)).find((value) => value.baseQuantityInternal === 1); assert.ok(bag);
+  const draftPurchase = await createPurchase({ supplierId, purchaseDate: '2026-09-29', items: [{ productId: cement.id, presentationId: bag.id, quantity: 1, unitPurchasePriceGuarani: 1000 }] });
+  const rejected = await app.inject({ method: 'POST', url: '/api/purchase-receipts', headers: await authorizationHeader('warehouse'), payload: { purchaseId: draftPurchase.json().id, receiptDate: '2026-09-29', lines: [{ purchaseItemId: draftPurchase.json().items[0].id, receivedQuantity: '1' }] } }); assert.equal(rejected.statusCode, 409);
+  const confirmed = await app.inject({ method: 'POST', url: `/api/purchases/${draftPurchase.json().id}/confirm`, headers: await authorizationHeader('admin') });
+  const receipt = await app.inject({ method: 'POST', url: '/api/purchase-receipts', headers: await authorizationHeader('warehouse'), payload: { purchaseId: draftPurchase.json().id, receiptDate: '2026-09-29', lines: [{ purchaseItemId: confirmed.json().items[0].id, receivedQuantity: '1' }] } });
+  const cancelled = await app.inject({ method: 'POST', url: `/api/purchase-receipts/${receipt.json().id}/cancel`, headers: await authorizationHeader('warehouse') }); assert.equal(cancelled.json().status, 'CANCELLED');
+  assert.equal((await app.inject({ method: 'PATCH', url: `/api/purchase-receipts/${receipt.json().id}`, headers: await authorizationHeader('warehouse'), payload: { notes: 'No permitido' } })).statusCode, 409);
+});
+
+test('safe decimal quantities and final cost remainder preserve exact totals', async () => {
+  const cement = await products.findByCode('CEM-CPII'); assert.ok(cement); const bag = (await products.listPresentations(cement.id)).find((value) => value.baseQuantityInternal === 1); assert.ok(bag);
+  const pack = await app.inject({ method: 'POST', url: `/api/products/${cement.id}/presentations`, headers: await authorizationHeader('admin'), payload: { name: 'Pack 3 bolsas', sku: 'CEM-CPII-P3', baseQuantity: 3, salePriceGuarani: 3000 } }); assert.equal(pack.statusCode, 201);
+  const draft = await createPurchase({ supplierId, purchaseDate: '2026-09-29', items: [{ productId: cement.id, presentationId: pack.json().id, quantity: 1, unitPurchasePriceGuarani: 1000 }] });
+  const confirmed = await app.inject({ method: 'POST', url: `/api/purchases/${draft.json().id}/confirm`, headers: await authorizationHeader('admin') }); const itemId = confirmed.json().items[0].id as string;
+  for (let index = 0; index < 3; index += 1) { const receipt = await app.inject({ method: 'POST', url: '/api/purchase-receipts', headers: await authorizationHeader('warehouse'), payload: { purchaseId: draft.json().id, receiptDate: '2026-09-29', lines: [{ purchaseItemId: itemId, receivedQuantity: '1' }] } }); assert.equal((await app.inject({ method: 'POST', url: `/api/purchase-receipts/${receipt.json().id}/confirm`, headers: await authorizationHeader('warehouse') })).statusCode, 200); }
+  const lots = await app.inject({ method: 'GET', url: `/api/lots?purchaseId=${draft.json().id}`, headers: await authorizationHeader('manager') }); const costs = lots.json().items.map((lot: { directPurchaseCostGuarani: number }) => lot.directPurchaseCostGuarani).sort((a: number, b: number) => a - b); assert.deepEqual(costs, [333, 333, 334]); assert.equal(costs.reduce((sum: number, value: number) => sum + value, 0), 1000);
+  const arenaDraft = await createPurchase({ supplierId, purchaseDate: '2026-09-29', items: [{ productId: arenaProductId, presentationId: arenaHalfPresentationId, quantity: 20, unitPurchasePriceGuarani: 90000 }] });
+  const arenaConfirmed = await app.inject({ method: 'POST', url: `/api/purchases/${arenaDraft.json().id}/confirm`, headers: await authorizationHeader('admin') }); const arenaReceipt = await app.inject({ method: 'POST', url: '/api/purchase-receipts', headers: await authorizationHeader('warehouse'), payload: { purchaseId: arenaDraft.json().id, receiptDate: '2026-09-29', lines: [{ purchaseItemId: arenaConfirmed.json().items[0].id, receivedQuantity: '6.5' }] } });
+  await app.inject({ method: 'POST', url: `/api/purchase-receipts/${arenaReceipt.json().id}/confirm`, headers: await authorizationHeader('warehouse') }); const status = await app.inject({ method: 'GET', url: `/api/purchases/${arenaDraft.json().id}/receiving-status`, headers: await authorizationHeader('warehouse') }); assert.equal(status.json().items[0].receivedQuantityBaseInternal, 6500); assert.equal(status.json().items[0].pendingQuantityBaseInternal, 3500);
+});
+
 function loginToken(response: { json(): { accessToken: string } }): string {
   return response.json().accessToken;
 }
+
+test('inventory HTTP is read-only and costs require inventory.costs.read', async () => {
+  const ledger = await inventory.allMovements(); assert.ok(ledger.length >= 6);
+  const movement = ledger[0]!; const headers = await authorizationHeader('manager');
+  const detail = await app.inject({ method: 'GET', url: `/api/inventory/movements/${movement.id}`, headers });
+  assert.equal(detail.statusCode, 200); assert.equal(detail.json().costGuarani, movement.costGuarani);
+  assert.equal(detail.json().lotId, movement.lotId); assert.equal(detail.json().quantityDeltaInternal, movement.quantityDeltaInternal);
+  const warehouse = await app.inject({ method: 'GET', url: '/api/inventory/movements', headers: await authorizationHeader('warehouse') });
+  assert.equal(warehouse.statusCode, 200); assert.equal(warehouse.body.includes('costGuarani'), false);
+  const purchasing = await app.inject({ method: 'GET', url: '/api/inventory/movements', headers: await authorizationHeader('purchasing') });
+  assert.equal(purchasing.statusCode, 200); assert.equal(purchasing.body.includes('costGuarani'), true);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/inventory/movements' })).statusCode, 401);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/inventory/movements', headers: await authorizationHeader('cashier') })).statusCode, 403);
+  for (const method of ['PATCH', 'DELETE'] as const) assert.equal((await app.inject({ method, url: `/api/inventory/movements/${movement.id}`, headers })).statusCode, 404);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/inventory/movements', headers, payload: {} })).statusCode, 404);
+  for (const balance of await inventory.allBalances()) {
+    assert.equal(balance.onHandInternal, ledger.filter((item) => item.productId === balance.productId).reduce((sum, item) => sum + item.quantityDeltaInternal, 0));
+  }
+});
 
 async function authorizationHeader(username: string): Promise<{ authorization: string }> {
   return { authorization: `Bearer ${loginToken(await login(adminPassword, username))}` };

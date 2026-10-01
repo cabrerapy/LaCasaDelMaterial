@@ -10,6 +10,9 @@
     "build": "npm run build --workspace @lcm/contracts && npm run build --workspace @lcm/api && npm run build --workspace @lcm/web",
     "lint": "npm run build --workspace @lcm/contracts && npm run lint --workspace @lcm/contracts && npm run lint --workspace @lcm/api && npm run lint --workspace @lcm/web",
     "test": "npm run test --workspace @lcm/contracts && npm run test --workspace @lcm/api && npm run test --workspace @lcm/web",
+    "inventory:backfill-receipts": "npm run inventory:backfill-receipts --workspace @lcm/api",
+    "inventory:rebuild-balances": "npm run inventory:rebuild-balances --workspace @lcm/api",
+    "inventory:verify": "npm run inventory:verify --workspace @lcm/api",
     "dev:web": "npm run start --workspace @lcm/web",
     "dev:api": "npm run dev --workspace @lcm/api"
   },

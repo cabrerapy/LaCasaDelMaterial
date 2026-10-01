@@ -1,6 +1,6 @@
 import { TransactionCanceledException } from '@aws-sdk/client-dynamodb';
 import {
-  DynamoDBDocumentClient, GetCommand, QueryCommand, TransactWriteCommand,
+  DynamoDBDocumentClient, GetCommand, QueryCommand, ScanCommand, TransactWriteCommand,
   type TransactWriteCommandInput
 } from '@aws-sdk/lib-dynamodb';
 import type {
@@ -14,7 +14,7 @@ const itemType = 'PURCHASE_ITEM';
 export class DynamoDbPurchaseRepository implements PurchaseRepository {
   constructor(private readonly client: DynamoDBDocumentClient, private readonly tableName: string) {}
   async findById(id: string): Promise<Purchase | null> {
-    const result = await this.client.send(new GetCommand({ TableName: this.tableName, Key: { pk: purchaseKey(id) } }));
+    const result = await this.client.send(new GetCommand({ TableName: this.tableName, Key: { pk: purchaseKey(id) }, ConsistentRead: true }));
     return toPurchase(result.Item);
   }
   async findByPurchaseNumber(number: string): Promise<Purchase | null> {
@@ -22,13 +22,17 @@ export class DynamoDbPurchaseRepository implements PurchaseRepository {
     const id = lock.Item?.['purchaseId']; return typeof id === 'string' ? this.findById(id) : null;
   }
   async listItems(purchaseId: string): Promise<readonly PurchaseItem[]> {
-    const result = await this.client.send(new QueryCommand({
-      TableName: this.tableName, IndexName: 'PurchaseItemsIndex',
-      KeyConditionExpression: '#purchaseId = :purchaseId',
-      ExpressionAttributeNames: { '#purchaseId': 'purchaseId' },
-      ExpressionAttributeValues: { ':purchaseId': purchaseId }, Limit: 10
-    }));
-    return (result.Items ?? []).map(parsePurchaseItem).filter((item): item is PurchaseItem => item !== null)
+    const records: Record<string, unknown>[] = []; let key: Record<string, unknown> | undefined;
+    do {
+      const result = await this.client.send(new ScanCommand({
+        TableName: this.tableName, ConsistentRead: true, Limit: 100,
+        FilterExpression: 'purchaseId = :purchaseId AND entityType = :type',
+        ExpressionAttributeValues: { ':purchaseId': purchaseId, ':type': itemType },
+        ...(key ? { ExclusiveStartKey: key } : {})
+      }));
+      records.push(...(result.Items ?? [])); key = result.LastEvaluatedKey;
+    } while (key);
+    return records.map(parsePurchaseItem).filter((item): item is PurchaseItem => item !== null)
       .sort((a, b) => a.sortOrder - b.sortOrder);
   }
   async list(options: PurchaseListOptions): Promise<PurchasePage> {

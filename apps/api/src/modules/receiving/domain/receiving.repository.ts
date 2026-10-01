@@ -1,4 +1,5 @@
 import type { PurchaseReceiptStatus } from '@lcm/contracts';
+import type { InventoryMovement } from '../../inventory/domain/inventory.js';
 import type { Purchase, PurchaseItem } from '../../purchases/domain/purchase.js';
 import type { PurchaseLot, PurchaseReceipt, PurchaseReceiptLine } from './receiving.js';
 
@@ -13,7 +14,8 @@ export interface ReceivingRepository {
   listReceipts(options: ReceiptListOptions): Promise<ReceiptPage>;
   createReceipt(receipt: PurchaseReceipt, lines: readonly PurchaseReceiptLine[]): Promise<void>;
   replaceReceipt(receipt: PurchaseReceipt, lines: readonly PurchaseReceiptLine[], previousLines: readonly PurchaseReceiptLine[], expectedStatus: PurchaseReceiptStatus): Promise<void>;
-  confirmReceipt(receipt: PurchaseReceipt, lines: readonly PurchaseReceiptLine[], lots: readonly PurchaseLot[], purchase: Purchase, items: readonly PurchaseItem[]): Promise<void>;
+  confirmReceipt(receipt: PurchaseReceipt, lines: readonly PurchaseReceiptLine[], lots: readonly PurchaseLot[], purchase: Purchase, items: readonly PurchaseItem[], expectedPurchaseUpdatedAt: string, movements: readonly InventoryMovement[], expectedReceiptUpdatedAt: string): Promise<void>;
+  auditSnapshot(): Promise<{ receipts: readonly PurchaseReceipt[]; lines: readonly PurchaseReceiptLine[]; lots: readonly PurchaseLot[] }>;
   findLotById(id: string): Promise<PurchaseLot | null>;
   listLots(options: LotListOptions): Promise<LotPage>;
 }

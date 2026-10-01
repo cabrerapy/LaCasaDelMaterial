@@ -24,6 +24,7 @@ services:
       DYNAMODB_PRODUCTS_TABLE: lcm-local-products
       DYNAMODB_SUPPLIERS_TABLE: lcm-local-suppliers
       DYNAMODB_PURCHASES_TABLE: lcm-local-purchases
+      DYNAMODB_INVENTORY_TABLE: lcm-local-inventory
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?INITIAL_ADMIN_PASSWORD is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}

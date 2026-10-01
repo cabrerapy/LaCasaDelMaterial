@@ -1,4 +1,7 @@
 import cors from '@fastify/cors';
+import type { InventoryRepository } from '../modules/inventory/domain/inventory.js';
+import { InventoryService } from '../modules/inventory/application/inventory.service.js';
+import { inventoryRoutes } from '../modules/inventory/http/inventory.routes.js';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { AppConfig } from '../config/environment.js';
 import { healthRoutes } from '../modules/health/health.routes.js';
@@ -22,6 +25,11 @@ import { suppliersRoutes } from '../modules/suppliers/http/suppliers.routes.js';
 import type { PurchaseRepository } from '../modules/purchases/domain/purchase.repository.js';
 import { PurchasesService } from '../modules/purchases/application/purchases.service.js';
 import { purchasesRoutes } from '../modules/purchases/http/purchases.routes.js';
+import type { ReceivingRepository } from '../modules/receiving/domain/receiving.repository.js';
+import { ReceivingService } from '../modules/receiving/application/receiving.service.js';
+import { receivingRoutes } from '../modules/receiving/http/receiving.routes.js';
+import { lotsRoutes } from '../modules/receiving/http/lots.routes.js';
+import { purchaseReceivingRoutes } from '../modules/receiving/http/purchase-receiving.routes.js';
 
 export interface AppDependencies {
   readonly users: UserRepository;
@@ -31,6 +39,8 @@ export interface AppDependencies {
   readonly products: ProductRepository;
   readonly suppliers: SupplierRepository;
   readonly purchases: PurchaseRepository;
+  readonly receiving: ReceivingRepository;
+  readonly inventory: InventoryRepository;
 }
 
 export async function createApp(
@@ -83,6 +93,12 @@ export async function createApp(
       dependencies.purchases, dependencies.suppliers, dependencies.products
     )
   });
+  const inventory = new InventoryService(dependencies.inventory);
+  const receivingService = new ReceivingService(dependencies.receiving, dependencies.purchases, inventory);
+  await app.register(inventoryRoutes, { prefix: '/api/inventory', authService, inventory });
+  await app.register(purchaseReceivingRoutes, { prefix: '/api/purchases', authService, service: receivingService });
+  await app.register(receivingRoutes, { prefix: '/api/purchase-receipts', authService, service: receivingService });
+  await app.register(lotsRoutes, { prefix: '/api/lots', authService, service: receivingService });
 
   return app;
 }

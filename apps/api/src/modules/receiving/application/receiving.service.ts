@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { InventoryService } from '../../inventory/application/inventory.service.js';
 import type {
   CreatePurchaseReceiptRequest, PurchaseLotResponse, PurchaseLotsPageResponse, PurchaseReceiptLineInput,
   PurchaseReceiptResponse, PurchaseReceiptsPageResponse, PurchaseReceivingStatusResponse, UpdatePurchaseReceiptRequest
@@ -11,7 +12,7 @@ import type { PurchaseLot, PurchaseReceipt, PurchaseReceiptLine } from '../domai
 import { ReceivingApplicationError } from './receiving-application-error.js';
 
 export class ReceivingService {
-  constructor(private readonly receipts: ReceivingRepository, private readonly purchases: PurchaseRepository) {}
+  constructor(private readonly receipts: ReceivingRepository, private readonly purchases: PurchaseRepository, private readonly inventory: InventoryService) {}
 
   async listReceipts(options: ReceiptListOptions, costs: boolean): Promise<PurchaseReceiptsPageResponse> {
     const page = await this.receipts.listReceipts(options);
@@ -37,7 +38,7 @@ export class ReceivingService {
   async update(id: string, input: UpdatePurchaseReceiptRequest, actor: string, costs: boolean): Promise<PurchaseReceiptResponse> {
     const current = await this.requireReceipt(id);
     if (current.status !== 'DRAFT') throw new ReceivingApplicationError('Solo se modifica una recepción en borrador', 409);
-    const previous = await this.receipts.listReceiptLines(id); const now = new Date().toISOString();
+    const previous = await this.receipts.listReceiptLines(id); const now = new Date(Math.max(Date.now(), Date.parse(current.updatedAt) + 1)).toISOString();
     const receipt: PurchaseReceipt = {
       ...current, receiptDate: input.receiptDate ?? current.receiptDate,
       ...replaceText(current, 'deliveryDocumentNumber', input.deliveryDocumentNumber),
@@ -62,7 +63,7 @@ export class ReceivingService {
     if (purchase.status !== 'CONFIRMED' && purchase.status !== 'PARTIALLY_RECEIVED') throw new ReceivingApplicationError('La compra no admite recepciones', 409);
     const purchaseItems = await this.purchases.listItems(purchase.id); const draftLines = await this.receipts.listReceiptLines(id);
     if (draftLines.length === 0) throw new ReceivingApplicationError('Agregue al menos una cantidad a recibir', 409);
-    const now = new Date().toISOString(); const updates = new Map<string, PurchaseItem>(); const lines: PurchaseReceiptLine[] = []; const lots: PurchaseLot[] = [];
+    const now = new Date(Math.max(Date.now(), Date.parse(purchase.updatedAt) + 1, Date.parse(current.updatedAt) + 1)).toISOString(); const updates = new Map<string, PurchaseItem>(); const lines: PurchaseReceiptLine[] = []; const lots: PurchaseLot[] = [];
     for (const line of draftLines) {
       const original = updates.get(line.purchaseItemId) ?? purchaseItems.find((item) => item.id === line.purchaseItemId);
       if (!original) throw new ReceivingApplicationError('Una línea no pertenece a la compra', 409);
@@ -88,7 +89,8 @@ export class ReceivingService {
     const complete = items.every((item) => (item.receivedQuantityBaseInternal ?? 0) === (item.orderedQuantityBaseInternal ?? item.quantityBaseInternal));
     const nextPurchase: Purchase = { ...purchase, status: complete ? 'RECEIVED' : 'PARTIALLY_RECEIVED', updatedAt: now, updatedBy: actor };
     const receipt: PurchaseReceipt = { ...current, status: 'CONFIRMED', updatedAt: now, updatedBy: actor, confirmedAt: now, confirmedBy: actor };
-    try { await this.receipts.confirmReceipt(receipt, lines, lots, nextPurchase, items); } catch (error: unknown) { this.rethrow(error); }
+    const movements = this.inventory.prepareReceipt(lots);
+    try { await this.receipts.confirmReceipt(receipt, lines, lots, nextPurchase, items, purchase.updatedAt, movements, current.updatedAt); } catch (error: unknown) { this.rethrow(error); }
     return this.receiptResponse(receipt, lines, costs);
   }
   async receivingStatus(purchaseId: string): Promise<PurchaseReceivingStatusResponse> {
@@ -113,7 +115,7 @@ export class ReceivingService {
     return inputs.map((input) => {
       const item = items.find((candidate) => candidate.id === input.purchaseItemId);
       if (!item || seen.has(item.id)) throw new ReceivingApplicationError('Cada línea debe pertenecer una sola vez a la compra', 400); seen.add(item.id);
-      const quantity = decimalTimes(input.receivedQuantity, item.presentationSnapshot.baseQuantityInternal);
+      const quantity = decimalTimes(input.receivedQuantity, item.productSnapshot.quantityScale);
       return { id: randomUUID(), receiptId: receipt.id, purchaseId: receipt.purchaseId, purchaseItemId: item.id,
         productId: item.productId, presentationId: item.presentationId, receivedQuantityBaseInternal: quantity,
         directPurchaseCostGuarani: 0, productSnapshot: item.productSnapshot, presentationSnapshot: item.presentationSnapshot,
@@ -128,7 +130,7 @@ export class ReceivingService {
       receivedQuantity: decimal(line.receivedQuantityBaseInternal, line.productSnapshot.quantityScale), ...(costs ? { directPurchaseCostGuarani: line.directPurchaseCostGuarani } : {}),
       productSnapshot: line.productSnapshot, presentationSnapshot: line.presentationSnapshot, ...(line.notes ? { notes: line.notes } : {}) })) };
   }
-  private lotResponse(lot: PurchaseLot, costs: boolean): PurchaseLotResponse { return { ...lot, receivedQuantity: decimal(lot.receivedQuantityBaseInternal, lot.productSnapshot.quantityScale), ...(costs ? { directPurchaseCostGuarani: lot.directPurchaseCostGuarani } : { directPurchaseCostGuarani: undefined }) }; }
+  private lotResponse(lot: PurchaseLot, costs: boolean): PurchaseLotResponse { const { directPurchaseCostGuarani, ...safe } = lot; return { ...safe, receivedQuantity: decimal(lot.receivedQuantityBaseInternal, lot.productSnapshot.quantityScale), ...(costs ? { directPurchaseCostGuarani } : {}) }; }
   private number(prefix: string, now: string): string { return `${prefix}-${now.slice(0, 4)}-${randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase()}`; }
   private rethrow(error: unknown): never { if (error instanceof ReceivingConflictError) throw new ReceivingApplicationError('Los datos cambiaron; recarga e intenta nuevamente', 409); throw error; }
 }

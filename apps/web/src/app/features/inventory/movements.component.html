@@ -1,0 +1,29 @@
+<main class="page">
+  <header><div><p class="eyebrow">Inventario</p><h1>Movimientos</h1><p class="muted">Historial de entradas de mercadería y sus documentos de origen.</p></div><a routerLink="/purchase-receipts">Ver recepciones</a></header>
+  <form class="card filters" [formGroup]="form" (ngSubmit)="apply()">
+    <label>Buscar producto<input type="search" [formControl]="productSearch" placeholder="Código o nombre"></label>
+    <label>Producto<select formControlName="productId"><option value="">Todos los productos</option>@for (product of products(); track product.id) { <option [value]="product.id">{{ product.code }} · {{ product.name }}</option> }</select></label>
+    <label>Tipo<select formControlName="type"><option value="">Todos los tipos</option><option value="PURCHASE_RECEIPT">Recepción de compra</option></select></label>
+    <label>Desde<input formControlName="dateFrom" type="date"></label><label>Hasta<input formControlName="dateTo" type="date"></label>
+    <label>Buscar referencia<input formControlName="search" type="search" placeholder="Movimiento o recepción"></label>
+    <button class="primary" [disabled]="loading()" type="submit">Aplicar filtros</button>
+  </form>
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (loading()) { <p role="status">Cargando movimientos…</p> }
+  <section class="card ledger" aria-label="Movimientos de inventario">
+    <table><thead><tr><th>Fecha</th><th>Movimiento</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Lote</th><th>Referencia</th><th>Usuario</th>@if (canReadCosts) { <th>Costo directo</th> }</tr></thead>
+      <tbody>@for (item of items(); track item.id) {
+        <tr><td data-label="Fecha">{{ item.occurredAt | date:'dd/MM/yyyy':'UTC' }}</td>
+          <td data-label="Movimiento"><a [routerLink]="['/inventory/movements', item.id]">{{ item.movementNumber }}</a></td>
+          <td data-label="Producto"><strong>{{ item.productSnapshot.name }}</strong><small>{{ item.productSnapshot.code }}</small></td>
+          <td data-label="Tipo">{{ labels[item.type] }}</td><td data-label="Cantidad" class="positive">{{ quantity(item) }}</td>
+          <td data-label="Lote"><a [routerLink]="['/lots', item.lotId]">{{ item.lotNumber }}</a></td>
+          <td data-label="Referencia"><a [routerLink]="['/purchase-receipts', item.sourceId]">{{ item.referenceNumber }}</a></td>
+          <td data-label="Usuario" class="identifier">{{ item.createdBy }}</td>
+          @if (canReadCosts) { <td data-label="Costo directo">{{ item.costGuarani | guarani }}</td> }
+        </tr>
+      } @empty { <tr><td [attr.colspan]="canReadCosts ? 9 : 8" class="empty">No hay movimientos en esta página. Ajusta los filtros o continúa a la siguiente página.</td></tr> }</tbody>
+    </table>
+  </section>
+  <nav class="pagination" aria-label="Paginación"><button (click)="previous()" [disabled]="page() === 1 || loading()">Anterior</button><span>Página {{ page() }}</span><button (click)="next()" [disabled]="!nextToken() || loading()">Siguiente</button></nav>
+</main>

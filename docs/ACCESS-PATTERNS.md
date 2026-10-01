@@ -1,5 +1,17 @@
 # Patrones de acceso conocidos
 
+## Ledger LCM-009
+
+Tabla de inventario separada, clave `pk`: `MOVEMENT#{uuid}` para detalle; `MOVEMENT_NUMBER#{number}` para número único; `SOURCE#PURCHASE_RECEIPT#{receiptId}#{lineId}` para origen único; `BALANCE#{productId}` para saldo/versionado. Número MOV-año-UUID: no usa contador global.
+
+Los GSIs MovementDateIndex (entityType), MovementProductIndex (productId), MovementLotIndex (lotId) y MovementTypeIndex (type) comparten orden `occurredAt#createdAt#id`. Query descendente limitada y paginada; filtros adicionales por origen, referencia y rangos. Búsqueda parcial acotada a cada página. Los índices son eventualmente consistentes; las lecturas por ID/origen/saldo son fuertes.
+
+La confirmación usa una sola transacción entre compras e inventario (máximo 42 operaciones para cinco líneas). Agrupa productos repetidos y usa ADD atómico sobre cantidad/version. Las reservas de origen/número son condicionales. Las condiciones de versión de compra y recepción impiden confirmar datos obsoletos.
+
+Las líneas usadas al confirmar se leen mediante Scan fuerte en páginas de 100 sobre la tabla local de compras, filtrando tipo e ID. Evita resultados obsoletos de GSI y mezcla de lotes/recepciones en el índice anterior. Esta solución prioriza consistencia para el volumen inicial; futuras claves de agregados permitirán Query fuerte sin scans.
+
+Mantenimiento recorre páginas fuertes de 100, sin índices eventuales. Rebuild toma versión antes de recorrer el ledger y aplica CAS al final: si hubo entradas concurrentes reintenta, sin perder incrementos. Verify informa cambios concurrentes para repetir en reposo.
+
 Antes de definir tablas o índices DynamoDB se detallarán volumen, orden, filtros y consistencia de cada patrón.
 
 - Obtener usuario por ID para resolver una sesión autenticada.
@@ -33,3 +45,5 @@ La tabla local de proveedores usa `pk`. El proveedor se obtiene mediante `SUPPLI
 La tabla local de compras usa `PURCHASE#{id}` y reserva `PURCHASE_NUMBER#{number}`. `PurchaseDateIndex` ordena compras por fecha, `SupplierDateIndex` atiende proveedor/fecha, `StatusDateIndex` atiende estado/fecha y `PurchaseItemsIndex` obtiene las líneas de una compra. Todos los listados usan `Query` paginado, descendente y limitado; la búsqueda por número, factura o proveedor se aplica como filtro acotado sobre esos índices.
 
 Creación, edición, confirmación y cancelación reemplazan cabecera y líneas mediante transacciones condicionales. El número legible usa `CMP-{año}-{8 caracteres hexadecimales}`: evita un contador global y conserva unicidad mediante reserva condicional. Las facturas de proveedor se buscan dentro del listado indexado y no se consideran únicas.
+
+Recepciones y lotes comparten la tabla de compras para confirmar atómicamente recepción, acumuladores, compra y lotes. Los índices de fecha, proveedor, estado y compra se reutilizan; `RelationIndex` obtiene líneas/lotes por recepción y `ProductDateIndex` obtiene lotes por producto. Los listados son paginados. Las claves directas y reservas únicas son `RECEIPT#{id}`, `RECEIPT_NUMBER#{number}`, `LOT#{id}` y `LOT_NUMBER#{number}`. Cada recepción admite cinco líneas para respetar el límite transaccional de DynamoDB; solo se reescriben los ítems recibidos.

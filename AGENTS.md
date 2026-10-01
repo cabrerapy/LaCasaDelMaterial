@@ -23,7 +23,8 @@ Sistema de gestión para depósito y comercio de materiales de construcción.
 ## DynamoDB e inventario
 
 - Diseñar DynamoDB según patrones de acceso; consultar `docs/ACCESS-PATTERNS.md` antes de crear índices o estructuras.
-- Futuro: todo cambio de stock genera `InventoryMovement`; conservar costos y lotes históricos; asociar ventas con lotes consumidos; usar FIFO salvo decisión documentada; auditar al autor. No implementar aún.
+- Nunca modificar stock directamente. Todo cambio debe pasar por `InventoryService` y crear un `InventoryMovement` inmutable; `InventoryBalance` es su proyección operativa.
+- Conservar costos, lotes históricos y autor. Consumo de lotes, FIFO y ajustes manuales quedan pendientes de sus tareas específicas.
 
 ## Calidad y documentación
 

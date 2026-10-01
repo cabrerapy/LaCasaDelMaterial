@@ -31,6 +31,7 @@ export class PurchaseDetailComponent {
   readonly confirmOpen = signal(false); readonly cancelOpen = signal(false);
   readonly canUpdate = this.permissions.has('purchases.update'); readonly canConfirm = this.permissions.has('purchases.confirm');
   readonly canCancel = this.permissions.has('purchases.cancel'); readonly canReadCosts = this.permissions.has('purchases.costs.read');
+  readonly canReceive = this.permissions.has('receipts.create');
   readonly statusLabels = {
     DRAFT: 'Borrador', CONFIRMED: 'Confirmada', PARTIALLY_RECEIVED: 'Parcialmente recibida',
     RECEIVED: 'Recibida', CANCELLED: 'Cancelada'

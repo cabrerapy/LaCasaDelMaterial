@@ -51,6 +51,8 @@
   @if (current.notes) { <section class="card"><h2>Observaciones</h2><p>{{ current.notes }}</p></section> }
   @if (current.cancellationReason) { <p class="feedback error">Motivo de cancelación: {{ current.cancellationReason }}</p> }
   <div class="form-actions">
+    @if (canReceive && (current.status === 'CONFIRMED' || current.status === 'PARTIALLY_RECEIVED')) { <a class="button primary" [routerLink]="['/purchases', current.id, 'receive']">Registrar recepción</a> }
+    @if (current.status === 'RECEIVED') { <strong>Recepción completa</strong> }
     @if (canUpdate && current.status === 'DRAFT') { <a class="button" [routerLink]="['/purchases', current.id, 'edit']">Editar borrador</a> }
     @if (canConfirm && current.status === 'DRAFT') { <button class="primary" type="button" (click)="confirmOpen.set(true)">Confirmar compra</button> }
     @if (canCancel && (current.status === 'DRAFT' || current.status === 'CONFIRMED')) { <button class="danger" type="button" (click)="cancelOpen.set(true)">Cancelar compra</button> }

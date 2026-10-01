@@ -1,4 +1,6 @@
 import { createApp } from './app/create-app.js';
+import { ensureInventoryTable } from './infrastructure/dynamodb/inventory-table.js';
+import { DynamoDbInventoryRepository } from './modules/inventory/infrastructure/dynamodb-inventory.repository.js';
 import { loadConfig } from './config/environment.js';
 import { createDynamoDbClient } from './infrastructure/dynamodb/client.js';
 import { ensureUsersTable } from './infrastructure/dynamodb/users-table.js';
@@ -15,6 +17,7 @@ import { ensureSuppliersTable } from './infrastructure/dynamodb/suppliers-table.
 import { DynamoDbSupplierRepository } from './modules/suppliers/infrastructure/dynamodb-supplier.repository.js';
 import { ensurePurchasesTable } from './infrastructure/dynamodb/purchases-table.js';
 import { DynamoDbPurchaseRepository } from './modules/purchases/infrastructure/dynamodb-purchase.repository.js';
+import { DynamoDbReceivingRepository } from './modules/receiving/infrastructure/dynamodb-receiving.repository.js';
 
 async function start(): Promise<void> {
   const config = loadConfig();
@@ -30,8 +33,10 @@ async function start(): Promise<void> {
   const products = new DynamoDbProductRepository(documentClient, config.productsTableName);
   const suppliers = new DynamoDbSupplierRepository(documentClient, config.suppliersTableName);
   const purchases = new DynamoDbPurchaseRepository(documentClient, config.purchasesTableName);
+  const inventory = new DynamoDbInventoryRepository(documentClient, config.inventoryTableName);
+  const receiving = new DynamoDbReceivingRepository(documentClient, config.purchasesTableName, inventory);
   const app = await createApp(config, {
-    users, passwordHasher, authentication, categories, products, suppliers, purchases
+    users, passwordHasher, authentication, categories, products, suppliers, purchases, receiving, inventory
   });
 
   await ensureUsersTable(dynamoDb, config.usersTableName);
@@ -39,6 +44,7 @@ async function start(): Promise<void> {
   await ensureProductsTable(dynamoDb, config.productsTableName);
   await ensureSuppliersTable(dynamoDb, config.suppliersTableName);
   await ensurePurchasesTable(dynamoDb, config.purchasesTableName);
+  await ensureInventoryTable(dynamoDb, config.inventoryTableName);
   await bootstrapAdmin(users, passwordHasher, config.initialAdminPassword, app.log);
 
   const shutdown = async (): Promise<void> => {

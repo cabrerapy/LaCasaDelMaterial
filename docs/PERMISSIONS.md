@@ -1,5 +1,7 @@
 # Roles y permisos
 
+LCM-009: ADMIN, MANAGER y PURCHASING tienen `inventory.movements.read` e `inventory.costs.read`; WAREHOUSE solo lectura de movimientos. CASHIER conserva `inventory.read`, pero no consulta ledger ni costos. LOGISTICS y DRIVER no acceden. API lista/detalle omite `costGuarani` sin permiso. No hay endpoints de creación, edición ni eliminación de movimientos, ni ajustes manuales.
+
 La fuente de verdad ejecutable es `ROLE_PERMISSIONS` en `@lcm/contracts`. Los roles son fijos.
 
 - `ADMIN`: todos los permisos, incluida la administración de usuarios.
@@ -19,3 +21,5 @@ Proveedores usa `suppliers.read`, `suppliers.create`, `suppliers.update` y `supp
 Compras usa `purchases.read`, `purchases.create`, `purchases.update`, `purchases.confirm`, `purchases.cancel` y `purchases.costs.read`. `ADMIN` y `MANAGER` poseen todos; `PURCHASING` crea, edita, confirma y ve costos sin cancelar; `WAREHOUSE` solo lee y el backend omite costos; los demás roles no acceden.
 
 La API aplica `requirePermission`; ocultar opciones en Angular es solamente una mejora de experiencia.
+
+Recepciones usa `receipts.read/create/update/confirm/cancel`; lotes usa `lots.read` y `lots.costs.read`. `ADMIN` y `MANAGER` poseen todos. `PURCHASING` consulta recepciones, lotes y costos. `WAREHOUSE` gestiona borradores, confirma/cancela borradores y consulta lotes, pero la API omite costos. Los demás roles no acceden.

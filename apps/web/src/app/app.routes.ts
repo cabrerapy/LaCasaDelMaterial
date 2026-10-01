@@ -3,6 +3,8 @@ import { authGuard, guestGuard } from './core/auth/auth.guard';
 import { permissionGuard } from './core/permissions/permission.guard';
 
 export const routes: Routes = [
+  { path: 'inventory/movements/:id', canActivate: [authGuard, permissionGuard], data: { permission: 'inventory.movements.read' }, loadComponent: () => import('./features/inventory/movement-detail.component').then((module) => module.MovementDetailComponent) },
+  { path: 'inventory/movements', canActivate: [authGuard, permissionGuard], data: { permission: 'inventory.movements.read' }, loadComponent: () => import('./features/inventory/movements.component').then((module) => module.MovementsComponent) },
   {
     path: 'login',
     canActivate: [guestGuard],
@@ -67,6 +69,11 @@ export const routes: Routes = [
     data: { permission: 'purchases.read' },
     loadComponent: () => import('./features/purchases/purchases.component').then((module) => module.PurchasesComponent)
   },
+  { path: 'purchases/:id/receive', canActivate: [authGuard, permissionGuard], data: { permission: 'receipts.create' }, loadComponent: () => import('./features/receiving/receive-purchase.component').then((module) => module.ReceivePurchaseComponent) },
+  { path: 'purchase-receipts/:id', canActivate: [authGuard, permissionGuard], data: { permission: 'receipts.read' }, loadComponent: () => import('./features/receiving/receipt-detail.component').then((module) => module.ReceiptDetailComponent) },
+  { path: 'purchase-receipts', canActivate: [authGuard, permissionGuard], data: { permission: 'receipts.read' }, loadComponent: () => import('./features/receiving/receipts.component').then((module) => module.ReceiptsComponent) },
+  { path: 'lots/:id', canActivate: [authGuard, permissionGuard], data: { permission: 'lots.read' }, loadComponent: () => import('./features/receiving/lots.component').then((module) => module.LotsComponent) },
+  { path: 'lots', canActivate: [authGuard, permissionGuard], data: { permission: 'lots.read' }, loadComponent: () => import('./features/receiving/lots.component').then((module) => module.LotsComponent) },
   {
     path: 'forbidden',
     canActivate: [authGuard],

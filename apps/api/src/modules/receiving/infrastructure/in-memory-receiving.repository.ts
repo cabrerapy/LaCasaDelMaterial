@@ -1,4 +1,6 @@
 import type { PurchaseRepository } from '../../purchases/domain/purchase.repository.js';
+import type { InventoryMovement } from '../../inventory/domain/inventory.js';
+import type { InMemoryInventoryRepository } from '../../inventory/infrastructure/in-memory-inventory.repository.js';
 import type { LotListOptions, LotPage, ReceiptListOptions, ReceiptPage, ReceivingRepository } from '../domain/receiving.repository.js';
 import { ReceivingConflictError } from '../domain/receiving.repository.js';
 import type { PurchaseLot, PurchaseReceipt, PurchaseReceiptLine } from '../domain/receiving.js';
@@ -6,7 +8,8 @@ import type { Purchase, PurchaseItem } from '../../purchases/domain/purchase.js'
 
 export class InMemoryReceivingRepository implements ReceivingRepository {
   private readonly receipts = new Map<string, PurchaseReceipt>(); private readonly lines = new Map<string, PurchaseReceiptLine>(); private readonly lots = new Map<string, PurchaseLot>();
-  constructor(private readonly purchases: PurchaseRepository) {}
+  constructor(private readonly purchases: PurchaseRepository, private readonly inventory: InMemoryInventoryRepository) {}
+  async auditSnapshot() { return { receipts: [...this.receipts.values()], lines: [...this.lines.values()], lots: [...this.lots.values()] }; }
   async findReceiptById(id: string): Promise<PurchaseReceipt | null> { return this.receipts.get(id) ?? null; }
   async findReceiptByNumber(number: string): Promise<PurchaseReceipt | null> { return [...this.receipts.values()].find((value) => value.receiptNumber === number) ?? null; }
   async listReceiptLines(receiptId: string): Promise<readonly PurchaseReceiptLine[]> { return [...this.lines.values()].filter((line) => line.receiptId === receiptId); }
@@ -25,9 +28,13 @@ export class InMemoryReceivingRepository implements ReceivingRepository {
   async replaceReceipt(receipt: PurchaseReceipt, lines: readonly PurchaseReceiptLine[], previous: readonly PurchaseReceiptLine[], expectedStatus: PurchaseReceipt['status']): Promise<void> {
     if (this.receipts.get(receipt.id)?.status !== expectedStatus) throw new ReceivingConflictError(); const ids = new Set(lines.map((line) => line.id)); previous.filter((line) => !ids.has(line.id)).forEach((line) => this.lines.delete(line.id)); lines.forEach((line) => this.lines.set(line.id, line)); this.receipts.set(receipt.id, receipt);
   }
-  async confirmReceipt(receipt: PurchaseReceipt, lines: readonly PurchaseReceiptLine[], lots: readonly PurchaseLot[], purchase: Purchase, items: readonly PurchaseItem[]): Promise<void> {
-    if (this.receipts.get(receipt.id)?.status !== 'DRAFT') throw new ReceivingConflictError(); const previousItems = await this.purchases.listItems(purchase.id); const current = await this.purchases.findById(purchase.id); if (!current) throw new ReceivingConflictError();
+  async confirmReceipt(receipt: PurchaseReceipt, lines: readonly PurchaseReceiptLine[], lots: readonly PurchaseLot[], purchase: Purchase, items: readonly PurchaseItem[], expectedPurchaseUpdatedAt: string, movements: readonly InventoryMovement[], expectedReceiptUpdatedAt: string): Promise<void> {
+    await this.inventory.atomic(movements, async () => {
+    if (this.receipts.get(receipt.id)?.updatedAt !== expectedReceiptUpdatedAt) throw new ReceivingConflictError();
+    if (this.receipts.get(receipt.id)?.status !== 'DRAFT') throw new ReceivingConflictError(); const previousItems = await this.purchases.listItems(purchase.id); const current = await this.purchases.findById(purchase.id); if (!current || current.updatedAt !== expectedPurchaseUpdatedAt) throw new ReceivingConflictError();
+    if (lots.some((lot) => [...this.lots.values()].some((existing) => existing.lotNumber === lot.lotNumber))) throw new ReceivingConflictError();
     await this.purchases.replace(purchase, items, previousItems, current.status); lines.forEach((line) => this.lines.set(line.id, line)); lots.forEach((lot) => this.lots.set(lot.id, lot)); this.receipts.set(receipt.id, receipt);
+    });
   }
   async findLotById(id: string): Promise<PurchaseLot | null> { return this.lots.get(id) ?? null; }
   async listLots(options: LotListOptions): Promise<LotPage> {

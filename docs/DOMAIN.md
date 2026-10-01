@@ -18,6 +18,14 @@
 
 LCM-001 solo prepara la estructura; no implementa lógica de estos dominios.
 
+## Inventory ledger (LCM-009)
+
+`InventoryMovement` es la fuente histórica de verdad e inmutable. `InventoryBalance` es una proyección operativa reconstruible mediante SUM(quantityDeltaInternal) por producto. Solo `InventoryService` prepara los movimientos y ordena cambios de la proyección a sus adaptadores de persistencia.
+
+Confirmar una recepción crea, en una transacción, sus lotes, un movimiento PURCHASE_RECEIPT por línea y los incrementos de saldo. Cada movimiento conserva lote, producto, compra, recepción/línea, costo directo, fecha y autor. El costo se toma del lote; las correcciones requerirán futuros movimientos compensatorios. No existe stock manual en Product.
+
+Los comandos explícitos de mantenimiento están descritos en [INVENTORY.md](INVENTORY.md). No se ejecutan al iniciar. No hay ajustes manuales, consumo de lotes, FIFO ni stock reservado.
+
 ## Categories
 
 LCM-004 administra categorías ordenables con nombre y slug únicos, descripción opcional, estado activo/inactivo y auditoría básica. La asociación con productos se implementará posteriormente.
@@ -41,3 +49,9 @@ Las cantidades persistidas son enteros escalados: `internalQuantity = displayQua
 `Purchase` representa un documento comercial con estados `DRAFT`, `CONFIRMED`, `PARTIALLY_RECEIVED`, `RECEIVED` y `CANCELLED`; LCM-007 solo genera borradores, confirmaciones y cancelaciones. `PurchaseItem` guarda cantidad de presentaciones, cantidad base interna, precio unitario entero y subtotal calculado por backend.
 
 Al confirmar se guardan `SupplierSnapshot`, `ProductSnapshot` y `PresentationSnapshot`, además de totales y auditoría definitiva. Una compra `CONFIRMED` no equivale a mercadería recibida: no crea stock, recepción, lote ni `InventoryMovement`. La entrada física comenzará en LCM-008.
+
+## Purchase receiving and lots
+
+`PurchaseReceipt` conserva la cabecera auditable de una recepción física y admite `DRAFT`, `CONFIRMED` y `CANCELLED`. Sus `PurchaseReceiptLine` siempre referencian un `PurchaseItem`; solo al confirmar incrementan los acumuladores recibidos y cambian la compra a `PARTIALLY_RECEIVED` o `RECEIVED`.
+
+Cada línea confirmada crea un `PurchaseLot` histórico e inmutable con snapshots, cantidad interna y costo directo. La última recepción absorbe el remanente de guaraníes para que la suma coincida exactamente con el subtotal del ítem. Descuentos y costos adicionales no se distribuyen todavía. LCM-008 no introduce `product.stock` ni `InventoryMovement`.

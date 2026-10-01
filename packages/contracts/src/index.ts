@@ -4,6 +4,7 @@ export interface HealthResponse {
   readonly version: string;
   readonly environment: string;
 }
+export * from './inventory.js';
 
 export const USER_ROLES = [
   'ADMIN',
@@ -39,6 +40,7 @@ export const PERMISSIONS = [
   'receipts.read', 'receipts.create', 'receipts.update', 'receipts.confirm', 'receipts.cancel',
   'lots.read', 'lots.costs.read',
   'inventory.read', 'inventory.receive', 'inventory.movements.read', 'inventory.adjust',
+  'inventory.costs.read',
   'customers.read', 'customers.create', 'customers.update',
   'sales.read', 'sales.create', 'sales.own.read', 'sales.authorized.read',
   'cash.read',
@@ -65,6 +67,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
     'receipts.read', 'receipts.create', 'receipts.update', 'receipts.confirm', 'receipts.cancel',
     'lots.read', 'lots.costs.read',
     'inventory.read', 'inventory.movements.read', 'sales.read', 'sales.authorized.read',
+    'inventory.costs.read',
     'trucks.read', 'trips.access', 'trips.read', 'fuel.access', 'fuel.read', 'reports.read'
   ],
   CASHIER: [
@@ -78,7 +81,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
     'suppliers.update', 'purchases.read', 'purchases.create', 'purchases.update',
     'purchases.confirm', 'purchases.costs.read',
     'receipts.read', 'lots.read', 'lots.costs.read',
-    'products.costs.read', 'inventory.read'
+    'products.costs.read', 'inventory.read', 'inventory.movements.read', 'inventory.costs.read'
   ],
   WAREHOUSE: [
     'dashboard.read', 'categories.read', 'products.read', 'suppliers.read', 'purchases.read',
