@@ -26,6 +26,15 @@ Sistema de gestión para depósito y comercio de materiales de construcción.
 - Nunca modificar stock directamente. Todo cambio debe pasar por `InventoryService` y crear un `InventoryMovement` inmutable; `InventoryBalance` es su proyección operativa.
 - Conservar costos, lotes históricos y autor. El consumo FIFO usa proyecciones y allocations; los ajustes manuales quedan pendientes de su tarea específica.
 - Las asignaciones FIFO son automáticas, usan cantidades base internas y nunca seleccionan ni modifican manualmente el lote histórico consumido.
+- La carga de camiones nunca modifica inventario; solo asigna cantidades vendidas a viajes.
+- La asignación acumulada de entrega de un `SaleItem` nunca puede exceder su cantidad vendida.
+
+## Caja
+
+- Los movimientos financieros son inmutables: una corrección o anulación crea un movimiento compensatorio y nunca edita el histórico.
+- Una sesión de caja cerrada no vuelve a abrirse ni se modifica; su efectivo esperado, contado y diferencia quedan como snapshot auditable.
+- Una carga de combustible no crea automáticamente `CashMovement`, `PurchaseLot` ni `InventoryMovement`.
+- `FuelTransaction` es inmutable; los errores se corrigen mediante anulación explícita, conservando el histórico.
 
 ## Calidad y documentación
 

@@ -40,7 +40,7 @@ Una venta futura podrá operar sin cliente como consumidor final. Cuando tenga c
 
 ## Sales and POS (LCM-012)
 
-`Sale` conserva borradores editables y ventas confirmadas/anuladas, número único, snapshots de cliente/producto/presentación, precio unitario vigente al agregar la línea y totales enteros calculados por backend. La ausencia de cliente representa Consumidor Final. Entrega y forma de pago son metadatos; esta tarea no crea movimientos de caja, deuda ni cuenta corriente.
+`Sale` conserva borradores editables y ventas confirmadas/anuladas, número único, snapshots de cliente/producto/presentación, precio unitario vigente al agregar la línea y totales enteros calculados por backend. La ausencia de cliente representa Consumidor Final. Entrega y forma de pago son metadatos comerciales; LCM-014 integra sus cobros con caja, pero todavía no crea deuda ni cuenta corriente.
 
 Confirmar descuenta stock mediante movimientos inmutables `SALE`; anular genera `SALE_VOID` compensatorio. Las líneas del mismo producto se agregan antes de validar saldo y la venta cambia de estado en la misma transacción DynamoDB que el ledger. Productos sin control de stock no generan movimiento. LCM-013 completa el estado de costeo, COGS y rentabilidad.
 
@@ -51,6 +51,46 @@ Confirmar descuenta stock mediante movimientos inmutables `SALE`; anular genera 
 El costo directo (Direct COGS) usa solamente `PurchaseLot.directPurchaseCostGuarani`. El costo proporcional, la distribución de descuento y el margen se calculan con aritmética `BigInt`, preservando cada guaraní; el margen se persiste en basis points. Ingreso neto de mercadería excluye el flete cobrado. Los costos adicionales y flete general de compra todavía no se distribuyen, por lo que no existe landed cost.
 
 Una anulación marca allocations como `REVERSED` y restituye `LotCostBalance`, sin borrar el histórico. El ledger global de inventario y FIFO siguen siendo responsabilidades separadas y su coincidencia se verifica explícitamente.
+
+## Cash (LCM-014)
+
+`CashSession` representa el turno de caja de un usuario y admite solamente `OPEN` y `CLOSED`. Cada usuario puede mantener una única sesión abierta. Al cerrar se guardan efectivo esperado, efectivo contado, diferencia, fecha, autor y observaciones; el snapshot cerrado no se modifica ni se reabre.
+
+`CashMovement` es histórico e inmutable. Confirmar una venta requiere una caja abierta y crea exactamente un `SALE_PAYMENT`; anular crea un `SALE_VOID` compensatorio en la caja abierta del autor de la anulación. `MANUAL_IN` y `MANUAL_OUT` requieren motivo y permisos específicos. Todos los medios de pago se registran para conciliación, pero solo `CASH` y los movimientos manuales alteran el efectivo esperado.
+
+En DynamoDB, la transición de venta, el inventario, FIFO y el movimiento financiero pertenecen a la misma escritura transaccional. Las reservas de origen hacen idempotente cada efecto. Cuentas por cobrar y contabilidad quedan fuera de LCM-014.
+
+## Trucks (LCM-015)
+
+`Truck` conserva los datos maestros del vehículo: chapa inmutable, código interno opcional, marca/modelo, año, tipo, combustible, capacidades, kilometraje conocido, estado y auditoría. `VehicleType` admite camión, volquete, plataforma, camioneta u otro; `FuelType` solo describe el combustible esperado y todavía no registra cargas ni consumo.
+
+`TruckStatus` admite `ACTIVE`, `MAINTENANCE` e `INACTIVE`. `ACTIVE` significa disponibilidad operativa en principio; desde LCM-017 la disponibilidad real también dependerá de que no exista un viaje activo. Mantenimiento e inactivo no podrán asignarse a nuevos viajes. No se eliminan vehículos físicamente.
+
+Las capacidades son datos maestros para la futura validación de cargas: kilogramos enteros y volumen escalado internamente a 1000 unidades por m³. LCM-018 validará peso y volumen cuando existan datos suficientes. El odómetro se puede corregir administrativamente en LCM-015; viajes y combustible asumirán posteriormente su actualización por eventos.
+
+## Drivers (LCM-016)
+
+`Driver` es una entidad operativa logística; `User` continúa siendo una identidad de autenticación. La vinculación mediante `userId` es opcional, única y solo admite usuarios activos con rol DRIVER. Documento y licencia también son únicos cuando existen; nunca se expone información de contraseña.
+
+`DriverStatus` admite `ACTIVE`, `SUSPENDED` e `INACTIVE`. El vencimiento de licencia se deriva de la fecha actual y no modifica automáticamente el estado. LCM-017 impedirá asignar a viajes choferes no activos o con licencia vencida. Truck y Driver no tienen vínculo permanente: se asignarán juntos mediante Trip.
+
+## Trips (LCM-017)
+
+`Trip` vincula Truck y Driver por operación y sigue `DRAFT → READY → IN_TRANSIT → DELIVERED`, con cancelación solo desde borrador o listo. Un camión o chofer participa en un único viaje activo mediante locks explícitos. Una Sale puede originar varios viajes.
+
+El flete del viaje es ingreso comercial asignado desde la venta, no costo logístico; la suma no cancelada no excede el flete de Sale. Inicio y entrega registran odómetros enteros, distancia calculada y actualización monotónica del odómetro del camión. Carga detallada, combustible y evidencia permanecen fuera de alcance.
+
+## Truck loads (LCM-018)
+
+`TripLoad` es la carga operativa de un viaje comercial y admite `DRAFT`, `CONFIRMED` y `CANCELLED`. Cada línea referencia exactamente un `SaleItem`, conserva snapshots del producto y asigna cantidades base internas; la suma de cargas confirmadas nunca supera la cantidad vendida. `SaleItemDeliveryBalance` es una proyección reconstruible y las líneas confirmadas/canceladas son el histórico de verdad.
+
+La carga no reserva, descuenta ni repone inventario. Peso y volumen se estiman con enteros desde los datos logísticos del producto; para productos `M3`, el volumen se deriva de la cantidad base. Una validación `PARTIAL` informa datos incompletos sin inventarlos. Un viaje con venta requiere carga confirmada antes de `READY` y vuelve a comprobarla antes de iniciar.
+
+## Fuel (LCM-019)
+
+`FuelTransaction` registra combustible cargado y es inmutable. Su estado es `POSTED` o `VOIDED`; una corrección anula el registro con motivo y auditoría, sin eliminarlo. Los litros se persisten como `litersMilli`, el precio como guaraní entero y el costo se calcula con `BigInt` y redondeo half-up.
+
+El combustible representa costo logístico interno. `Trip.freightChargeGuarani` representa flete cobrado al cliente y no es ganancia logística. Una transacción registra combustible cargado, no necesariamente combustible consumido durante ese viaje exacto; por ello el rendimiento km/l mostrado es aproximado. Fuel no modifica odómetro maestro, inventario, lotes ni caja.
 
 ## Categories
 

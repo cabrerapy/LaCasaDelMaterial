@@ -1,7 +1,7 @@
 # Estado del proyecto
 
-- Tarea actual: LCM-013 FIFO Costing
-- Estado: BLOCKED (implementación terminada; build Angular y Docker Compose bloqueados por permisos del entorno).
-- Funcionalidades implementadas: allocations FIFO, balances de costo por lote, Direct COGS por item/venta, utilidad, margen BPS, descuento distribuido, reversión al anular, reintento idempotente, backfill, rebuild, verify, permisos y UI de rentabilidad. Validación: lint completo, 83 tests API y 60 tests web correctos; builds contracts/API correctos.
-- Decisiones importantes: FIFO usa cantidad base y `PurchaseLot.receivedAt`; `SaleLotAllocation` es histórico y `LotCostBalance` proyección. Solo se usa costo directo del lote; costos adicionales generales de compra no forman landed cost.
-- Pendientes inmediatos: ejecutar build web/Docker y comandos de mantenimiento en una terminal con acceso completo; después continuar con LCM-014 Cash.
+- Tarea actual: LCM-019 Fuel.
+- Estado: BLOCKED (funcionalidad Fuel operativa y validaciones TypeScript/API completas; build/test Angular y Docker continúan bloqueados por permisos del entorno OneDrive; persiste el pendiente heredado de atomicidad Trip/TripLoad de LCM-018).
+- Funcionalidades implementadas: transacciones inmutables de combustible, numeración anual, litros milli, costo exacto, validación de camión/viaje/chofer/combustible/odómetro, anulación, seguridad de costos, listados, resúmenes por viaje y camión, acceso DRIVER, API, DynamoDB y UI responsive integrada a Viajes.
+- Decisiones importantes: combustible cargado es costo logístico interno y no equivale a flete ni consumo exacto; el rendimiento es aproximado; Fuel no actualiza odómetro maestro ni genera movimientos de caja, lotes o inventario; el precio capturado por DRIVER se oculta posteriormente sin `fuel.costs.read`.
+- Pendientes inmediatos: completar pruebas frontend con el entorno desbloqueado, validar DynamoDB/Docker real y resolver la transacción conjunta de cancelación Trip/TripLoad heredada. No iniciar entrega/evidencia/GPS/mapas/reportes generales.

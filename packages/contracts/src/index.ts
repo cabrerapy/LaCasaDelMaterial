@@ -45,11 +45,11 @@ export const PERMISSIONS = [
   'sales.read', 'sales.create', 'sales.update', 'sales.confirm', 'sales.void', 'sales.discount',
   'sales.own.read', 'sales.authorized.read', 'sales.costs.read', 'sales.margins.read',
   'cash.read', 'cash.open', 'cash.close', 'cash.manual_in', 'cash.manual_out', 'cash.audit',
-  'trucks.read', 'trucks.manage',
-  'drivers.read',
-  'trips.access', 'trips.read', 'trips.manage', 'trips.own.read', 'trips.start', 'trips.arrival',
-  'loads.read', 'loads.pending.read', 'loads.assigned.read',
-  'fuel.access', 'fuel.read', 'fuel.create', 'fuel.authorized.create',
+  'trucks.read', 'trucks.create', 'trucks.update', 'trucks.status.manage',
+  'drivers.read', 'drivers.create', 'drivers.update', 'drivers.status.manage',
+  'trips.read', 'trips.create', 'trips.update', 'trips.ready', 'trips.start', 'trips.deliver', 'trips.cancel',
+  'trip_loads.read', 'trip_loads.create', 'trip_loads.update', 'trip_loads.confirm', 'trip_loads.cancel',
+  'fuel.read', 'fuel.create', 'fuel.void', 'fuel.costs.read',
   'deliveries.read', 'deliveries.register', 'deliveries.evidence.create',
   'reports.read'
 ] as const;
@@ -70,7 +70,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
     'lots.read', 'lots.costs.read',
     'inventory.read', 'inventory.movements.read', 'sales.read', 'sales.create', 'sales.update', 'sales.confirm', 'sales.void', 'sales.discount', 'sales.authorized.read', 'sales.costs.read', 'sales.margins.read',
     'inventory.costs.read', 'cash.read', 'cash.open', 'cash.close', 'cash.manual_in', 'cash.manual_out', 'cash.audit',
-    'trucks.read', 'trips.access', 'trips.read', 'fuel.access', 'fuel.read', 'reports.read'
+    'trucks.read', 'trucks.create', 'trucks.update', 'trucks.status.manage', 'drivers.read', 'drivers.create', 'drivers.update', 'drivers.status.manage', 'trips.read', 'trips.create', 'trips.update', 'trips.ready', 'trips.start', 'trips.deliver', 'trips.cancel', 'trip_loads.read', 'trip_loads.create', 'trip_loads.update', 'trip_loads.confirm', 'trip_loads.cancel', 'fuel.read', 'fuel.create', 'fuel.void', 'fuel.costs.read', 'reports.read'
   ],
   CASHIER: [
     'dashboard.read', 'categories.read', 'products.read', 'suppliers.read', 'inventory.read', 'customers.read',
@@ -89,15 +89,15 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
     'dashboard.read', 'categories.read', 'products.read', 'suppliers.read', 'purchases.read',
     'receipts.read', 'receipts.create', 'receipts.update', 'receipts.confirm', 'receipts.cancel', 'lots.read',
     'inventory.read', 'inventory.receive',
-    'inventory.movements.read', 'inventory.adjust', 'loads.pending.read'
+    'inventory.movements.read', 'inventory.adjust', 'trucks.read', 'drivers.read', 'trips.read', 'trip_loads.read', 'trip_loads.create', 'trip_loads.update', 'trip_loads.confirm'
   ],
   LOGISTICS: [
-    'dashboard.read', 'products.read', 'inventory.read', 'trucks.read', 'trucks.manage', 'drivers.read', 'trips.read',
-    'trips.access', 'trips.manage', 'loads.read', 'fuel.access', 'fuel.read', 'fuel.create', 'deliveries.read'
+    'dashboard.read', 'products.read', 'inventory.read', 'trucks.read', 'trucks.create', 'trucks.update', 'trucks.status.manage', 'drivers.read', 'drivers.create', 'drivers.update', 'drivers.status.manage', 'trips.read', 'trips.create', 'trips.update', 'trips.ready', 'trips.start', 'trips.deliver', 'trips.cancel',
+    'trip_loads.read', 'trip_loads.create', 'trip_loads.update', 'trip_loads.confirm', 'trip_loads.cancel', 'fuel.read', 'fuel.create', 'fuel.void', 'fuel.costs.read', 'deliveries.read'
   ],
   DRIVER: [
-    'dashboard.read', 'trips.access', 'trips.own.read', 'trips.start', 'trips.arrival',
-    'loads.assigned.read', 'fuel.access', 'fuel.authorized.create', 'deliveries.register',
+    'dashboard.read', 'trips.read', 'trips.start', 'trips.deliver',
+    'trip_loads.read', 'fuel.read', 'fuel.create', 'deliveries.register',
     'deliveries.evidence.create'
   ]
 };
@@ -231,6 +231,8 @@ export interface ProductResponse {
   readonly quantityScale: number;
   readonly minStock: number;
   readonly trackStock: boolean;
+  readonly weightPerBaseUnitGrams?: number;
+  readonly volumePerBaseUnitMl?: number;
   readonly status: ProductStatus;
   readonly presentations: readonly ProductPresentationResponse[];
   readonly createdAt: string;
@@ -261,6 +263,8 @@ export interface CreateProductRequest {
   readonly quantityScale: number;
   readonly minStock: number;
   readonly trackStock?: boolean;
+  readonly weightPerBaseUnitGrams?: number;
+  readonly volumePerBaseUnitMl?: number;
   readonly presentations: readonly CreateProductPresentationRequest[];
 }
 
@@ -270,6 +274,8 @@ export interface UpdateProductRequest {
   readonly categoryId?: string;
   readonly minStock?: number;
   readonly trackStock?: boolean;
+  readonly weightPerBaseUnitGrams?: number | null;
+  readonly volumePerBaseUnitMl?: number | null;
 }
 
 export interface UpdateProductStatusRequest { readonly status: ProductStatus; }
@@ -472,3 +478,8 @@ export * from './stock.js';
 export * from './customers.js';
 export * from './sales.js';
 export * from './cash.js';
+export * from './trucks.js';
+export * from './drivers.js';
+export * from './trips.js';
+export * from './trip-loads.js';
+export * from './fuel.js';

@@ -16,6 +16,9 @@
     "costing:backfill": "npm run costing:backfill --workspace @lcm/api",
     "costing:rebuild-lot-balances": "npm run costing:rebuild-lot-balances --workspace @lcm/api",
     "costing:verify": "npm run costing:verify --workspace @lcm/api",
+    "trip-loads:backfill": "npm run trip-loads:backfill --workspace @lcm/api",
+    "trip-loads:rebuild-balances": "npm run trip-loads:rebuild-balances --workspace @lcm/api",
+    "trip-loads:verify": "npm run trip-loads:verify --workspace @lcm/api",
     "dev:web": "npm run start --workspace @lcm/web",
     "dev:api": "npm run dev --workspace @lcm/api"
   },

@@ -41,6 +41,21 @@ import { FifoCostingService } from '../modules/costing/application/fifo-costing.
 import type { CashRepository } from '../modules/cash/domain/cash.repository.js';
 import { CashService } from '../modules/cash/application/cash.service.js';
 import { cashRoutes } from '../modules/cash/http/cash.routes.js';
+import type { TruckRepository } from '../modules/trucks/domain/truck.repository.js';
+import { TrucksService } from '../modules/trucks/application/trucks.service.js';
+import { trucksRoutes } from '../modules/trucks/http/trucks.routes.js';
+import type { DriverRepository } from '../modules/drivers/domain/driver.repository.js';
+import { DriversService } from '../modules/drivers/application/drivers.service.js';
+import { driversRoutes } from '../modules/drivers/http/drivers.routes.js';
+import type { TripRepository } from '../modules/trips/domain/trip.repository.js';
+import { TripsService } from '../modules/trips/application/trips.service.js';
+import { tripsRoutes } from '../modules/trips/http/trips.routes.js';
+import type { TripLoadRepository } from '../modules/trip-loads/domain/trip-load.repository.js';
+import { TripLoadsService } from '../modules/trip-loads/application/trip-loads.service.js';
+import { tripLoadsRoutes } from '../modules/trip-loads/http/trip-loads.routes.js';
+import type { FuelRepository } from '../modules/fuel/domain/fuel.repository.js';
+import { FuelService } from '../modules/fuel/application/fuel.service.js';
+import { fuelRoutes, truckFuelRoutes } from '../modules/fuel/http/fuel.routes.js';
 
 export interface AppDependencies {
   readonly users: UserRepository;
@@ -56,6 +71,11 @@ export interface AppDependencies {
   readonly sales: SaleRepository;
   readonly costing: CostingRepository;
   readonly cash: CashRepository;
+  readonly trucks: TruckRepository;
+  readonly drivers: DriverRepository;
+  readonly trips: TripRepository;
+  readonly tripLoads: TripLoadRepository;
+  readonly fuel: FuelRepository;
 }
 
 export async function createApp(
@@ -121,6 +141,13 @@ export async function createApp(
   const costing = new FifoCostingService(dependencies.costing, dependencies.receiving, dependencies.sales);
   const cash = new CashService(dependencies.cash);
   await app.register(cashRoutes, { prefix: '/api/cash', authService, service: cash });
+  await app.register(trucksRoutes, { prefix: '/api/trucks', authService, service: new TrucksService(dependencies.trucks) });
+  await app.register(driversRoutes, { prefix: '/api/drivers', authService, service: new DriversService(dependencies.drivers, dependencies.users) });
+  const tripLoads = new TripLoadsService(dependencies.tripLoads, dependencies.trips, dependencies.sales, dependencies.products, dependencies.trucks, dependencies.drivers);
+  await app.register(tripsRoutes, { prefix: '/api/trips', authService, service: new TripsService(dependencies.trips, dependencies.trucks, dependencies.drivers, dependencies.sales, dependencies.tripLoads) });
+  await app.register(tripLoadsRoutes, { prefix: '/api/trips', authService, service: tripLoads });
+  await app.register(fuelRoutes, { prefix: '/api/fuel', authService, service: new FuelService(dependencies.fuel, dependencies.trucks, dependencies.trips, dependencies.drivers) });
+  await app.register(truckFuelRoutes, { prefix: '/api/trucks', authService, service: new FuelService(dependencies.fuel, dependencies.trucks, dependencies.trips, dependencies.drivers) });
   await app.register(salesRoutes, { prefix: '/api/sales', authService,
     service: new SalesService(dependencies.sales, dependencies.products, dependencies.customers, dependencies.inventory, costing, cash), costing });
 

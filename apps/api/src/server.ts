@@ -26,6 +26,16 @@ import { ensureCostingTable } from './infrastructure/dynamodb/costing-table.js';
 import { DynamoDbCostingRepository } from './modules/costing/infrastructure/dynamodb-costing.repository.js';
 import { ensureCashTable } from './infrastructure/dynamodb/cash-table.js';
 import { DynamoDbCashRepository } from './modules/cash/infrastructure/dynamodb-cash.repository.js';
+import { ensureTrucksTable } from './infrastructure/dynamodb/trucks-table.js';
+import { DynamoDbTruckRepository } from './modules/trucks/infrastructure/dynamodb-truck.repository.js';
+import { ensureDriversTable } from './infrastructure/dynamodb/drivers-table.js';
+import { DynamoDbDriverRepository } from './modules/drivers/infrastructure/dynamodb-driver.repository.js';
+import { ensureTripsTable } from './infrastructure/dynamodb/trips-table.js';
+import { DynamoDbTripRepository } from './modules/trips/infrastructure/dynamodb-trip.repository.js';
+import { ensureTripLoadsTable } from './infrastructure/dynamodb/trip-loads-table.js';
+import { DynamoDbTripLoadRepository } from './modules/trip-loads/infrastructure/dynamodb-trip-load.repository.js';
+import { ensureFuelTable } from './infrastructure/dynamodb/fuel-table.js';
+import { DynamoDbFuelRepository } from './modules/fuel/infrastructure/dynamodb-fuel.repository.js';
 
 async function start(): Promise<void> {
   const config = loadConfig();
@@ -47,8 +57,13 @@ async function start(): Promise<void> {
   const cash = new DynamoDbCashRepository(documentClient, config.cashTableName);
   const sales = new DynamoDbSaleRepository(documentClient, config.salesTableName, inventory, cash);
   const costing = new DynamoDbCostingRepository(documentClient, config.costingTableName);
+  const trucks = new DynamoDbTruckRepository(documentClient, config.trucksTableName);
+  const drivers = new DynamoDbDriverRepository(documentClient, config.driversTableName);
+  const trips = new DynamoDbTripRepository(documentClient, config.tripsTableName, config.trucksTableName);
+  const tripLoads = new DynamoDbTripLoadRepository(documentClient, config.tripLoadsTableName);
+  const fuel = new DynamoDbFuelRepository(documentClient, config.fuelTableName);
   const app = await createApp(config, {
-    users, passwordHasher, authentication, categories, products, suppliers, purchases, receiving, inventory, customers, sales, costing, cash
+    users, passwordHasher, authentication, categories, products, suppliers, purchases, receiving, inventory, customers, sales, costing, cash, trucks, drivers, trips, tripLoads, fuel
   });
 
   await ensureUsersTable(dynamoDb, config.usersTableName);
@@ -61,6 +76,11 @@ async function start(): Promise<void> {
   await ensureSalesTable(dynamoDb, config.salesTableName);
   await ensureCostingTable(dynamoDb, config.costingTableName);
   await ensureCashTable(dynamoDb, config.cashTableName);
+  await ensureTrucksTable(dynamoDb, config.trucksTableName);
+  await ensureDriversTable(dynamoDb, config.driversTableName);
+  await ensureTripsTable(dynamoDb, config.tripsTableName);
+  await ensureTripLoadsTable(dynamoDb, config.tripLoadsTableName);
+  await ensureFuelTable(dynamoDb, config.fuelTableName);
   await bootstrapAdmin(users, passwordHasher, config.initialAdminPassword, app.log);
 
   const shutdown = async (): Promise<void> => {

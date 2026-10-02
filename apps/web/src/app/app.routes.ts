@@ -3,6 +3,10 @@ import { authGuard, guestGuard } from './core/auth/auth.guard';
 import { permissionGuard } from './core/permissions/permission.guard';
 
 export const routes: Routes = [
+  { path: 'fuel', canActivate: [authGuard, permissionGuard], data: { permission: 'fuel.read' }, loadComponent: () => import('./features/fuel/fuel.component').then(m => m.FuelComponent) },
+  { path: 'trips', canActivate: [authGuard, permissionGuard], data: { permission: 'trips.read' }, loadComponent: () => import('./features/trips/trips.component').then(m => m.TripsComponent) },
+  { path: 'drivers', canActivate: [authGuard, permissionGuard], data: { permission: 'drivers.read' }, loadComponent: () => import('./features/drivers/drivers.component').then((module) => module.DriversComponent) },
+  { path: 'trucks', canActivate: [authGuard, permissionGuard], data: { permission: 'trucks.read' }, loadComponent: () => import('./features/trucks/trucks.component').then((module) => module.TrucksComponent) },
   { path: 'cash', canActivate: [authGuard, permissionGuard], data: { permission: 'cash.read' }, loadComponent: () => import('./features/cash/cash.component').then(m => m.CashComponent) },
   { path: 'pos', canActivate: [authGuard, permissionGuard], data: { permission: 'sales.create' }, loadComponent: () => import('./features/sales/pos.component').then(m => m.PosComponent) },
   { path: 'sales/:id', canActivate: [authGuard, permissionGuard], data: { permission: 'sales.authorized.read' }, loadComponent: () => import('./features/sales/sales.component').then(m => m.SalesComponent) },

@@ -1,0 +1,3 @@
+import type { DriverStatus } from '@lcm/contracts';
+export interface Driver { readonly id:string;readonly userId?:string;readonly firstName:string;readonly lastName?:string;readonly documentNumber?:string;readonly phone?:string;readonly licenseNumber?:string;readonly licenseCategory?:string;readonly licenseExpirationDate?:string;readonly status:DriverStatus;readonly notes?:string;readonly normalizedSearch:string;readonly createdAt:string;readonly updatedAt:string;readonly createdBy:string;readonly updatedBy:string; }
+export function driverDisplayName(driver:Pick<Driver,'firstName'|'lastName'>){return [driver.firstName,driver.lastName].filter(Boolean).join(' ');}

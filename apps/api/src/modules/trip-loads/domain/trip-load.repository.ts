@@ -1,0 +1,3 @@
+import type { TripLoad } from './trip-load.js';
+export interface TripLoadRepository { findByTripId(tripId:string):Promise<TripLoad|null>; saveDraft(load:TripLoad,expectedUpdatedAt?:string):Promise<void>; confirm(load:TripLoad,sold:ReadonlyMap<string,number>,expectedUpdatedAt:string):Promise<void>; cancel(load:TripLoad,expectedUpdatedAt:string):Promise<void>; allocatedForSale(saleId:string,excludeTripId?:string):Promise<ReadonlyMap<string,number>>; all():Promise<readonly TripLoad[]>; rebuildBalances():Promise<void>; verifyBalances():Promise<readonly string[]>; }
+export class TripLoadConflictError extends Error {}

@@ -54,6 +54,8 @@
           <label>Precisión interna<input formControlName="quantityScale" type="number" min="1"><small>1 para unidades/bolsas; 1000 permite milésimas en m³.</small></label>
           <label>Stock mínimo<input formControlName="minStock" type="number" min="0" step="any"><small>Expresado en {{ unitLabels[form.controls.baseUnit.value] }}.</small></label>
           <label class="check"><input formControlName="trackStock" type="checkbox"> Controlar stock en el futuro</label>
+          <label>Peso por unidad base (g)<input formControlName="weightPerBaseUnitGrams" type="number" min="1" step="1"><small>Opcional; se usa para validar cargas.</small></label>
+          <label>Volumen por unidad base (ml)<input formControlName="volumePerBaseUnitMl" type="number" min="1" step="1"><small>Opcional; para m³ se deriva automáticamente.</small></label>
         </div></fieldset>
 
         <fieldset formArrayName="presentations"><legend>Presentaciones y precios</legend>

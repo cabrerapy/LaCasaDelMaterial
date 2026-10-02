@@ -16,6 +16,11 @@ export interface AppConfig {
   readonly salesTableName: string;
   readonly costingTableName: string;
   readonly cashTableName: string;
+  readonly trucksTableName: string;
+  readonly driversTableName: string;
+  readonly tripsTableName: string;
+  readonly tripLoadsTableName: string;
+  readonly fuelTableName: string;
   readonly initialAdminPassword: string;
   readonly jwtSecret: string;
   readonly jwtExpiresIn: string;
@@ -58,6 +63,11 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     salesTableName: environment['DYNAMODB_SALES_TABLE']?.trim() || 'lcm-local-sales',
     costingTableName: environment['DYNAMODB_COSTING_TABLE']?.trim() || 'lcm-local-costing',
     cashTableName: environment['DYNAMODB_CASH_TABLE']?.trim() || 'lcm-local-cash',
+    trucksTableName: environment['DYNAMODB_TRUCKS_TABLE']?.trim() || 'lcm-local-trucks',
+    driversTableName: environment['DYNAMODB_DRIVERS_TABLE']?.trim() || 'lcm-local-drivers',
+    tripsTableName: environment['DYNAMODB_TRIPS_TABLE']?.trim() || 'lcm-local-trips',
+    tripLoadsTableName: environment['DYNAMODB_TRIP_LOADS_TABLE']?.trim() || 'lcm-local-trip-loads',
+    fuelTableName: environment['DYNAMODB_FUEL_TABLE']?.trim() || 'lcm-local-fuel',
     initialAdminPassword,
     jwtSecret,
     jwtExpiresIn: environment['JWT_EXPIRES_IN']?.trim() || '8h',

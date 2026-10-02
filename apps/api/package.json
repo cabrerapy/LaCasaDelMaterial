@@ -16,6 +16,9 @@
     "costing:backfill": "npm run build && node dist/modules/costing/cli.js backfill",
     "costing:rebuild-lot-balances": "npm run build && node dist/modules/costing/cli.js rebuild",
     "costing:verify": "npm run build && node dist/modules/costing/cli.js verify",
+    "trip-loads:backfill": "npm run build && node dist/modules/trip-loads/cli.js backfill",
+    "trip-loads:rebuild-balances": "npm run build && node dist/modules/trip-loads/cli.js rebuild",
+    "trip-loads:verify": "npm run build && node dist/modules/trip-loads/cli.js verify",
     "test:dynamodb": "npm run build && node --test dist/modules/inventory/dynamodb.integration.test.js"
   },
   "dependencies": {

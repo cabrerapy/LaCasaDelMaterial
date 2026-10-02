@@ -79,6 +79,8 @@ export async function productsRoutes(app: FastifyInstance, options: Options): Pr
         quantityScale: { type: 'integer', minimum: 1, maximum: 1_000_000 },
         minStock: { type: 'number', minimum: 0, maximum: 1_000_000_000 },
         trackStock: { type: 'boolean', default: true },
+        weightPerBaseUnitGrams: { type: 'integer', minimum: 1 },
+        volumePerBaseUnitMl: { type: 'integer', minimum: 1 },
         presentations: {
           type: 'array', minItems: 1, maxItems: 7,
           items: {
@@ -101,6 +103,8 @@ export async function productsRoutes(app: FastifyInstance, options: Options): Pr
         description: { type: 'string', maxLength: 1000 }, categoryId: id,
         minStock: { type: 'number', minimum: 0, maximum: 1_000_000_000 },
         trackStock: { type: 'boolean' },
+        weightPerBaseUnitGrams: { anyOf: [{ type: 'integer', minimum: 1 }, { type: 'null' }] },
+        volumePerBaseUnitMl: { anyOf: [{ type: 'integer', minimum: 1 }, { type: 'null' }] },
         code: { not: {} }, baseUnit: { not: {} }, quantityScale: { not: {} },
         status: { not: {} }, createdAt: { not: {} }, createdBy: { not: {} }, id: { not: {} }
       }

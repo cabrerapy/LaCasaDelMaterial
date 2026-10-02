@@ -22,8 +22,9 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { label: 'Clientes', route: '/customers', icon: '◎', requiredPermission: 'customers.read' },
   { label: 'Proveedores', route: '/suppliers', icon: '◉', requiredPermission: 'suppliers.read' },
   { label: 'Camiones', route: '/trucks', icon: '▰', requiredPermission: 'trucks.read' },
-  { label: 'Viajes', route: '/trips', icon: '➜', requiredPermission: 'trips.access' },
-  { label: 'Combustible', route: '/fuel', icon: '◐', requiredPermission: 'fuel.access' },
+  { label: 'Choferes', route: '/drivers', icon: '♙', requiredPermission: 'drivers.read' },
+  { label: 'Viajes', route: '/trips', icon: '➜', requiredPermission: 'trips.read' },
+  { label: 'Combustible', route: '/fuel', icon: '◐', requiredPermission: 'fuel.read' },
   { label: 'Reportes', route: '/reports', icon: '▥', requiredPermission: 'reports.read' },
   { label: 'Usuarios', route: '/users', icon: '♙', requiredPermission: 'users.read' }
 ];

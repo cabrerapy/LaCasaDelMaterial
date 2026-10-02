@@ -1,5 +1,17 @@
 # Roles y permisos
 
+LCM-019: `fuel.read/create/void/costs.read` separa operación y datos económicos. ADMIN, MANAGER y LOGISTICS poseen todos; DRIVER lee y crea únicamente en sus viajes, pero no recibe precio ni costo. El chofer puede introducir el precio durante el alta porque `fuel.costs.read` controla lectura posterior, no captura operativa. WAREHOUSE, CASHIER y PURCHASING no acceden.
+
+LCM-018: `trip_loads.read/create/update/confirm/cancel` controla la carga. ADMIN, MANAGER y LOGISTICS poseen todos; WAREHOUSE puede leer, crear, editar y confirmar; DRIVER solo lee la carga de su propio viaje. CASHIER y PURCHASING no acceden.
+
+LCM-017: `trips.read/create/update/ready/start/deliver/cancel` controla el ciclo operativo. ADMIN, MANAGER y LOGISTICS poseen todos; WAREHOUSE solo lectura. DRIVER lee, inicia y entrega únicamente viajes cuyo Driver está vinculado a su User. CASHIER y PURCHASING no acceden.
+
+LCM-016: `drivers.read/create/update/status.manage` protege el maestro de choferes. ADMIN, MANAGER y LOGISTICS administran; WAREHOUSE solo consulta. CASHIER, PURCHASING y DRIVER no acceden al CRUD general. La cuenta asociada no concede permisos de administración.
+
+LCM-015: `trucks.read/create/update/status.manage` protege el maestro de vehículos. ADMIN, MANAGER y LOGISTICS poseen administración completa; WAREHOUSE solo lectura. CASHIER, PURCHASING y DRIVER no acceden al CRUD general. La disponibilidad futura se deriva del estado, no de un permiso ni campo booleano adicional.
+
+LCM-014: `cash.read/open/close/manual_in/manual_out/audit` separa consulta, operación y supervisión. ADMIN posee todos; MANAGER puede auditar y realizar movimientos manuales; CASHIER consulta y abre/cierra solamente su propia caja. Sin `cash.audit`, la API impide consultar o cerrar sesiones ajenas. Confirmar o anular ventas exige una caja abierta del actor además de los permisos de ventas.
+
 LCM-013: `sales.costs.read` protege COGS y detalle de lotes FIFO; `sales.margins.read` protege ingreso neto, utilidad y margen. ADMIN posee ambos y puede reintentar costeo; MANAGER posee ambos. CASHIER conserva importes comerciales, pero la API omite costos, allocations, utilidad y margen. PURCHASING, WAREHOUSE, LOGISTICS y DRIVER no reciben rentabilidad de ventas.
 
 LCM-012: ADMIN y MANAGER leen todas las ventas, crean/editan/confirman, anulan y aplican descuentos. CASHIER crea, edita y confirma, pero solo consulta ventas propias/autorizadas, no aplica descuentos ni anula. Los endpoints aplican `sales.read/create/update/confirm/void/discount`, `sales.own.read` y `sales.authorized.read`; la UI no reemplaza la autorización del backend.

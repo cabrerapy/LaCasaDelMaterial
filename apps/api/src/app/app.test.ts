@@ -21,6 +21,11 @@ import { InMemoryCustomerRepository } from '../modules/customers/infrastructure/
 import { InMemorySaleRepository } from '../modules/sales/infrastructure/in-memory-sale.repository.js';
 import { InMemoryCostingRepository } from '../modules/costing/infrastructure/in-memory-costing.repository.js';
 import { InMemoryCashRepository } from '../modules/cash/infrastructure/in-memory-cash.repository.js';
+import { InMemoryTruckRepository } from '../modules/trucks/infrastructure/in-memory-truck.repository.js';
+import { InMemoryDriverRepository } from '../modules/drivers/infrastructure/in-memory-driver.repository.js';
+import { InMemoryTripRepository } from '../modules/trips/infrastructure/in-memory-trip.repository.js';
+import { InMemoryTripLoadRepository } from '../modules/trip-loads/infrastructure/in-memory-trip-load.repository.js';
+import { InMemoryFuelRepository } from '../modules/fuel/infrastructure/in-memory-fuel.repository.js';
 
 const adminPassword = 'LocalTestPassword123!';
 const jwtSecret = 'test-secret-with-at-least-thirty-two-characters';
@@ -35,6 +40,11 @@ let customers: InMemoryCustomerRepository;
 let sales: InMemorySaleRepository;
 let costing: InMemoryCostingRepository;
 let cash: InMemoryCashRepository;
+let trucks: InMemoryTruckRepository;
+let drivers: InMemoryDriverRepository;
+let trips: InMemoryTripRepository;
+let tripLoads: InMemoryTripLoadRepository;
+let fuel: InMemoryFuelRepository;
 
 before(async () => {
   users = new InMemoryUserRepository();
@@ -47,6 +57,11 @@ before(async () => {
   cash = new InMemoryCashRepository();
   sales = new InMemorySaleRepository(inventory, cash);
   costing = new InMemoryCostingRepository();
+  trucks = new InMemoryTruckRepository();
+  drivers = new InMemoryDriverRepository();
+  trips = new InMemoryTripRepository(trucks);
+  tripLoads = new InMemoryTripLoadRepository();
+  fuel = new InMemoryFuelRepository();
   const now = new Date().toISOString();
   await users.create({
     id: 'b052fa5e-e405-4460-82c8-6887137c885a',
@@ -106,6 +121,13 @@ before(async () => {
     createdBy: 'b052fa5e-e405-4460-82c8-6887137c885a',
     updatedBy: 'b052fa5e-e405-4460-82c8-6887137c885a'
   });
+  await users.create({ id: '9c03c559-a266-424d-a5f3-b1ef74d1f984', name: 'Chofer inactivo', username: 'driver.off', email: 'driver.off@lacasadelmaterial.local', passwordHash: await argon2.hash(adminPassword), role: 'DRIVER', status: 'INACTIVE', createdAt: now, updatedAt: now });
+  await users.create({
+    id: 'e5bd4ba6-eacd-46ed-a4ec-393fdfbfe41d', name: 'Logística', username: 'logistics',
+    email: 'logistics@lacasadelmaterial.local', passwordHash: await argon2.hash(adminPassword),
+    role: 'LOGISTICS', status: 'ACTIVE', createdAt: now, updatedAt: now,
+    createdBy: 'b052fa5e-e405-4460-82c8-6887137c885a', updatedBy: 'b052fa5e-e405-4460-82c8-6887137c885a'
+  });
 
   const config = loadConfig({
     NODE_ENV: 'test',
@@ -119,7 +141,7 @@ before(async () => {
     products,
     suppliers,
     purchases,
-    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory, customers, sales, costing, cash,
+    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory, customers, sales, costing, cash, trucks, drivers, trips, tripLoads, fuel,
     passwordHasher: new Argon2PasswordHasher(),
     authentication: new LocalJwtAuthentication(config.jwtSecret, config.jwtExpiresIn)
   });
@@ -957,6 +979,45 @@ test('customers support person/company, uniqueness, search, audit and permission
   assert.equal(enabled.json().status, 'ACTIVE');
 });
 
+test('drivers validate optional user linkage, license, uniqueness, status and permissions', async () => {
+  const admin=await authorizationHeader('admin'),logistics=await authorizationHeader('logistics');
+  assert.equal((await app.inject({method:'GET',url:'/api/drivers'})).statusCode,401);assert.equal((await app.inject({method:'GET',url:'/api/drivers',headers:await authorizationHeader('cashier')})).statusCode,403);assert.equal((await app.inject({method:'GET',url:'/api/drivers',headers:await authorizationHeader('driver')})).statusCode,403);assert.equal((await app.inject({method:'GET',url:'/api/drivers',headers:await authorizationHeader('warehouse')})).statusCode,200);
+  const past=await app.inject({method:'POST',url:'/api/drivers',headers:admin,payload:{firstName:' Juan ',lastName:' Pérez ',documentNumber:' 1 234 567 ',phone:'0981 123456',licenseNumber:' lic-1 ',licenseCategory:'Profesional B',licenseExpirationDate:'2020-01-01'}});assert.equal(past.statusCode,201);assert.equal(past.json().displayName,'Juan Pérez');assert.equal(past.json().licenseExpired,true);assert.equal(past.json().status,'ACTIVE');assert.equal((await drivers.findById(past.json().id))?.createdBy,'b052fa5e-e405-4460-82c8-6887137c885a');
+  assert.equal((await app.inject({method:'POST',url:'/api/drivers',headers:admin,payload:{firstName:'Duplicado',documentNumber:'1234567'}})).statusCode,409);assert.equal((await app.inject({method:'POST',url:'/api/drivers',headers:admin,payload:{firstName:'Duplicado',licenseNumber:'LIC-1'}})).statusCode,409);
+  const linked=await app.inject({method:'POST',url:'/api/drivers',headers:logistics,payload:{userId:'0f67e992-05df-4412-a909-91224f478c47',firstName:'Chofer',licenseExpirationDate:'2099-01-01'}});assert.equal(linked.statusCode,201);assert.equal(linked.json().licenseExpired,false);assert.equal(linked.body.includes('passwordHash'),false);
+  assert.equal((await app.inject({method:'POST',url:'/api/drivers',headers:admin,payload:{userId:'0f67e992-05df-4412-a909-91224f478c47',firstName:'Otro'}})).statusCode,409);assert.equal((await app.inject({method:'POST',url:'/api/drivers',headers:admin,payload:{userId:'50f4b568-e60a-4381-a7c3-c6d635c1b767',firstName:'Caja'}})).statusCode,400);assert.equal((await app.inject({method:'POST',url:'/api/drivers',headers:admin,payload:{userId:'9c03c559-a266-424d-a5f3-b1ef74d1f984',firstName:'Inactivo'}})).statusCode,400);assert.equal((await app.inject({method:'POST',url:'/api/drivers',headers:admin,payload:{notes:'Sin nombre'}})).statusCode,400);
+  const updated=await app.inject({method:'PATCH',url:`/api/drivers/${past.json().id}`,headers:logistics,payload:{phone:'0991 000000'}});assert.equal(updated.statusCode,200);assert.equal(updated.json().phone,'0991 000000');for(const status of ['SUSPENDED','ACTIVE','INACTIVE']as const){const r=await app.inject({method:'PATCH',url:`/api/drivers/${past.json().id}/status`,headers:logistics,payload:{status}});assert.equal(r.json().status,status);}
+  const search=await app.inject({method:'GET',url:'/api/drivers?status=INACTIVE&search=LIC-1&licenseExpired=true',headers:admin});assert.equal(search.statusCode,200);assert.equal(search.json().items[0].id,past.json().id);
+});
+
+test('trucks support normalized unique master data, filters, status and permissions', async () => {
+  const admin = await authorizationHeader('admin'); const logistics = await authorizationHeader('logistics');
+  assert.equal((await app.inject({ method: 'GET', url: '/api/trucks' })).statusCode, 401);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/trucks', headers: await authorizationHeader('cashier') })).statusCode, 403);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/trucks', headers: await authorizationHeader('driver') })).statusCode, 403);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/trucks', headers: await authorizationHeader('warehouse') })).statusCode, 200);
+  const created = await app.inject({ method: 'POST', url: '/api/trucks', headers: admin, payload: { plate: ' ab c 123 ', internalCode: ' cam-01 ', brand: 'Mercedes-Benz', model: '1114', year: 2018, vehicleType: 'TRUCK', maxLoadKg: 10000, maxVolumeM3: '7.5', fuelType: 'DIESEL', currentOdometerKm: 183220, notes: 'Principal' } });
+  assert.equal(created.statusCode, 201); assert.equal(created.json().plate, 'ABC123'); assert.equal(created.json().internalCode, 'CAM-01'); assert.equal(created.json().maxVolumeM3, '7.5'); assert.equal(created.json().status, 'ACTIVE');
+  const stored = await trucks.findById(created.json().id); assert.equal(stored?.maxVolumeM3Internal, 7500); assert.equal(stored?.createdBy, 'b052fa5e-e405-4460-82c8-6887137c885a');
+  assert.equal((await app.inject({ method: 'POST', url: '/api/trucks', headers: admin, payload: { plate: 'ABC123', brand: 'Otra', vehicleType: 'PICKUP', fuelType: 'GASOLINE' } })).statusCode, 409);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/trucks', headers: logistics, payload: { plate: 'XYZ987', internalCode: 'CAM-01', brand: 'Isuzu', vehicleType: 'TIPPER', fuelType: 'DIESEL' } })).statusCode, 409);
+  const logisticsTruck = await app.inject({ method: 'POST', url: '/api/trucks', headers: logistics, payload: { plate: 'XYZ987', internalCode: 'VOL-01', brand: 'Isuzu', model: 'NPR', vehicleType: 'TIPPER', fuelType: 'DIESEL' } }); assert.equal(logisticsTruck.statusCode, 201);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/trucks', headers: admin, payload: { brand: 'Sin chapa', vehicleType: 'TRUCK', fuelType: 'DIESEL' } })).statusCode, 400);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/trucks', headers: admin, payload: { plate: 'NEG1', brand: 'Test', vehicleType: 'TRUCK', fuelType: 'DIESEL', currentOdometerKm: -1 } })).statusCode, 400);
+  const updated = await app.inject({ method: 'PATCH', url: `/api/trucks/${created.json().id}`, headers: logistics, payload: { currentOdometerKm: 183500, maxVolumeM3: '8,25', internalCode: 'CAM-02' } }); assert.equal(updated.statusCode, 200); assert.equal(updated.json().currentOdometerKm, 183500); assert.equal(updated.json().maxVolumeM3, '8.25');
+  assert.equal((await app.inject({ method: 'PATCH', url: `/api/trucks/${created.json().id}`, headers: admin, payload: { plate: 'NEW123' } })).statusCode, 400);
+  for (const status of ['MAINTENANCE', 'ACTIVE', 'INACTIVE'] as const) { const result = await app.inject({ method: 'PATCH', url: `/api/trucks/${created.json().id}/status`, headers: logistics, payload: { status } }); assert.equal(result.statusCode, 200); assert.equal(result.json().status, status); }
+  const found = await app.inject({ method: 'GET', url: '/api/trucks?search=XYZ987&vehicleType=TIPPER&fuelType=DIESEL', headers: admin }); assert.equal(found.statusCode, 200); assert.equal(found.json().items[0].id, logisticsTruck.json().id);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/trucks', headers: await authorizationHeader('cashier'), payload: { plate: 'NOPE1', brand: 'Sin permiso', vehicleType: 'TRUCK', fuelType: 'DIESEL' } })).statusCode, 403);
+});
+
+test('trip lifecycle reserves resources and updates odometer', async()=>{
+ const admin=await authorizationHeader('admin');const truck=(await trucks.list({limit:10,status:'ACTIVE'})).items[0];const driver=(await drivers.list({limit:10,status:'ACTIVE',today:'2026-10-02'})).items.find(d=>!d.licenseExpirationDate||d.licenseExpirationDate>='2026-10-02');assert.ok(truck);assert.ok(driver);
+ const created=await app.inject({method:'POST',url:'/api/trips',headers:admin,payload:{truckId:truck.id,driverId:driver.id,scheduledDate:'2026-10-03',destinationName:'Cliente',destinationAddress:'Limpio',freightChargeGuarani:0}});assert.equal(created.statusCode,201);assert.equal(created.json().status,'DRAFT');
+ const ready=await app.inject({method:'POST',url:`/api/trips/${created.json().id}/ready`,headers:admin});assert.equal(ready.json().status,'READY');const start=await app.inject({method:'POST',url:`/api/trips/${created.json().id}/start`,headers:admin,payload:{odometerStartKm:truck.currentOdometerKm}});assert.equal(start.json().status,'IN_TRANSIT');assert.equal((await app.inject({method:'POST',url:`/api/trips/${created.json().id}/cancel`,headers:admin,payload:{reason:'No'} })).statusCode,409);
+ const delivered=await app.inject({method:'POST',url:`/api/trips/${created.json().id}/deliver`,headers:admin,payload:{odometerEndKm:truck.currentOdometerKm+60}});assert.equal(delivered.json().status,'DELIVERED');assert.equal(delivered.json().distanceKm,60);assert.equal((await trucks.findById(truck.id))?.currentOdometerKm,truck.currentOdometerKm+60);
+});
+
 test('cash sessions open once, summarize manual movements and close immutably', async () => {
   const headers = await authorizationHeader('manager');
   const opened = await app.inject({ method: 'POST', url: '/api/cash/sessions/open', headers, payload: { openingCashGuarani: 500000, notes: 'Fondo inicial' } });
@@ -985,6 +1046,7 @@ test('sales POS confirms stock atomically, restricts discounts and void restores
   assert.equal(draft.statusCode, 201); assert.equal(draft.json().status, 'DRAFT'); assert.match(draft.json().saleNumber, /^VTA-2026-/);
   const confirmed = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/confirm`, headers: await authorizationHeader('cashier') });
   assert.equal(confirmed.statusCode, 200); assert.equal(confirmed.json().status, 'CONFIRMED'); assert.equal(confirmed.json().costingStatus, 'COSTED');
+  const cashierSummary = await app.inject({ method: 'GET', url: `/api/cash/sessions/${cashierOpen.json().id}/summary`, headers: await authorizationHeader('cashier') }); assert.equal(cashierSummary.json().expectedCashGuarani, 500000 + confirmed.json().totalGuarani); assert.equal(cashierSummary.json().saleCount, 1);
   assert.equal(confirmed.json().directCogsGuarani, undefined);
   const managerDetail = await app.inject({ method: 'GET', url: `/api/sales/${draft.json().id}`, headers: await authorizationHeader('manager') });
   assert.equal(managerDetail.statusCode, 200); assert.equal(typeof managerDetail.json().directCogsGuarani, 'number'); assert.equal(typeof managerDetail.json().grossMarginBps, 'number');
@@ -994,8 +1056,57 @@ test('sales POS confirms stock atomically, restricts discounts and void restores
   const adminOpen = await app.inject({ method: 'POST', url: '/api/cash/sessions/open', headers: await authorizationHeader('admin'), payload: { openingCashGuarani: 0 } }); assert.equal(adminOpen.statusCode, 201);
   const voided = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/void`, headers: await authorizationHeader('admin'), payload: { reason: 'Prueba de anulación' } });
   assert.equal(voided.statusCode, 200); assert.equal(voided.json().status, 'VOIDED'); assert.equal((await inventory.getBalance(cement.id))?.onHandInternal, before);
+  const adminSummary = await app.inject({ method: 'GET', url: `/api/cash/sessions/${adminOpen.json().id}/summary`, headers: await authorizationHeader('admin') }); assert.equal(adminSummary.json().expectedCashGuarani, -confirmed.json().totalGuarani); assert.equal(adminSummary.json().voidCount, 1);
   const doubleVoid = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/void`, headers: await authorizationHeader('admin'), payload: { reason: 'otra' } }); assert.equal(doubleVoid.statusCode, 409);
   const movements = await inventory.allMovements(); assert.equal(movements.filter((m) => m.saleId === draft.json().id && m.type === 'SALE').length, 1); assert.equal(movements.filter((m) => m.saleId === draft.json().id && m.type === 'SALE_VOID').length, 1);
+});
+
+test('truck loads allocate sale items, validate capacity and reverse on trip cancellation', async () => {
+  const admin = await authorizationHeader('admin');
+  const cashier = await authorizationHeader('cashier');
+  const cement = await products.findByCode('CEM-CPII'); assert.ok(cement);
+  await app.inject({ method: 'PATCH', url: `/api/products/${cement.id}`, headers: admin,
+    payload: { weightPerBaseUnitGrams: 50000, volumePerBaseUnitMl: 35000 } });
+  const bag = (await products.listPresentations(cement.id)).find((x) => x.baseQuantityInternal === 1); assert.ok(bag);
+  const draft = await app.inject({ method: 'POST', url: '/api/sales', headers: cashier, payload: {
+    saleDate: '2026-10-02', deliveryType: 'OWN_FLEET', deliveryAddress: 'Luque', paymentMethod: 'CASH',
+    items: [{ productId: cement.id, presentationId: bag.id, quantity: '1' }]
+  } }); assert.equal(draft.statusCode, 201);
+  const sale = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/confirm`, headers: cashier }); assert.equal(sale.statusCode, 200);
+  const truck = (await trucks.list({ limit: 10, status: 'ACTIVE' })).items[0]; assert.ok(truck);
+  const driver = (await drivers.list({ limit: 10, status: 'ACTIVE', today: '2026-10-02' })).items.find((x) => !x.licenseExpirationDate || x.licenseExpirationDate >= '2026-10-02'); assert.ok(driver);
+  const trip = await app.inject({ method: 'POST', url: '/api/trips', headers: admin, payload: { truckId: truck.id, driverId: driver.id, saleId: sale.json().id, scheduledDate: '2026-10-04', destinationName: 'Obra', destinationAddress: 'Luque' } }); assert.equal(trip.statusCode, 201);
+  assert.equal((await app.inject({ method: 'POST', url: `/api/trips/${trip.json().id}/ready`, headers: admin })).statusCode, 409);
+  const line = sale.json().items[0];
+  const load = await app.inject({ method: 'POST', url: `/api/trips/${trip.json().id}/load`, headers: admin, payload: { lines: [{ saleItemId: line.id, quantityBaseInternal: line.quantityBaseInternal }] } });
+  assert.equal(load.statusCode, 201); assert.equal(load.json().totalWeightGrams, 50000); assert.equal(load.json().capacityValidation, 'COMPLETE');
+  const confirmed = await app.inject({ method: 'POST', url: `/api/trips/${trip.json().id}/load/confirm`, headers: admin }); assert.equal(confirmed.statusCode, 200); assert.equal(confirmed.json().status, 'CONFIRMED');
+  const balances = await app.inject({ method: 'GET', url: `/api/trips/${trip.json().id}/load/balances`, headers: admin }); assert.equal(balances.json()[0].remainingQuantityBaseInternal, 0);
+  assert.equal((await app.inject({ method: 'POST', url: `/api/trips/${trip.json().id}/ready`, headers: admin })).statusCode, 200);
+  assert.equal((await app.inject({ method: 'POST', url: `/api/trips/${trip.json().id}/cancel`, headers: admin, payload: { reason: 'Reprogramación' } })).statusCode, 200);
+  assert.equal((await app.inject({ method: 'GET', url: `/api/trips/${trip.json().id}/load`, headers: admin })).json().status, 'CANCELLED');
+});
+
+test('fuel is immutable, exact, access-controlled and excluded from inventory and cash', async()=>{
+ const admin=await authorizationHeader('admin'),manager=await authorizationHeader('manager'),logistics=await authorizationHeader('logistics'),driverAuth=await authorizationHeader('driver');
+ const truck=(await trucks.list({limit:20,status:'ACTIVE'})).items[0];assert.ok(truck);const linked=(await drivers.list({limit:100,status:'ACTIVE',today:'2026-10-02'})).items.find(x=>x.userId==='0f67e992-05df-4412-a909-91224f478c47');assert.ok(linked);
+ const trip=await app.inject({method:'POST',url:'/api/trips',headers:admin,payload:{truckId:truck.id,driverId:linked.id,scheduledDate:'2026-10-05',destinationName:'Obra combustible',destinationAddress:'Limpio'}});assert.equal(trip.statusCode,201);assert.equal((await app.inject({method:'POST',url:`/api/trips/${trip.json().id}/ready`,headers:admin})).statusCode,200);
+ const beforeInventory=(await inventory.allMovements()).length;const cashSession=await cash.current('50f4b568-e60a-4381-a7c3-c6d635c1b767');assert.ok(cashSession);const beforeCash=(await cash.movements(cashSession.id)).length;
+ const created=await app.inject({method:'POST',url:'/api/fuel',headers:driverAuth,payload:{truckId:truck.id,tripId:trip.json().id,liters:'35,5',pricePerLiterGuarani:7850,odometerKm:truck.currentOdometerKm,stationName:'Petropar Limpio',receiptNumber:'001-001-0001234',occurredAt:'2026-10-02T10:30:00-03:00'}});assert.equal(created.statusCode,201);assert.equal(created.json().litersMilli,35500);assert.equal(created.json().totalCostGuarani,undefined);assert.equal(created.json().pricePerLiterGuarani,undefined);assert.match(created.json().fuelNumber,/^COM-\d{4}-\d{6}$/);
+ const stored=await fuel.findById(created.json().id);assert.equal(stored?.totalCostGuarani,278675);assert.equal(stored?.createdBy,'0f67e992-05df-4412-a909-91224f478c47');
+ const detail=await app.inject({method:'GET',url:`/api/fuel/${created.json().id}`,headers:manager});assert.equal(detail.json().totalCostGuarani,278675);
+ const decimal=await app.inject({method:'POST',url:'/api/fuel',headers:logistics,payload:{truckId:truck.id,liters:'42,750',pricePerLiterGuarani:1000,odometerKm:truck.currentOdometerKm,occurredAt:'2026-10-02T11:00:00-03:00'}});assert.equal(decimal.statusCode,201);assert.equal(decimal.json().litersMilli,42750);
+ const wrong=truck.fuelType==='DIESEL'?'GASOLINE':'DIESEL';assert.equal((await app.inject({method:'POST',url:'/api/fuel',headers:logistics,payload:{truckId:truck.id,fuelType:wrong,liters:'1',pricePerLiterGuarani:1,odometerKm:truck.currentOdometerKm,occurredAt:'2026-10-02T11:10:00-03:00'}})).statusCode,409);
+ const otherTruckResponse=await app.inject({method:'POST',url:'/api/trucks',headers:logistics,payload:{plate:'FUE019',brand:'Prueba',vehicleType:'TRUCK',fuelType:truck.fuelType,currentOdometerKm:truck.currentOdometerKm}});assert.equal(otherTruckResponse.statusCode,201);const otherTruck=otherTruckResponse.json();assert.equal((await app.inject({method:'POST',url:'/api/fuel',headers:logistics,payload:{truckId:otherTruck.id,tripId:trip.json().id,liters:'1',pricePerLiterGuarani:1,odometerKm:otherTruck.currentOdometerKm,occurredAt:'2026-10-02T11:15:00-03:00'}})).statusCode,409);
+ assert.equal((await app.inject({method:'POST',url:'/api/fuel',headers:driverAuth,payload:{truckId:truck.id,liters:'1',pricePerLiterGuarani:1,odometerKm:truck.currentOdometerKm,occurredAt:'2026-10-02T11:20:00-03:00'}})).statusCode,403);
+ assert.equal((await app.inject({method:'POST',url:'/api/fuel',headers:driverAuth,payload:{truckId:truck.id,tripId:trip.json().id,liters:'1',pricePerLiterGuarani:1,odometerKm:Math.max(0,truck.currentOdometerKm-1),occurredAt:'2026-10-02T11:30:00-03:00'}})).statusCode,409);
+ const summary=await app.inject({method:'GET',url:`/api/fuel/trip/${trip.json().id}/summary`,headers:manager});assert.equal(summary.json().transactionCount,1);assert.equal(summary.json().totalLitersMilli,35500);assert.equal(summary.json().totalCostGuarani,278675);
+ const truckSummary=await app.inject({method:'GET',url:`/api/trucks/${truck.id}/fuel-summary`,headers:manager});assert.equal(truckSummary.statusCode,200);assert.equal(truckSummary.json().transactionCount,2);
+ const redacted=await app.inject({method:'GET',url:`/api/fuel/trip/${trip.json().id}/summary`,headers:driverAuth});assert.equal(redacted.json().totalCostGuarani,undefined);
+ const voided=await app.inject({method:'POST',url:`/api/fuel/${created.json().id}/void`,headers:logistics,payload:{reason:'Comprobante duplicado'}});assert.equal(voided.json().status,'VOIDED');assert.equal((await app.inject({method:'POST',url:`/api/fuel/${created.json().id}/void`,headers:logistics,payload:{reason:'Otra'}})).statusCode,409);
+ assert.equal((await app.inject({method:'GET',url:`/api/fuel/trip/${trip.json().id}/summary`,headers:manager})).json().transactionCount,0);
+ assert.equal((await inventory.allMovements()).length,beforeInventory);assert.equal((await cash.movements(cashSession.id)).length,beforeCash);
+ assert.equal((await app.inject({method:'GET',url:'/api/fuel'})).statusCode,401);assert.equal((await app.inject({method:'GET',url:'/api/fuel',headers:await authorizationHeader('warehouse')})).statusCode,403);
 });
 
 async function authorizationHeader(username: string): Promise<{ authorization: string }> {

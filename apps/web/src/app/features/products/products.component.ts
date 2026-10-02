@@ -61,6 +61,8 @@ export class ProductsComponent {
     baseUnit: this.fb.control<BaseUnit>('UNIT'),
     quantityScale: [1, [Validators.required, Validators.min(1), Validators.pattern(/^\d+$/)]],
     minStock: [0, [Validators.required, Validators.min(0)]], trackStock: [true],
+    weightPerBaseUnitGrams: this.fb.control<number | null>(null, Validators.min(1)),
+    volumePerBaseUnitMl: this.fb.control<number | null>(null, Validators.min(1)),
     presentations: this.presentations
   });
 
@@ -96,7 +98,7 @@ export class ProductsComponent {
 
   openCreate(): void {
     this.selectedProduct.set(null); this.presentations.clear(); this.presentations.push(this.presentationGroup(true));
-    this.form.reset({ code: '', name: '', categoryId: '', description: '', baseUnit: 'UNIT', quantityScale: 1, minStock: 0, trackStock: true });
+    this.form.reset({ code: '', name: '', categoryId: '', description: '', baseUnit: 'UNIT', quantityScale: 1, minStock: 0, trackStock: true, weightPerBaseUnitGrams: null, volumePerBaseUnitMl: null });
     this.form.controls.code.enable(); this.form.controls.baseUnit.enable(); this.form.controls.quantityScale.enable();
     this.formMode.set('create'); this.clearFeedback();
   }
@@ -106,7 +108,8 @@ export class ProductsComponent {
     this.form.reset({
       code: product.code, name: product.name, categoryId: product.category.id,
       description: product.description ?? '', baseUnit: product.baseUnit,
-      quantityScale: product.quantityScale, minStock: product.minStock, trackStock: product.trackStock
+      quantityScale: product.quantityScale, minStock: product.minStock, trackStock: product.trackStock,
+      weightPerBaseUnitGrams: product.weightPerBaseUnitGrams ?? null, volumePerBaseUnitMl: product.volumePerBaseUnitMl ?? null
     });
     this.form.controls.code.disable(); this.form.controls.baseUnit.disable(); this.form.controls.quantityScale.disable();
     this.formMode.set('edit'); this.clearFeedback();
@@ -184,7 +187,9 @@ export class ProductsComponent {
         code: raw.code, name: raw.name, categoryId: raw.categoryId,
         ...(raw.description.trim() ? { description: raw.description } : {}),
         baseUnit: raw.baseUnit, quantityScale: raw.quantityScale, minStock: raw.minStock,
-        trackStock: raw.trackStock, presentations: presentationInputs
+        trackStock: raw.trackStock,
+        ...(raw.weightPerBaseUnitGrams ? { weightPerBaseUnitGrams: raw.weightPerBaseUnitGrams } : {}),
+        ...(raw.volumePerBaseUnitMl ? { volumePerBaseUnitMl: raw.volumePerBaseUnitMl } : {}), presentations: presentationInputs
       };
       this.finishSave(this.api.create(input), 'Producto creado correctamente.');
       return;
@@ -194,7 +199,8 @@ export class ProductsComponent {
     this.api.update(product.id, {
       name: raw.name, categoryId: raw.categoryId,
       ...(raw.description.trim() ? { description: raw.description } : { description: '' }),
-      minStock: raw.minStock, trackStock: raw.trackStock
+      minStock: raw.minStock, trackStock: raw.trackStock,
+      weightPerBaseUnitGrams: raw.weightPerBaseUnitGrams, volumePerBaseUnitMl: raw.volumePerBaseUnitMl
     }).pipe(switchMap(() => {
       const ordered = presentationInputs.map((input, index) => ({ input, index }))
         .sort((left, right) => Number(right.input.isDefault) - Number(left.input.isDefault));

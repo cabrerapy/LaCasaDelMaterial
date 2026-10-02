@@ -1,5 +1,17 @@
 # Patrones de acceso conocidos
 
+## Fuel LCM-019
+
+La tabla exclusiva usa `FUEL#{id}` para detalle, `NUMBER#{fuelNumber}` como reserva única y `COUNTER#{year}` para generar `COM-{año}-{secuencia}` atómicamente. Los registros conservan campos denormalizados de camión, viaje y chofer para lectura operativa.
+
+El listado inicial usa `Scan` paginado y limitado sobre la tabla exclusiva, con filtros acotados por camión, viaje, chofer, estado, fecha y estación, y ordena cada página por `occurredAt DESC`. Los resúmenes recorren páginas y suman exclusivamente registros `POSTED`. No se agregan GSIs hasta justificar volumen; candidatos futuros son índices por viaje, camión/fecha, chofer/fecha, fecha y estado.
+
+## Truck loads LCM-018
+
+La tabla exclusiva de cargas usa `LOAD#{tripId}` para garantizar una sola carga activa por viaje y `BALANCE#{saleId}#{saleItemId}` para la proyección fuerte de cantidad asignada. Confirmar escribe la carga y aplica `ADD` condicional a cada balance dentro de una única `TransactWrite`; la condición impide que dos viajes concurrentes superen la cantidad vendida. Cancelar conserva el histórico y resta las asignaciones en la misma transacción de carga.
+
+Las consultas de saldo expuestas al usuario se reconstruyen desde cargas confirmadas para conservar las líneas históricas como fuente de verdad. Los comandos `trip-loads:backfill`, `trip-loads:rebuild-balances` y `trip-loads:verify` regeneran o comparan la proyección; nunca modifican inventario. La implementación inicial usa `Scan` fuerte y acotado sobre una tabla exclusiva, candidato a GSI por venta cuando el volumen lo requiera.
+
 ## Ledger LCM-009
 
 Tabla de inventario separada, clave `pk`: `MOVEMENT#{uuid}` para detalle; `MOVEMENT_NUMBER#{number}` para número único; `SOURCE#PURCHASE_RECEIPT#{receiptId}#{lineId}` para origen único; `BALANCE#{productId}` para saldo/versionado. Número MOV-año-UUID: no usa contador global.
@@ -35,6 +47,26 @@ Confirmación y anulación reemplazan la venta mediante condición sobre `update
 Tabla de costeo separada: `LOT_BALANCE#{lotId}` obtiene la proyección fuerte por lote y `ALLOCATION#{saleItemId}#{lotId}` garantiza idempotencia. `OpenLotsIndex` es sparse: partición `OPENLOT#PRODUCT#{productId}` y orden `receivedAt#lotNumber`; los lotes agotados dejan de proyectar esas claves. `SaleAllocationsIndex` usa `saleId` y `saleItemId#receivedAt#lotNumber` para detalle y reversión.
 
 Cada allocation y actualización del balance se escriben en una transacción condicional por versión y cantidad restante. Las allocations por venta/item/lote y activas por lote se derivan de los registros de allocation; ventas confirmadas `PENDING` se recorren paginadas y se ordenan por confirmación/número para backfill. Rebuild usa `PurchaseLot - allocations ACTIVE`; verify compara lotes, items, venta e `InventoryBalance` sin corregir silenciosamente.
+
+## Cash LCM-014
+
+Tabla separada con `SESSION#{id}` para sesiones, `OPEN_USER#{userId}` como bloqueo fuerte de una caja abierta por usuario, `MOVEMENT#{id}` para movimientos y `SOURCE#{type}#{sourceId}` para idempotencia. `SESSION_NUMBER#{number}` reserva el número legible. `SessionMovementsIndex` obtiene los movimientos de una sesión por fecha y `SessionDateIndex` soporta el historial cronológico.
+
+Apertura y cierre usan transacciones condicionales. Cada movimiento actualiza atómicamente la proyección `expectedCashGuarani`; el cierre compara `updatedAt`, por lo que no puede competir silenciosamente con un cobro o movimiento manual. Los movimientos de venta se anexan a la misma `TransactWrite` de venta, inventario y FIFO. El listado administrativo inicial conserva paginación limitada y filtros acotados; podrá migrar completamente al índice de fecha cuando el volumen lo justifique.
+
+## Trucks LCM-015
+
+Tabla exclusiva con `TRUCK#{id}` para detalle fuerte, `PLATE#{normalizedPlate}` y `INTERNAL_CODE#{normalizedCode}` como reservas únicas. Alta y cambio de código interno usan transacciones condicionales, por lo que dos solicitudes concurrentes no pueden reservar el mismo valor. La chapa queda inmutable.
+
+El listado inicial usa `Scan` limitado con cursor opaco sobre la tabla pequeña y exclusiva, filtrando estado, tipo, combustible y texto normalizado de chapa/código/marca/modelo. No se crean GSIs antes de observar volumen real; estados y tipo podrán indexarse sin cambiar el contrato del repositorio.
+
+## Drivers LCM-016
+
+Tabla exclusiva con `DRIVER#{id}` para detalle fuerte y reservas condicionales `USER#{userId}`, `DOCUMENT#{normalizedDocument}` y `LICENSE#{normalizedLicense}`. Altas y cambios actualizan registro y reservas en una sola transacción. El listado usa Scan limitado y paginado con filtros de estado, vencimiento y búsqueda normalizada; no requiere índices para el volumen inicial.
+
+## Trips LCM-017
+
+Tabla exclusiva con `TRIP#{id}`, reserva `NUMBER#{tripNumber}` y locks `ACTIVE_TRUCK#{truckId}` / `ACTIVE_DRIVER#{driverId}`. READY adquiere ambos locks en una transacción; cancelación o entrega los libera. La entrega actualiza viaje y odómetro monotónico del camión en una escritura transaccional entre tablas. Listado paginado filtra fecha, estado, camión, chofer y venta.
 
 Antes de definir tablas o índices DynamoDB se detallarán volumen, orden, filtros y consistencia de cada patrón.
 

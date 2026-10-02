@@ -11,6 +11,8 @@ export interface Product {
   readonly quantityScale: number;
   readonly minStockInternal: number;
   readonly trackStock: boolean;
+  readonly weightPerBaseUnitGrams?: number;
+  readonly volumePerBaseUnitMl?: number;
   readonly status: ProductStatus;
   readonly createdAt: string;
   readonly updatedAt: string;

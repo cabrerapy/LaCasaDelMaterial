@@ -63,6 +63,8 @@ export class ProductsService {
       quantityScale,
       minStockInternal: convertQuantity(input.minStock, quantityScale),
       trackStock: input.trackStock ?? true,
+      ...positiveOptional('weightPerBaseUnitGrams', input.weightPerBaseUnitGrams),
+      ...positiveOptional('volumePerBaseUnitMl', input.volumePerBaseUnitMl),
       status: 'ACTIVE',
       createdAt: now,
       updatedAt: now,
@@ -94,9 +96,13 @@ export class ProductsService {
         ? { minStockInternal: convertQuantity(input.minStock, current.quantityScale) }
         : {}),
       ...(input.trackStock !== undefined ? { trackStock: input.trackStock } : {}),
+      ...(input.weightPerBaseUnitGrams === null ? {} : positiveOptional('weightPerBaseUnitGrams', input.weightPerBaseUnitGrams)),
+      ...(input.volumePerBaseUnitMl === null ? {} : positiveOptional('volumePerBaseUnitMl', input.volumePerBaseUnitMl)),
       updatedAt: new Date().toISOString(),
       updatedBy: actorId
     };
+    if (input.weightPerBaseUnitGrams === null) delete (updated as { weightPerBaseUnitGrams?: number }).weightPerBaseUnitGrams;
+    if (input.volumePerBaseUnitMl === null) delete (updated as { volumePerBaseUnitMl?: number }).volumePerBaseUnitMl;
     try { await this.products.updateProduct(updated, current.normalizedName); }
     catch (error: unknown) { this.rethrowUniqueness(error); }
     return this.toResponse(updated);
@@ -241,6 +247,8 @@ export class ProductsService {
       baseUnit: product.baseUnit, quantityScale: product.quantityScale,
       minStock: toDisplayQuantity(product.minStockInternal, product.quantityScale),
       trackStock: product.trackStock, status: product.status,
+      ...(product.weightPerBaseUnitGrams !== undefined ? { weightPerBaseUnitGrams: product.weightPerBaseUnitGrams } : {}),
+      ...(product.volumePerBaseUnitMl !== undefined ? { volumePerBaseUnitMl: product.volumePerBaseUnitMl } : {}),
       presentations: presentations.map((item) => toPresentationResponse(item, product.quantityScale)),
       createdAt: product.createdAt, updatedAt: product.updatedAt
     };
@@ -252,6 +260,12 @@ export class ProductsService {
     }
     throw error;
   }
+}
+
+function positiveOptional<K extends 'weightPerBaseUnitGrams' | 'volumePerBaseUnitMl'>(key: K, value: number | undefined): Partial<Pick<Product, K>> {
+  if (value === undefined) return {};
+  if (!Number.isSafeInteger(value) || value <= 0) throw new ProductApplicationError('El dato logístico debe ser un entero mayor que cero', 400);
+  return { [key]: value } as Partial<Pick<Product, K>>;
 }
 
 function createPresentations(
