@@ -1,12 +1,12 @@
 <div class="app-shell">
   <aside class="sidebar" [class.open]="menuOpen()">
     <div class="brand">
-      <span class="brand-mark">LCM</span>
-      <span>La Casa del Material</span>
+      <img src="assets/brand/mascot-circle.png" alt="" width="48" height="48">
+      <span><strong>La Casa</strong><small>del Material</small></span>
     </div>
     <nav aria-label="Navegación principal">
-      @for (item of menuItems(); track item.label; let first = $first) {
-        <a [routerLink]="item.route" [class.active]="first">
+      @for (item of menuItems(); track item.label) {
+        <a [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }">
           <span aria-hidden="true">{{ item.icon }}</span>
           {{ item.label }}
         </a>
@@ -37,7 +37,7 @@
         <div>
           <p class="eyebrow">Resumen operativo</p>
           <h2>Bienvenido a La Casa del Material</h2>
-          <p>El espacio de trabajo está listo para incorporar los próximos módulos del sistema.</p>
+          <p>Inventario, compras, ventas y logística en un mismo espacio de trabajo.</p>
         </div>
         <div class="connection" [attr.data-state]="apiStatus()">
           <span></span>
@@ -50,17 +50,17 @@
       </section>
 
       <section class="summary-grid" aria-label="Resumen inicial">
-        <article><span>01</span><h3>Base técnica</h3><p>Monorepo configurado</p></article>
-        <article><span>02</span><h3>Servicios</h3><p>Web, API y DynamoDB Local</p></article>
-        <article><span>03</span><h3>Próxima etapa</h3><p>Autenticación y acceso</p></article>
+        <article><span>OPERACIÓN</span><h3>Inventario</h3><p>Consulta existencias y movimientos</p></article>
+        <article><span>COMERCIAL</span><h3>Clientes y ventas</h3><p>Gestiona la atención comercial</p></article>
+        <article><span>LOGÍSTICA</span><h3>Viajes y combustible</h3><p>Supervisa la operación de reparto</p></article>
       </section>
 
       <section class="placeholder-panel">
         <div>
           <p class="eyebrow">Actividad</p>
-          <h2>Operación del depósito</h2>
+          <h2>Tu operación, en orden</h2>
         </div>
-        <p>Los indicadores y movimientos se habilitarán en las próximas etapas.</p>
+        <p>Usa el menú lateral para ingresar al módulo que necesitas.</p>
       </section>
     </main>
   </div>

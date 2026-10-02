@@ -4,70 +4,105 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 
-  /* Corporate palette */
-  --green-900: #173c2a;
-  --green-700: #1f5136;
-  --green-600: #2b6748;
+  /* LCM brand palette */
+  --lcm-gold-50: #fffdf2;
+  --lcm-gold-100: #fff8cf;
+  --lcm-gold-200: #fff09a;
+  --lcm-gold-300: #ffe45f;
+  --lcm-gold-400: #ffd52f;
+  --lcm-gold-500: #f6be00;
+  --lcm-gold-600: #d99b00;
+  --lcm-gold-700: #ad7100;
+  --lcm-gold-800: #8d5708;
+  --lcm-gold-900: #75470d;
+  --lcm-orange: #eb4d0b;
+  --lcm-ink: #111827;
 
-  /* Construction accents */
-  --construction-700: #8a6500;
-  --construction-600: #c98f00;
-  --construction-500: #f2b705;
-  --construction-400: #ffc928;
-  --construction-200: #ffe28a;
-  --construction-100: #fff4cc;
-  --construction-50: #fff9e8;
+  /* Semantic design tokens */
+  --color-primary: var(--lcm-gold-500);
+  --color-primary-hover: var(--lcm-gold-600);
+  --color-primary-active: var(--lcm-gold-700);
+  --color-accent: var(--lcm-orange);
+  --color-background: #f7f5ef;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f1eee5;
+  --color-border: #ddd8ca;
+  --color-text: var(--lcm-ink);
+  --color-text-secondary: #5f6673;
 
-  /* Surfaces and typography */
-  --background: #f3f5f1;
-  --surface: #ffffff;
-  --surface-subtle: #f8faf8;
-  --surface-muted: #fafbfa;
-  --text-primary: #203329;
-  --text-secondary: #718078;
-  --text-muted: #77827c;
+  /* Compatibility aliases for existing modules */
+  --green-900: var(--lcm-ink);
+  --green-700: var(--color-primary);
+  --green-600: var(--color-primary-hover);
+  --construction-700: var(--lcm-gold-800);
+  --construction-600: var(--lcm-gold-600);
+  --construction-500: var(--lcm-gold-500);
+  --construction-400: var(--lcm-gold-400);
+  --construction-200: var(--lcm-gold-200);
+  --construction-100: var(--lcm-gold-100);
+  --construction-50: var(--lcm-gold-50);
+  --background: var(--color-background);
+  --surface: var(--color-surface);
+  --surface-subtle: #fbfaf6;
+  --surface-muted: var(--color-surface-secondary);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: #737986;
   --text-on-dark: #ffffff;
-  --border: #dce2dd;
-  --border-secondary: #e0e6e1;
-  --border-control: #cbd5ce;
-  --border-subtle: #edf0ed;
+  --border: var(--color-border);
+  --border-secondary: #e5e1d7;
+  --border-control: #c9c4b7;
+  --border-subtle: #eeeae1;
 
-  /* Feedback and states */
-  --success: #1d6538;
-  --success-background: #e4f5ea;
+  /* Feedback colors remain semantic, never decorative brand colors */
+  --success: #177245;
+  --success-background: #e3f5eb;
   --warning-text: #775a00;
   --warning-background: #fff2cb;
-  --error: #922c27;
+  --error: #a12622;
   --error-background: #fff0ef;
   --disabled: #666666;
   --disabled-background: #eeeeee;
 
-  /* Overlays and elevated surfaces */
-  --overlay: rgb(9 24 16 / 55%);
-  --overlay-medium: rgb(9 24 16 / 50%);
-  --overlay-light: rgb(255 255 255 / 12%);
-  --overlay-hover: rgb(255 255 255 / 11%);
-  --shadow: rgb(0 0 0 / 25%);
-  --shadow-soft: rgb(0 0 0 / 18%);
-  --green-shadow: rgb(23 60 42 / 15%);
-  --green-shadow-subtle: rgb(23 60 42 / 12%);
-  --construction-glow: rgb(242 183 5 / 22%);
-  --construction-focus: rgb(242 183 5 / 24%);
+  --overlay: rgb(17 24 39 / 58%);
+  --overlay-medium: rgb(17 24 39 / 50%);
+  --overlay-light: rgb(255 255 255 / 14%);
+  --overlay-hover: rgb(255 255 255 / 10%);
+  --shadow: rgb(17 24 39 / 22%);
+  --shadow-soft: rgb(17 24 39 / 16%);
+  --green-shadow: rgb(17 24 39 / 15%);
+  --green-shadow-subtle: rgb(17 24 39 / 12%);
+  --construction-glow: rgb(246 190 0 / 25%);
+  --construction-focus: rgb(246 190 0 / 32%);
 }
 
 * { box-sizing: border-box; }
 html, body { min-height: 100%; margin: 0; }
-body { min-width: 320px; background: var(--background); color: var(--text-primary); }
-button, input { font: inherit; }
+body { min-width: 320px; background: var(--color-background); color: var(--color-text); }
+button, input, select, textarea { font: inherit; }
+
+:focus-visible {
+  outline: 3px solid var(--lcm-gold-400);
+  outline-offset: 2px;
+}
+
+button.primary,
+a.primary,
+.primary-button {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--lcm-ink);
+}
 
 button.primary:hover:not(:disabled),
 a.primary:hover,
 .primary-button:hover:not(:disabled) {
-  background: var(--green-600);
-  border-color: var(--green-600);
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: var(--lcm-ink);
 }
 
 table th {
-  background: var(--green-900);
-  color: var(--text-on-dark);
+  background: var(--color-surface-secondary);
+  color: var(--color-text);
 }

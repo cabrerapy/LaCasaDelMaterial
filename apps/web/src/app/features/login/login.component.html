@@ -1,11 +1,21 @@
 <main class="login-page">
-  <section class="login-card" aria-labelledby="login-title">
-    <div class="brand-mark" aria-hidden="true">LCM</div>
-    <p class="eyebrow">Gestión integral</p>
-    <h1 id="login-title">La Casa del Material</h1>
-    <p class="intro">Accede al panel de administración del depósito.</p>
+  <section class="login-shell" aria-labelledby="login-title">
+    <div class="brand-panel">
+      <img class="brand-logo" src="assets/brand/logo-main.png" alt="La Casa del Material">
+      <div>
+        <p class="brand-kicker">Materiales · gestión · confianza</p>
+        <h2>Todo el depósito en un solo lugar.</h2>
+        <p>Una herramienta clara para acompañar cada compra, venta y entrega.</p>
+      </div>
+    </div>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="form-panel">
+      <img class="mobile-brand" src="assets/brand/mascot-circle.png" alt="" width="72" height="72">
+      <p class="eyebrow">Acceso al sistema</p>
+      <h1 id="login-title">Bienvenido</h1>
+      <p class="intro">Ingresa tus datos para continuar.</p>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <label for="username">Usuario</label>
       <input id="username" formControlName="username" type="text" placeholder="admin" autocomplete="username">
       @if (form.controls.username.touched && form.controls.username.invalid) {
@@ -25,7 +35,8 @@
       <button class="primary-button" type="submit" [disabled]="loading()">
         {{ loading() ? 'Iniciando…' : 'Iniciar sesión' }}
       </button>
-    </form>
-    <small>Acceso seguro para personal autorizado</small>
+      </form>
+      <small>Acceso seguro para personal autorizado</small>
+    </div>
   </section>
 </main>

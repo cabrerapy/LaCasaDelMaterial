@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { HealthService } from '../../core/health.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -10,7 +10,7 @@ type ApiStatus = 'checking' | 'connected' | 'unavailable';
 
 @Component({
   selector: 'lcm-dashboard',
-  imports: [RouterLink],
+  imports: [RouterLink, RouterLinkActive],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
