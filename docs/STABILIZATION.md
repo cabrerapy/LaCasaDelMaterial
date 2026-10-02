@@ -2,9 +2,9 @@
 
 | Área | Estado | Nota |
 | --- | --- | --- |
-| Environment | TODO | Repositorio actual dentro de OneDrive; migración segura pendiente. |
-| Git safety | TODO | Snapshot y rama de estabilización pendientes. |
-| Web build/tests | TODO | Revalidar fuera de OneDrive. |
+| Environment | DONE | Copia operativa fuera de OneDrive en `C:\Users\Ever\Documents\Codex\la-casa-del-material`; `C:\dev` no permitió escritura. |
+| Git safety | DONE | Historial preservado, árbol limpio y rama `stabilization/lcm-019`; cambios visuales ya estaban en `c0327bb`. |
+| Web build/tests | BLOCKED_EXTERNAL | Lint pasa; Vitest y Angular/esbuild no pueden enumerar `../../../../..` por restricción del entorno Codex. Reanudar con Node 20/22 en una terminal normal: `npm ci && npm run lint && npm test && npm run build`. |
 | Docker | TODO | Diagnóstico pendiente fuera de OneDrive. |
 | Trips web | TODO | Rutas y pantallas pendientes de auditoría. |
 | Sale → Trips | TODO | Integración pendiente de auditoría. |
@@ -16,6 +16,6 @@
 | DynamoDB indexes | TODO | Scans operativos pendientes de sustitución. |
 | Navigation | TODO | Reportes y funciones futuras pendientes de revisión. |
 | E2E | TODO | Smoke logístico pendiente. |
-| Final verification | TODO | `verify`, DynamoDB, Docker y E2E pendientes. |
+| Final verification | BLOCKED_EXTERNAL | La fase web impide continuar de forma validable a fases posteriores en esta sesión. |
 
 Estados permitidos: `TODO`, `DONE`, `BLOCKED_EXTERNAL`.
