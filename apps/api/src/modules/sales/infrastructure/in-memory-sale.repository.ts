@@ -2,9 +2,11 @@ import type { InventoryRepository } from '../../inventory/domain/inventory.js';
 import type { Sale } from '../domain/sale.js';
 import { SaleConflictError, type SaleListOptions, type SalePage, type SaleRepository } from '../domain/sale.repository.js';
 import type { InventoryMovement } from '../../inventory/domain/inventory.js';
+import type { CashRepository } from '../../cash/domain/cash.repository.js';
+import type { SaleFinancialPosting } from '../domain/sale.repository.js';
 export class InMemorySaleRepository implements SaleRepository {
   private readonly sales = new Map<string, Sale>();
-  constructor(private readonly inventory: InventoryRepository) {}
+  constructor(private readonly inventory: InventoryRepository, private readonly cash?: CashRepository) {}
   async findById(id: string) { return this.sales.get(id) ?? null; }
   async list(o: SaleListOptions): Promise<SalePage> {
     const start = o.nextToken ? Number(o.nextToken) : 0; const q = o.search?.toLocaleLowerCase('es');
@@ -17,7 +19,7 @@ export class InMemorySaleRepository implements SaleRepository {
   }
   async create(sale: Sale) { if ([...this.sales.values()].some(s=>s.saleNumber===sale.saleNumber)) throw new SaleConflictError('NUMBER'); this.sales.set(sale.id,sale); }
   async replace(sale: Sale, expected: string) { const current=this.sales.get(sale.id); if(!current||current.updatedAt!==expected) throw new SaleConflictError(); this.sales.set(sale.id,sale); }
-  async confirm(sale: Sale, movements: readonly InventoryMovement[], expected: string) { await this.transition(sale,movements,expected); }
-  async void(sale: Sale, movements: readonly InventoryMovement[], expected: string) { await this.transition(sale,movements,expected); }
-  private async transition(sale: Sale, movements: readonly InventoryMovement[], expected: string) { const current=this.sales.get(sale.id); if(!current||current.updatedAt!==expected) throw new SaleConflictError(); try { if(movements.length) await this.inventory.append(movements); } catch { throw new SaleConflictError('STOCK'); } this.sales.set(sale.id,sale); }
+  async confirm(sale: Sale, movements: readonly InventoryMovement[], expected: string, financial?: SaleFinancialPosting) { await this.transition(sale,movements,expected,financial); }
+  async void(sale: Sale, movements: readonly InventoryMovement[], expected: string, financial?: SaleFinancialPosting) { await this.transition(sale,movements,expected,financial); }
+  private async transition(sale: Sale, movements: readonly InventoryMovement[], expected: string, financial?: SaleFinancialPosting) { const current=this.sales.get(sale.id); if(!current||current.updatedAt!==expected) throw new SaleConflictError(); try { if(financial&&this.cash)await this.cash.append(financial.movement);if(movements.length) await this.inventory.append(movements); } catch { throw new SaleConflictError('STOCK'); } this.sales.set(sale.id,sale); }
 }

@@ -3,6 +3,7 @@ import { authGuard, guestGuard } from './core/auth/auth.guard';
 import { permissionGuard } from './core/permissions/permission.guard';
 
 export const routes: Routes = [
+  { path: 'cash', canActivate: [authGuard, permissionGuard], data: { permission: 'cash.read' }, loadComponent: () => import('./features/cash/cash.component').then(m => m.CashComponent) },
   { path: 'pos', canActivate: [authGuard, permissionGuard], data: { permission: 'sales.create' }, loadComponent: () => import('./features/sales/pos.component').then(m => m.PosComponent) },
   { path: 'sales/:id', canActivate: [authGuard, permissionGuard], data: { permission: 'sales.authorized.read' }, loadComponent: () => import('./features/sales/sales.component').then(m => m.SalesComponent) },
   { path: 'sales', canActivate: [authGuard, permissionGuard], data: { permission: 'sales.authorized.read' }, loadComponent: () => import('./features/sales/sales.component').then(m => m.SalesComponent) },

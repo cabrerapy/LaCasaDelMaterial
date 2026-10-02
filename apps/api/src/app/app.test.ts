@@ -20,6 +20,7 @@ import { InMemoryReceivingRepository } from '../modules/receiving/infrastructure
 import { InMemoryCustomerRepository } from '../modules/customers/infrastructure/in-memory-customer.repository.js';
 import { InMemorySaleRepository } from '../modules/sales/infrastructure/in-memory-sale.repository.js';
 import { InMemoryCostingRepository } from '../modules/costing/infrastructure/in-memory-costing.repository.js';
+import { InMemoryCashRepository } from '../modules/cash/infrastructure/in-memory-cash.repository.js';
 
 const adminPassword = 'LocalTestPassword123!';
 const jwtSecret = 'test-secret-with-at-least-thirty-two-characters';
@@ -33,6 +34,7 @@ let inventory: InMemoryInventoryRepository;
 let customers: InMemoryCustomerRepository;
 let sales: InMemorySaleRepository;
 let costing: InMemoryCostingRepository;
+let cash: InMemoryCashRepository;
 
 before(async () => {
   users = new InMemoryUserRepository();
@@ -42,7 +44,8 @@ before(async () => {
   purchases = new InMemoryPurchaseRepository();
   inventory = new InMemoryInventoryRepository();
   customers = new InMemoryCustomerRepository();
-  sales = new InMemorySaleRepository(inventory);
+  cash = new InMemoryCashRepository();
+  sales = new InMemorySaleRepository(inventory, cash);
   costing = new InMemoryCostingRepository();
   const now = new Date().toISOString();
   await users.create({
@@ -116,7 +119,7 @@ before(async () => {
     products,
     suppliers,
     purchases,
-    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory, customers, sales, costing,
+    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory, customers, sales, costing, cash,
     passwordHasher: new Argon2PasswordHasher(),
     authentication: new LocalJwtAuthentication(config.jwtSecret, config.jwtExpiresIn)
   });
@@ -954,7 +957,23 @@ test('customers support person/company, uniqueness, search, audit and permission
   assert.equal(enabled.json().status, 'ACTIVE');
 });
 
+test('cash sessions open once, summarize manual movements and close immutably', async () => {
+  const headers = await authorizationHeader('manager');
+  const opened = await app.inject({ method: 'POST', url: '/api/cash/sessions/open', headers, payload: { openingCashGuarani: 500000, notes: 'Fondo inicial' } });
+  assert.equal(opened.statusCode, 201); assert.equal(opened.json().status, 'OPEN'); assert.equal(opened.json().expectedCashGuarani, 500000);
+  const duplicate = await app.inject({ method: 'POST', url: '/api/cash/sessions/open', headers, payload: { openingCashGuarani: 1 } }); assert.equal(duplicate.statusCode, 409);
+  const current = await app.inject({ method: 'GET', url: '/api/cash/sessions/current', headers }); assert.equal(current.json().id, opened.json().id);
+  const manualIn = await app.inject({ method: 'POST', url: `/api/cash/sessions/${opened.json().id}/manual-in`, headers, payload: { amountGuarani: 200000, reason: 'Refuerzo' } }); assert.equal(manualIn.statusCode, 200);
+  const manualOut = await app.inject({ method: 'POST', url: `/api/cash/sessions/${opened.json().id}/manual-out`, headers, payload: { amountGuarani: 100000, reason: 'Insumos' } }); assert.equal(manualOut.statusCode, 200);
+  const excessive = await app.inject({ method: 'POST', url: `/api/cash/sessions/${opened.json().id}/manual-out`, headers, payload: { amountGuarani: 999999, reason: 'Excesivo' } }); assert.equal(excessive.statusCode, 409);
+  const cashierDenied = await app.inject({ method: 'POST', url: `/api/cash/sessions/${opened.json().id}/manual-in`, headers: await authorizationHeader('cashier'), payload: { amountGuarani: 1, reason: 'No' } }); assert.equal(cashierDenied.statusCode, 403);
+  const summary = await app.inject({ method: 'GET', url: `/api/cash/sessions/${opened.json().id}/summary`, headers }); assert.equal(summary.json().expectedCashGuarani, 600000); assert.equal(summary.json().manualInGuarani, 200000); assert.equal(summary.json().manualOutGuarani, 100000);
+  const closed = await app.inject({ method: 'POST', url: `/api/cash/sessions/${opened.json().id}/close`, headers, payload: { countedCashGuarani: 595000, notes: 'Faltante' } }); assert.equal(closed.statusCode, 200); assert.equal(closed.json().differenceGuarani, -5000);
+  const doubleClose = await app.inject({ method: 'POST', url: `/api/cash/sessions/${opened.json().id}/close`, headers, payload: { countedCashGuarani: 595000 } }); assert.equal(doubleClose.statusCode, 409);
+});
+
 test('sales POS confirms stock atomically, restricts discounts and void restores stock once', async () => {
+  const cashierOpen = await app.inject({ method: 'POST', url: '/api/cash/sessions/open', headers: await authorizationHeader('cashier'), payload: { openingCashGuarani: 500000 } }); assert.equal(cashierOpen.statusCode, 201);
   const cement = await products.findByCode('CEM-CPII'); assert.ok(cement);
   const bag = (await products.listPresentations(cement.id)).find((value) => value.baseQuantityInternal === 1); assert.ok(bag);
   const before = (await inventory.getBalance(cement.id))?.onHandInternal ?? 0; assert.ok(before >= 1);
@@ -972,6 +991,7 @@ test('sales POS confirms stock atomically, restricts discounts and void restores
   const cashierCosting = await app.inject({ method: 'GET', url: `/api/sales/${draft.json().id}/costing`, headers: await authorizationHeader('cashier') }); assert.equal(cashierCosting.statusCode, 403);
   assert.equal((await inventory.getBalance(cement.id))?.onHandInternal, before - 1);
   const repeated = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/confirm`, headers: await authorizationHeader('cashier') }); assert.equal(repeated.statusCode, 409);
+  const adminOpen = await app.inject({ method: 'POST', url: '/api/cash/sessions/open', headers: await authorizationHeader('admin'), payload: { openingCashGuarani: 0 } }); assert.equal(adminOpen.statusCode, 201);
   const voided = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/void`, headers: await authorizationHeader('admin'), payload: { reason: 'Prueba de anulación' } });
   assert.equal(voided.statusCode, 200); assert.equal(voided.json().status, 'VOIDED'); assert.equal((await inventory.getBalance(cement.id))?.onHandInternal, before);
   const doubleVoid = await app.inject({ method: 'POST', url: `/api/sales/${draft.json().id}/void`, headers: await authorizationHeader('admin'), payload: { reason: 'otra' } }); assert.equal(doubleVoid.statusCode, 409);

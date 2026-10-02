@@ -38,6 +38,9 @@ import { SalesService } from '../modules/sales/application/sales.service.js';
 import { salesRoutes } from '../modules/sales/http/sales.routes.js';
 import type { CostingRepository } from '../modules/costing/domain/costing.repository.js';
 import { FifoCostingService } from '../modules/costing/application/fifo-costing.service.js';
+import type { CashRepository } from '../modules/cash/domain/cash.repository.js';
+import { CashService } from '../modules/cash/application/cash.service.js';
+import { cashRoutes } from '../modules/cash/http/cash.routes.js';
 
 export interface AppDependencies {
   readonly users: UserRepository;
@@ -52,6 +55,7 @@ export interface AppDependencies {
   readonly customers: CustomerRepository;
   readonly sales: SaleRepository;
   readonly costing: CostingRepository;
+  readonly cash: CashRepository;
 }
 
 export async function createApp(
@@ -115,8 +119,10 @@ export async function createApp(
   await app.register(receivingRoutes, { prefix: '/api/purchase-receipts', authService, service: receivingService });
   await app.register(lotsRoutes, { prefix: '/api/lots', authService, service: receivingService });
   const costing = new FifoCostingService(dependencies.costing, dependencies.receiving, dependencies.sales);
+  const cash = new CashService(dependencies.cash);
+  await app.register(cashRoutes, { prefix: '/api/cash', authService, service: cash });
   await app.register(salesRoutes, { prefix: '/api/sales', authService,
-    service: new SalesService(dependencies.sales, dependencies.products, dependencies.customers, dependencies.inventory, costing), costing });
+    service: new SalesService(dependencies.sales, dependencies.products, dependencies.customers, dependencies.inventory, costing, cash), costing });
 
   return app;
 }

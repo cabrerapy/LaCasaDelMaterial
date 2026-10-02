@@ -19,6 +19,7 @@ export interface SaleItemResponse extends SaleItemInput {
 }
 export interface SaleResponse {
   readonly id: string; readonly saleNumber: string; readonly status: SaleStatus; readonly saleDate: string;
+  readonly cashSessionId?: string;
   readonly customerId?: string; readonly customerSnapshot?: SaleCustomerSnapshot; readonly items: readonly SaleItemResponse[];
   readonly subtotalGuarani: number; readonly discountGuarani: number; readonly freightGuarani: number; readonly totalGuarani: number;
   readonly deliveryType: SaleDeliveryType; readonly deliveryAddress?: string; readonly paymentMethod: SalePaymentMethod;

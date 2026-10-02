@@ -15,6 +15,7 @@ export interface AppConfig {
   readonly customersTableName: string;
   readonly salesTableName: string;
   readonly costingTableName: string;
+  readonly cashTableName: string;
   readonly initialAdminPassword: string;
   readonly jwtSecret: string;
   readonly jwtExpiresIn: string;
@@ -56,6 +57,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     customersTableName: environment['DYNAMODB_CUSTOMERS_TABLE']?.trim() || 'lcm-local-customers',
     salesTableName: environment['DYNAMODB_SALES_TABLE']?.trim() || 'lcm-local-sales',
     costingTableName: environment['DYNAMODB_COSTING_TABLE']?.trim() || 'lcm-local-costing',
+    cashTableName: environment['DYNAMODB_CASH_TABLE']?.trim() || 'lcm-local-cash',
     initialAdminPassword,
     jwtSecret,
     jwtExpiresIn: environment['JWT_EXPIRES_IN']?.trim() || '8h',

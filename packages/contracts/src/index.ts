@@ -44,7 +44,7 @@ export const PERMISSIONS = [
   'customers.read', 'customers.create', 'customers.update', 'customers.disable',
   'sales.read', 'sales.create', 'sales.update', 'sales.confirm', 'sales.void', 'sales.discount',
   'sales.own.read', 'sales.authorized.read', 'sales.costs.read', 'sales.margins.read',
-  'cash.read',
+  'cash.read', 'cash.open', 'cash.close', 'cash.manual_in', 'cash.manual_out', 'cash.audit',
   'trucks.read', 'trucks.manage',
   'drivers.read',
   'trips.access', 'trips.read', 'trips.manage', 'trips.own.read', 'trips.start', 'trips.arrival',
@@ -69,13 +69,13 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
     'receipts.read', 'receipts.create', 'receipts.update', 'receipts.confirm', 'receipts.cancel',
     'lots.read', 'lots.costs.read',
     'inventory.read', 'inventory.movements.read', 'sales.read', 'sales.create', 'sales.update', 'sales.confirm', 'sales.void', 'sales.discount', 'sales.authorized.read', 'sales.costs.read', 'sales.margins.read',
-    'inventory.costs.read',
+    'inventory.costs.read', 'cash.read', 'cash.open', 'cash.close', 'cash.manual_in', 'cash.manual_out', 'cash.audit',
     'trucks.read', 'trips.access', 'trips.read', 'fuel.access', 'fuel.read', 'reports.read'
   ],
   CASHIER: [
     'dashboard.read', 'categories.read', 'products.read', 'suppliers.read', 'inventory.read', 'customers.read',
     'customers.create', 'customers.update', 'sales.create', 'sales.update', 'sales.confirm', 'sales.own.read',
-    'sales.authorized.read', 'cash.read'
+    'sales.authorized.read', 'cash.read', 'cash.open', 'cash.close'
   ],
   PURCHASING: [
     'dashboard.read', 'categories.read', 'categories.create', 'categories.update',
@@ -471,3 +471,4 @@ export interface PurchaseLotsPageResponse { readonly items: readonly PurchaseLot
 export * from './stock.js';
 export * from './customers.js';
 export * from './sales.js';
+export * from './cash.js';

@@ -28,6 +28,7 @@ services:
       DYNAMODB_INVENTORY_TABLE: lcm-local-inventory
       DYNAMODB_SALES_TABLE: lcm-local-sales
       DYNAMODB_COSTING_TABLE: lcm-local-costing
+      DYNAMODB_CASH_TABLE: lcm-local-cash
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?INITIAL_ADMIN_PASSWORD is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}

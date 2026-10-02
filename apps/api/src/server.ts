@@ -24,6 +24,8 @@ import { ensureSalesTable } from './infrastructure/dynamodb/sales-table.js';
 import { DynamoDbSaleRepository } from './modules/sales/infrastructure/dynamodb-sale.repository.js';
 import { ensureCostingTable } from './infrastructure/dynamodb/costing-table.js';
 import { DynamoDbCostingRepository } from './modules/costing/infrastructure/dynamodb-costing.repository.js';
+import { ensureCashTable } from './infrastructure/dynamodb/cash-table.js';
+import { DynamoDbCashRepository } from './modules/cash/infrastructure/dynamodb-cash.repository.js';
 
 async function start(): Promise<void> {
   const config = loadConfig();
@@ -42,10 +44,11 @@ async function start(): Promise<void> {
   const inventory = new DynamoDbInventoryRepository(documentClient, config.inventoryTableName);
   const receiving = new DynamoDbReceivingRepository(documentClient, config.purchasesTableName, inventory);
   const customers = new DynamoDbCustomerRepository(documentClient, config.customersTableName);
-  const sales = new DynamoDbSaleRepository(documentClient, config.salesTableName, inventory);
+  const cash = new DynamoDbCashRepository(documentClient, config.cashTableName);
+  const sales = new DynamoDbSaleRepository(documentClient, config.salesTableName, inventory, cash);
   const costing = new DynamoDbCostingRepository(documentClient, config.costingTableName);
   const app = await createApp(config, {
-    users, passwordHasher, authentication, categories, products, suppliers, purchases, receiving, inventory, customers, sales, costing
+    users, passwordHasher, authentication, categories, products, suppliers, purchases, receiving, inventory, customers, sales, costing, cash
   });
 
   await ensureUsersTable(dynamoDb, config.usersTableName);
@@ -57,6 +60,7 @@ async function start(): Promise<void> {
   await ensureCustomersTable(dynamoDb, config.customersTableName);
   await ensureSalesTable(dynamoDb, config.salesTableName);
   await ensureCostingTable(dynamoDb, config.costingTableName);
+  await ensureCashTable(dynamoDb, config.cashTableName);
   await bootstrapAdmin(users, passwordHasher, config.initialAdminPassword, app.log);
 
   const shutdown = async (): Promise<void> => {
