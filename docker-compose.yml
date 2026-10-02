@@ -34,12 +34,15 @@ services:
       DYNAMODB_TRIPS_TABLE: lcm-local-trips
       DYNAMODB_TRIP_LOADS_TABLE: lcm-local-trip-loads
       DYNAMODB_FUEL_TABLE: lcm-local-fuel
+      DYNAMODB_DELIVERIES_TABLE: lcm-local-deliveries
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?INITIAL_ADMIN_PASSWORD is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:4200}
     ports:
       - "3000:3000"
+    volumes:
+      - delivery-evidence:/app/.data/delivery-evidence
     depends_on:
       dynamodb-local:
         condition: service_started
@@ -67,3 +70,6 @@ services:
 networks:
   lcm-network:
     driver: bridge
+
+volumes:
+  delivery-evidence:

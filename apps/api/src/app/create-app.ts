@@ -56,6 +56,10 @@ import { tripLoadsRoutes } from '../modules/trip-loads/http/trip-loads.routes.js
 import type { FuelRepository } from '../modules/fuel/domain/fuel.repository.js';
 import { FuelService } from '../modules/fuel/application/fuel.service.js';
 import { fuelRoutes, truckFuelRoutes } from '../modules/fuel/http/fuel.routes.js';
+import type { DeliveryRepository } from '../modules/deliveries/domain/delivery.repository.js';
+import { DeliveriesService } from '../modules/deliveries/application/deliveries.service.js';
+import { deliveriesRoutes, deliveryEvidenceRoutes, tripDeliveryRoutes } from '../modules/deliveries/http/deliveries.routes.js';
+import type { DeliveryEvidenceStorage } from '../modules/deliveries/domain/delivery-evidence.storage.js';
 
 export interface AppDependencies {
   readonly users: UserRepository;
@@ -76,6 +80,8 @@ export interface AppDependencies {
   readonly trips: TripRepository;
   readonly tripLoads: TripLoadRepository;
   readonly fuel: FuelRepository;
+  readonly deliveries: DeliveryRepository;
+  readonly deliveryEvidenceStorage: DeliveryEvidenceStorage;
 }
 
 export async function createApp(
@@ -146,6 +152,10 @@ export async function createApp(
   const tripLoads = new TripLoadsService(dependencies.tripLoads, dependencies.trips, dependencies.sales, dependencies.products, dependencies.trucks, dependencies.drivers);
   await app.register(tripsRoutes, { prefix: '/api/trips', authService, service: new TripsService(dependencies.trips, dependencies.trucks, dependencies.drivers, dependencies.sales, dependencies.tripLoads) });
   await app.register(tripLoadsRoutes, { prefix: '/api/trips', authService, service: tripLoads });
+  const deliveries = new DeliveriesService(dependencies.deliveries, dependencies.trips, dependencies.tripLoads, dependencies.trucks, dependencies.drivers, dependencies.deliveryEvidenceStorage);
+  await app.register(tripDeliveryRoutes, { prefix: '/api/trips', authService, service: deliveries });
+  await app.register(deliveriesRoutes, { prefix: '/api/deliveries', authService, service: deliveries });
+  await app.register(deliveryEvidenceRoutes, { prefix: '/api/delivery-evidence', authService, service: deliveries });
   await app.register(fuelRoutes, { prefix: '/api/fuel', authService, service: new FuelService(dependencies.fuel, dependencies.trucks, dependencies.trips, dependencies.drivers) });
   await app.register(truckFuelRoutes, { prefix: '/api/trucks', authService, service: new FuelService(dependencies.fuel, dependencies.trucks, dependencies.trips, dependencies.drivers) });
   await app.register(salesRoutes, { prefix: '/api/sales', authService,

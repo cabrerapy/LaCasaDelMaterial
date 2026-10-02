@@ -26,6 +26,8 @@ import { InMemoryDriverRepository } from '../modules/drivers/infrastructure/in-m
 import { InMemoryTripRepository } from '../modules/trips/infrastructure/in-memory-trip.repository.js';
 import { InMemoryTripLoadRepository } from '../modules/trip-loads/infrastructure/in-memory-trip-load.repository.js';
 import { InMemoryFuelRepository } from '../modules/fuel/infrastructure/in-memory-fuel.repository.js';
+import { InMemoryDeliveryRepository } from '../modules/deliveries/infrastructure/in-memory-delivery.repository.js';
+import { InMemoryDeliveryEvidenceStorage } from '../modules/deliveries/infrastructure/in-memory-delivery-evidence.storage.js';
 
 const adminPassword = 'LocalTestPassword123!';
 const jwtSecret = 'test-secret-with-at-least-thirty-two-characters';
@@ -45,6 +47,7 @@ let drivers: InMemoryDriverRepository;
 let trips: InMemoryTripRepository;
 let tripLoads: InMemoryTripLoadRepository;
 let fuel: InMemoryFuelRepository;
+let deliveries: InMemoryDeliveryRepository;
 
 before(async () => {
   users = new InMemoryUserRepository();
@@ -62,6 +65,7 @@ before(async () => {
   trips = new InMemoryTripRepository(trucks);
   tripLoads = new InMemoryTripLoadRepository();
   fuel = new InMemoryFuelRepository();
+  deliveries = new InMemoryDeliveryRepository(trips);
   const now = new Date().toISOString();
   await users.create({
     id: 'b052fa5e-e405-4460-82c8-6887137c885a',
@@ -141,7 +145,7 @@ before(async () => {
     products,
     suppliers,
     purchases,
-    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory, customers, sales, costing, cash, trucks, drivers, trips, tripLoads, fuel,
+    receiving: new InMemoryReceivingRepository(purchases, inventory), inventory, customers, sales, costing, cash, trucks, drivers, trips, tripLoads, fuel, deliveries, deliveryEvidenceStorage:new InMemoryDeliveryEvidenceStorage(),
     passwordHasher: new Argon2PasswordHasher(),
     authentication: new LocalJwtAuthentication(config.jwtSecret, config.jwtExpiresIn)
   });
@@ -1085,6 +1089,15 @@ test('truck loads allocate sale items, validate capacity and reverse on trip can
   assert.equal((await app.inject({ method: 'POST', url: `/api/trips/${trip.json().id}/ready`, headers: admin })).statusCode, 200);
   assert.equal((await app.inject({ method: 'POST', url: `/api/trips/${trip.json().id}/cancel`, headers: admin, payload: { reason: 'Reprogramación' } })).statusCode, 200);
   assert.equal((await app.inject({ method: 'GET', url: `/api/trips/${trip.json().id}/load`, headers: admin })).json().status, 'CANCELLED');
+});
+
+test('delivery confirms actual partial quantities without changing inventory', async()=>{
+ const admin=await authorizationHeader('admin'),cashier=await authorizationHeader('cashier');const cement=await products.findByCode('CEM-CPII');assert.ok(cement);const bag=(await products.listPresentations(cement.id)).find(x=>x.baseQuantityInternal===1);assert.ok(bag);const before=(await inventory.getBalance(cement.id))?.onHandInternal??0;
+ const draft=await app.inject({method:'POST',url:'/api/sales',headers:cashier,payload:{saleDate:'2026-10-02',deliveryType:'OWN_FLEET',deliveryAddress:'San Lorenzo',paymentMethod:'CASH',items:[{productId:cement.id,presentationId:bag.id,quantity:'2'}]}});assert.equal(draft.statusCode,201);const sale=await app.inject({method:'POST',url:`/api/sales/${draft.json().id}/confirm`,headers:cashier});assert.equal(sale.statusCode,200);const afterSale=(await inventory.getBalance(cement.id))?.onHandInternal;
+ const truck=(await trucks.list({limit:20,status:'ACTIVE'})).items[0];const driver=(await drivers.list({limit:20,status:'ACTIVE',today:'2026-10-02'})).items.find(x=>!x.licenseExpirationDate||x.licenseExpirationDate>='2026-10-02');assert.ok(truck);assert.ok(driver);
+ const trip=await app.inject({method:'POST',url:'/api/trips',headers:admin,payload:{truckId:truck.id,driverId:driver.id,saleId:sale.json().id,scheduledDate:'2026-10-06',destinationName:'Cliente',destinationAddress:'San Lorenzo'}});assert.equal(trip.statusCode,201);const item=sale.json().items[0];const load=await app.inject({method:'POST',url:`/api/trips/${trip.json().id}/load`,headers:admin,payload:{lines:[{saleItemId:item.id,quantityBaseInternal:2}]}});assert.equal(load.statusCode,201);assert.equal((await app.inject({method:'POST',url:`/api/trips/${trip.json().id}/load/confirm`,headers:admin})).statusCode,200);assert.equal((await app.inject({method:'POST',url:`/api/trips/${trip.json().id}/ready`,headers:admin})).statusCode,200);assert.equal((await app.inject({method:'POST',url:`/api/trips/${trip.json().id}/start`,headers:admin,payload:{odometerStartKm:truck.currentOdometerKm}})).statusCode,200);
+ const delivery=await app.inject({method:'POST',url:`/api/trips/${trip.json().id}/delivery`,headers:admin,payload:{}});assert.equal(delivery.statusCode,201);assert.match(delivery.json().deliveryNumber,/^ENT-\d{4}-\d{6}$/);const invalid=await app.inject({method:'PATCH',url:`/api/trips/${trip.json().id}/delivery`,headers:admin,payload:{lines:[{tripLoadLineId:delivery.json().lines[0].tripLoadLineId,deliveredQuantityBaseInternal:3,incidentType:'NONE'}]}});assert.equal(invalid.statusCode,400);
+ const saved=await app.inject({method:'PATCH',url:`/api/trips/${trip.json().id}/delivery`,headers:admin,payload:{receiverName:'Juan Pérez',lines:[{tripLoadLineId:delivery.json().lines[0].tripLoadLineId,deliveredQuantityBaseInternal:1,incidentType:'SHORTAGE',incidentNotes:'Una bolsa faltante'}]}});assert.equal(saved.statusCode,200);const confirmed=await app.inject({method:'POST',url:`/api/trips/${trip.json().id}/delivery/confirm`,headers:admin,payload:{odometerEndKm:truck.currentOdometerKm+5}});assert.equal(confirmed.statusCode,200);assert.equal(confirmed.json().outcome,'PARTIAL');assert.equal((await trips.findById(trip.json().id))?.status,'DELIVERED');assert.equal((await inventory.getBalance(cement.id))?.onHandInternal,afterSale);assert.equal(before-afterSale!,2);assert.equal((await app.inject({method:'POST',url:`/api/trips/${trip.json().id}/delivery/confirm`,headers:admin,payload:{odometerEndKm:truck.currentOdometerKm+5}})).statusCode,409);
 });
 
 test('fuel is immutable, exact, access-controlled and excluded from inventory and cash', async()=>{

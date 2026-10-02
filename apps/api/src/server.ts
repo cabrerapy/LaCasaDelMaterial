@@ -36,6 +36,9 @@ import { ensureTripLoadsTable } from './infrastructure/dynamodb/trip-loads-table
 import { DynamoDbTripLoadRepository } from './modules/trip-loads/infrastructure/dynamodb-trip-load.repository.js';
 import { ensureFuelTable } from './infrastructure/dynamodb/fuel-table.js';
 import { DynamoDbFuelRepository } from './modules/fuel/infrastructure/dynamodb-fuel.repository.js';
+import { ensureDeliveriesTable } from './infrastructure/dynamodb/deliveries-table.js';
+import { DynamoDbDeliveryRepository } from './modules/deliveries/infrastructure/dynamodb-delivery.repository.js';
+import { LocalDeliveryEvidenceStorage } from './modules/deliveries/infrastructure/local-delivery-evidence.storage.js';
 
 async function start(): Promise<void> {
   const config = loadConfig();
@@ -62,8 +65,9 @@ async function start(): Promise<void> {
   const trips = new DynamoDbTripRepository(documentClient, config.tripsTableName, config.trucksTableName);
   const tripLoads = new DynamoDbTripLoadRepository(documentClient, config.tripLoadsTableName);
   const fuel = new DynamoDbFuelRepository(documentClient, config.fuelTableName);
+  const deliveries = new DynamoDbDeliveryRepository(documentClient, config.deliveriesTableName, config.tripsTableName, config.trucksTableName, config.tripLoadsTableName);
   const app = await createApp(config, {
-    users, passwordHasher, authentication, categories, products, suppliers, purchases, receiving, inventory, customers, sales, costing, cash, trucks, drivers, trips, tripLoads, fuel
+    users, passwordHasher, authentication, categories, products, suppliers, purchases, receiving, inventory, customers, sales, costing, cash, trucks, drivers, trips, tripLoads, fuel, deliveries, deliveryEvidenceStorage:new LocalDeliveryEvidenceStorage('.data/delivery-evidence')
   });
 
   await ensureUsersTable(dynamoDb, config.usersTableName);
@@ -81,6 +85,7 @@ async function start(): Promise<void> {
   await ensureTripsTable(dynamoDb, config.tripsTableName);
   await ensureTripLoadsTable(dynamoDb, config.tripLoadsTableName);
   await ensureFuelTable(dynamoDb, config.fuelTableName);
+  await ensureDeliveriesTable(dynamoDb, config.deliveriesTableName);
   await bootstrapAdmin(users, passwordHasher, config.initialAdminPassword, app.log);
 
   const shutdown = async (): Promise<void> => {

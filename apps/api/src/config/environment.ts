@@ -21,6 +21,7 @@ export interface AppConfig {
   readonly tripsTableName: string;
   readonly tripLoadsTableName: string;
   readonly fuelTableName: string;
+  readonly deliveriesTableName: string;
   readonly initialAdminPassword: string;
   readonly jwtSecret: string;
   readonly jwtExpiresIn: string;
@@ -68,6 +69,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     tripsTableName: environment['DYNAMODB_TRIPS_TABLE']?.trim() || 'lcm-local-trips',
     tripLoadsTableName: environment['DYNAMODB_TRIP_LOADS_TABLE']?.trim() || 'lcm-local-trip-loads',
     fuelTableName: environment['DYNAMODB_FUEL_TABLE']?.trim() || 'lcm-local-fuel',
+    deliveriesTableName: environment['DYNAMODB_DELIVERIES_TABLE']?.trim() || 'lcm-local-deliveries',
     initialAdminPassword,
     jwtSecret,
     jwtExpiresIn: environment['JWT_EXPIRES_IN']?.trim() || '8h',

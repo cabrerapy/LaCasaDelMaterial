@@ -1,0 +1,2 @@
+import type { DeliveryEvidenceStorage } from '../domain/delivery-evidence.storage.js';
+export class InMemoryDeliveryEvidenceStorage implements DeliveryEvidenceStorage {private readonly files=new Map<string,Buffer>();async save(deliveryId:string,extension:string,content:Buffer){const key=`deliveries/${deliveryId}/${this.files.size+1}.${extension}`;this.files.set(key,content);return{storageKey:key,absolutePath:key};}async resolve(key:string){if(!this.files.has(key))throw new Error('Archivo no encontrado');return key;}}

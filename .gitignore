@@ -4,6 +4,7 @@ node_modules/
 dist/
 .angular/
 coverage/
+.data/
 .env
 .env.*
 !.env.example
