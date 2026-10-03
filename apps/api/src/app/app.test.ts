@@ -28,6 +28,7 @@ import { InMemoryTripLoadRepository } from '../modules/trip-loads/infrastructure
 import { InMemoryFuelRepository } from '../modules/fuel/infrastructure/in-memory-fuel.repository.js';
 import { InMemoryDeliveryRepository } from '../modules/deliveries/infrastructure/in-memory-delivery.repository.js';
 import { InMemoryDeliveryEvidenceStorage } from '../modules/deliveries/infrastructure/in-memory-delivery-evidence.storage.js';
+import { sanitizeCsvCell } from '../modules/reports/application/reports.service.js';
 
 const adminPassword = 'LocalTestPassword123!';
 const jwtSecret = 'test-secret-with-at-least-thirty-two-characters';
@@ -1129,6 +1130,28 @@ test('dashboard aggregates real data and filters financial sections by permissio
  const cashier=await app.inject({method:'GET',url:'/api/dashboard/summary?dateFrom=2026-10-01&dateTo=2026-10-31',headers:await authorizationHeader('cashier')});assert.equal(cashier.statusCode,200);assert.ok(cashier.json().sales);assert.ok(cashier.json().payments);assert.equal(cashier.json().sales.fifoCostGuarani,undefined);assert.equal(cashier.json().purchases,undefined);assert.equal(cashier.json().fuel,undefined);
  const driver=await app.inject({method:'GET',url:'/api/dashboard/summary?dateFrom=2026-10-01&dateTo=2026-10-31',headers:await authorizationHeader('driver')});assert.equal(driver.statusCode,200);assert.equal(driver.json().sales,undefined);assert.equal(driver.json().payments,undefined);assert.ok(driver.json().logistics);assert.ok(driver.json().fuel);
  assert.equal((await app.inject({method:'GET',url:'/api/dashboard/summary?dateFrom=2026-01-01&dateTo=2026-10-01',headers:await authorizationHeader('admin')})).statusCode,400);assert.equal((await app.inject({method:'GET',url:'/api/dashboard/summary'})).statusCode,401);
+});
+
+test('reports expose authorized real data, validate time ranges and protect exports', async () => {
+  const admin = await authorizationHeader('admin');
+  const salesReport = await app.inject({ method: 'GET', url: '/api/reports/sales?dateFrom=2026-10-01T10:00:00-03:00&dateTo=2026-10-31T15:00:00-03:00&pageSize=25', headers: admin });
+  assert.equal(salesReport.statusCode, 200);
+  assert.equal(salesReport.json().reportType, 'sales');
+  assert.equal(salesReport.json().pagination.pageSize, 25);
+  assert.ok(Array.isArray(salesReport.json().summary));
+  assert.ok(Array.isArray(salesReport.json().items));
+  const hub = await app.inject({ method: 'GET', url: '/api/reports', headers: await authorizationHeader('cashier') });
+  assert.equal(hub.statusCode, 200);
+  assert.equal(hub.json().reports.some((report: { type: string }) => report.type === 'gross-margin'), false);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/reports/gross-margin?dateFrom=2026-10-01T00:00:00-03:00&dateTo=2026-10-31T23:59:59-03:00', headers: await authorizationHeader('cashier') })).statusCode, 403);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/reports', headers: await authorizationHeader('driver') })).statusCode, 403);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/reports/sales?dateFrom=2026-10-03T15:00:00-03:00&dateTo=2026-10-03T10:00:00-03:00', headers: admin })).statusCode, 400);
+  const csv = await app.inject({ method: 'GET', url: '/api/reports/sales/export?dateFrom=2026-10-01T00:00:00-03:00&dateTo=2026-10-31T23:59:59-03:00', headers: admin });
+  assert.equal(csv.statusCode, 200);
+  assert.match(csv.headers['content-type'] ?? '', /text\/csv/);
+  assert.equal(csv.body.startsWith('\uFEFF'), true);
+  assert.equal(sanitizeCsvCell('=SUM(A1:A2)'), '"\'=SUM(A1:A2)"');
+  assert.equal(sanitizeCsvCell('+cmd'), '"\'+cmd"');
 });
 
 async function authorizationHeader(username: string): Promise<{ authorization: string }> {

@@ -62,6 +62,8 @@ import { deliveriesRoutes, deliveryEvidenceRoutes, tripDeliveryRoutes } from '..
 import type { DeliveryEvidenceStorage } from '../modules/deliveries/domain/delivery-evidence.storage.js';
 import { DashboardService } from '../modules/dashboard/application/dashboard.service.js';
 import { dashboardRoutes } from '../modules/dashboard/http/dashboard.routes.js';
+import { ReportsService } from '../modules/reports/application/reports.service.js';
+import { reportsRoutes } from '../modules/reports/http/reports.routes.js';
 
 export interface AppDependencies {
   readonly users: UserRepository;
@@ -110,6 +112,7 @@ export async function createApp(
     authService
   });
   await app.register(dashboardRoutes,{prefix:'/api/dashboard',authService,service:new DashboardService(dependencies.sales,dependencies.purchases,dependencies.products,dependencies.inventory,dependencies.trips,dependencies.deliveries,dependencies.fuel,dependencies.cash,dependencies.drivers)});
+  await app.register(reportsRoutes, { prefix: '/api/reports', authService, service: new ReportsService(dependencies.sales, dependencies.cash, dependencies.purchases, dependencies.products, dependencies.categories, dependencies.inventory, dependencies.trips, dependencies.deliveries, dependencies.fuel, config.reportExportMaxRows) });
   await app.register(usersRoutes, {
     prefix: '/api/users',
     authService,

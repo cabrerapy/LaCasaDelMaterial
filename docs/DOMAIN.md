@@ -104,6 +104,10 @@ La venta descuenta inventario; TripLoad solo asigna/carga; DeliveryReceipt regis
 
 El Dashboard agrega datos existentes dentro de un rango máximo de 90 días y filtra bloques y campos financieros en backend según permisos. Los cobros provienen de `CashMovement`, no del total de Sale; una transferencia cuenta como cobro pero nunca como efectivo físico. El margen mostrado es margen bruto FIFO y se omite cuando el costeo está incompleto; no representa ganancia neta.
 
+## Reports (LCM-022)
+
+Reports es una proyección estrictamente de lectura sobre Sales, CashMovement, Purchases, Inventory, Trips, Deliveries y Fuel. Los detalles se paginan por cursor y los resúmenes consideran todo el rango filtrado. Transferencia es cobro pero no efectivo físico; margen bruto FIFO no es ganancia neta; un costeo pendiente nunca produce margen supuesto. Inventario histórico por fecha queda fuera de alcance: se ofrece stock actual y movimientos por período.
+
 ## Categories
 
 LCM-004 administra categorías ordenables con nombre y slug únicos, descripción opcional, estado activo/inactivo y auditoría básica. La asociación con productos se implementará posteriormente.

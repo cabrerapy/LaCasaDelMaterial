@@ -1,5 +1,7 @@
 # Roles y permisos
 
+LCM-022: `reports.read` habilita el hub y cada reporte exige además su permiso específico (`reports.sales/payments/transfers/margin/cash/purchases/inventory/inventory_movements/trips/deliveries/fuel.read`). `reports.export` es adicional para CSV. ADMIN y MANAGER acceden a todos; CASHIER a ventas, cobros, transferencias y caja; PURCHASING a compras e inventario; WAREHOUSE a inventario, movimientos, viajes y entregas; LOGISTICS a viajes, entregas y combustible. DRIVER no accede al módulo general. Costos continúan protegidos por los permisos de dominio y se omiten en backend.
+
 LCM-021: `dashboard.read` permite solicitar el resumen, pero cada bloque se filtra nuevamente con sus permisos de dominio. Costos FIFO requieren `sales.costs.read`; costos de compras requieren `purchases.costs.read`; costos de combustible requieren `fuel.costs.read`. DRIVER recibe solo viajes, entregas y combustible propios, sin ventas, cobros, caja ni costos.
 
 LCM-020: `deliveries.read/create/confirm/void` controla comprobantes de entrega y `delivery_evidence.read/create` sus evidencias. ADMIN, MANAGER y LOGISTICS poseen todos; DRIVER lee, crea y confirma únicamente para su propio Trip, sin anular; WAREHOUSE tiene solo lectura. CASHIER puede leer el resultado logístico desde una venta autorizada. La pertenencia del DRIVER se valida en backend mediante `Driver.userId`.

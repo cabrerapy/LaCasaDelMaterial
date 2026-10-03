@@ -1,5 +1,11 @@
 # Patrones de acceso conocidos
 
+## Reports LCM-022
+
+Los reportes temporales consultan páginas por cursor y calculan el resumen recorriendo todas las páginas del rango. Sales usa `SaleDateIndex` (`datePk=SALE`, `dateSk=saleDate#createdAt#id`), Fuel usa `FuelDateIndex` (`datePk=FUEL`, `dateSk=occurredAt#createdAt#id`), CashMovement usa `CashMovementDateIndex` y Trips usa `TripDateIndex`; reemplazan los `Scan` operativos anteriores por `Query`. Purchases, InventoryMovement y Deliveries reutilizan sus índices temporales existentes. Los filtros secundarios se aplican sobre el conjunto temporal acotado. Inventario actual y stock bajo consultan catálogo paginado más balances por lote, porque representan estado presente y no histórico.
+
+Los registros Sales/Fuel/CashMovement/Trip escritos desde LCM-022 proyectan las nuevas claves. Una base persistente creada antes de LCM-022 requiere backfill de esas proyecciones antes de consultar datos históricos; DynamoDB Local en memoria se recrea con los índices y no conserva registros antiguos.
+
 ## Dashboard LCM-021
 
 `GET /api/dashboard/summary` recorre todas las páginas del rango solicitado, con guardia máxima de 100 páginas, y agrega Sales, CashMovement, Products/InventoryBalance, Purchases, Trips, Deliveries y Fuel en backend. El rango máximo es 90 días y el período efectivo usa `America/Asuncion`. Los índices existentes de compras, viajes y entregas se reutilizan. Antes de considerar producción completa deben sustituirse los `Scan` heredados de los repositorios DynamoDB de Sales y Fuel por índices de fecha; el Dashboard no oculta ni trunca esa limitación.

@@ -19,7 +19,7 @@
     "trip-loads:backfill": "npm run build && node dist/modules/trip-loads/cli.js backfill",
     "trip-loads:rebuild-balances": "npm run build && node dist/modules/trip-loads/cli.js rebuild",
     "trip-loads:verify": "npm run build && node dist/modules/trip-loads/cli.js verify",
-    "test:dynamodb": "npm run build && node --test dist/modules/inventory/dynamodb.integration.test.js"
+    "test:dynamodb": "npm run build && node --test dist/modules/inventory/dynamodb.integration.test.js dist/modules/reports/dynamodb.integration.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.883.0",

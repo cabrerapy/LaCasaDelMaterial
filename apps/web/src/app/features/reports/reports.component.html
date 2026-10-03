@@ -1,0 +1,47 @@
+<main class="reports-page">
+  @if (!type()) {
+    <header class="page-header"><div><p class="eyebrow">ANÁLISIS</p><h1>Reportes</h1><p>Consulte qué ocurrió, aplique filtros y exporte información verificable.</p></div></header>
+    @if (loading()) { <div class="state-card">Cargando reportes…</div> }
+    @else if (error()) { <div class="state-card error"><p>{{ error() }}</p><button type="button" (click)="retry()">Reintentar</button></div> }
+    @else {
+      @for (group of reportGroups; track group.key) {
+        <section class="report-group"><h2>{{ group.label }}</h2><div class="hub-grid">
+          @for (item of grouped()[group.key]; track item.type) {
+            <article class="report-card"><span class="report-icon">▥</span><div><h3>{{ item.title }}</h3><p>{{ item.description }}</p></div><a [routerLink]="['/reports', item.type]">Ver reporte</a></article>
+          }
+        </div></section>
+      }
+    }
+  } @else {
+    <header class="page-header report-heading"><div><a routerLink="/reports" class="back">← Reportes</a><p class="eyebrow">REPORTE</p><h1>{{ report()?.title ?? 'Reporte' }}</h1><p>{{ report()?.description }}</p></div><div class="header-actions no-print"><button type="button" class="secondary" (click)="filterPanel.set(!filterPanel())">Filtros</button><button type="button" class="secondary" (click)="print()">Imprimir</button><button type="button" (click)="exportCsv()" [disabled]="exporting()">{{ exporting() ? 'Exportando…' : 'Exportar CSV' }}</button></div></header>
+
+    <section class="filters no-print" [class.open]="filterPanel()">
+      @if (!['inventory','low-stock'].includes(type()!)) {
+        <div class="quick-periods">
+          @for (period of quickPeriods; track period.value) {
+            <button type="button" [class.active]="quickPeriod() === period.value" (click)="setQuickPeriod(period.value)">{{ period.label }}</button>
+          }
+        </div>
+        @if (quickPeriod() === 'CUSTOM') { <div class="filter-grid"><label>Fecha y hora desde<input type="datetime-local" [ngModel]="value('dateFrom')" (ngModelChange)="setFilter('dateFrom',$event)"></label><label>Fecha y hora hasta<input type="datetime-local" [ngModel]="value('dateTo')" (ngModelChange)="setFilter('dateTo',$event)"></label></div> }
+        @if (!validPeriod()) { <p class="inline-error">La fecha desde debe ser anterior o igual a la fecha hasta.</p> }
+      }
+      <div class="filter-grid">@for (filter of filterDefinitions(); track filter.key) { <label>{{ filter.label }}<input [placeholder]="filter.placeholder ?? filter.label" [ngModel]="value(filter.key)" (ngModelChange)="setFilter(filter.key,$event)"></label> }</div>
+      <div class="filter-actions"><button type="button" class="secondary" (click)="clearFilters()">Limpiar filtros</button><button type="button" (click)="applyFilters()" [disabled]="!validPeriod()">Aplicar filtros</button></div>
+    </section>
+
+    @if (report()?.filters?.length) { <div class="chips">@for (filter of report()!.filters; track filter.key) { <span>{{ filter.label }}: {{ filter.value }}</span> }</div> }
+    <div class="print-brand"><strong>LA CASA DEL MATERIAL</strong><span>Generado: {{ generatedAt | date:'dd/MM/yyyy HH:mm' }}</span></div>
+
+    @if (loading()) { <div class="state-card">Generando reporte…</div> }
+    @else if (error()) { <div class="state-card error"><p>{{ error() }}</p><button type="button" (click)="retry()">Reintentar</button></div> }
+    @else if (report(); as data) {
+      <section class="summary-grid">@for (item of data.summary; track item.key) { <article><span>{{ item.label }}</span><strong>{{ format(item) }}</strong></article> }</section>
+      @if (data.items.length === 0) { <div class="state-card"><h2>Sin resultados</h2><p>No encontramos registros para los filtros seleccionados.</p></div> }
+      @else {
+        <div class="table-wrap"><table><thead><tr>@for (cell of data.items[0].cells; track cell.key) { <th>{{ cell.label }}</th> }</tr></thead><tbody>@for (item of data.items; track item.id) { <tr [class.clickable]="item.detailUrl" (click)="open(item.detailUrl)">@for (cell of item.cells; track cell.key) { <td [attr.data-label]="cell.label"><span [class.status-pill]="cell.kind === 'STATUS'">{{ format(cell) }}</span></td> }</tr> }</tbody></table></div>
+        <div class="mobile-list">@for (item of data.items; track item.id) { <article (click)="open(item.detailUrl)">@for (cell of item.cells; track cell.key) { @if (cell.mobilePriority || $index < 4) { <div><span>{{ cell.label }}</span><strong [class.status-pill]="cell.kind === 'STATUS'">{{ format(cell) }}</strong></div> } }</article> }</div>
+        <nav class="pagination no-print" aria-label="Paginación"><button type="button" class="secondary" (click)="previous()" [disabled]="pageIndex() === 1">Anterior</button><span>Página {{ pageIndex() }}</span><button type="button" class="secondary" (click)="next()" [disabled]="!data.pagination.nextCursor">Siguiente</button></nav>
+      }
+    }
+  }
+</main>

@@ -26,6 +26,7 @@ export interface AppConfig {
   readonly jwtSecret: string;
   readonly jwtExpiresIn: string;
   readonly webOrigin: string;
+  readonly reportExportMaxRows: number;
 }
 
 function readPort(value: string | undefined): number {
@@ -34,6 +35,12 @@ function readPort(value: string | undefined): number {
     throw new Error('API_PORT must be an integer between 1 and 65535');
   }
   return port;
+}
+
+function readPositiveInteger(value: string | undefined, fallback: number, name: string): number {
+  const parsed = Number(value ?? fallback);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) throw new Error(`${name} must be a positive integer`);
+  return parsed;
 }
 
 export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -73,6 +80,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     initialAdminPassword,
     jwtSecret,
     jwtExpiresIn: environment['JWT_EXPIRES_IN']?.trim() || '8h',
-    webOrigin: environment['WEB_ORIGIN']?.trim() || 'http://localhost:4200'
+    webOrigin: environment['WEB_ORIGIN']?.trim() || 'http://localhost:4200',
+    reportExportMaxRows: readPositiveInteger(environment['REPORT_EXPORT_MAX_ROWS'], 50_000, 'REPORT_EXPORT_MAX_ROWS')
   };
 }

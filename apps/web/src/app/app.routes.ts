@@ -3,6 +3,8 @@ import { authGuard, guestGuard } from './core/auth/auth.guard';
 import { permissionGuard } from './core/permissions/permission.guard';
 
 export const routes: Routes = [
+  { path: 'reports/:type', canActivate: [authGuard, permissionGuard], data: { permission: 'reports.read' }, loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent) },
+  { path: 'reports', canActivate: [authGuard, permissionGuard], data: { permission: 'reports.read' }, loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent) },
   { path: 'fuel', canActivate: [authGuard, permissionGuard], data: { permission: 'fuel.read' }, loadComponent: () => import('./features/fuel/fuel.component').then(m => m.FuelComponent) },
   { path: 'trips/:id/delivery', canActivate: [authGuard, permissionGuard], data: { permission: 'deliveries.read' }, loadComponent: () => import('./features/trips/delivery-page.component').then(m => m.DeliveryPageComponent) },
   { path: 'trips', canActivate: [authGuard, permissionGuard], data: { permission: 'trips.read' }, loadComponent: () => import('./features/trips/trips.component').then(m => m.TripsComponent) },

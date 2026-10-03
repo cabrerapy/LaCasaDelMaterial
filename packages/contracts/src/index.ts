@@ -52,7 +52,10 @@ export const PERMISSIONS = [
   'fuel.read', 'fuel.create', 'fuel.void', 'fuel.costs.read',
   'deliveries.read', 'deliveries.create', 'deliveries.confirm', 'deliveries.void',
   'delivery_evidence.read', 'delivery_evidence.create',
-  'reports.read'
+  'reports.read', 'reports.sales.read', 'reports.payments.read', 'reports.transfers.read',
+  'reports.margin.read', 'reports.cash.read', 'reports.purchases.read', 'reports.inventory.read',
+  'reports.inventory_movements.read', 'reports.trips.read', 'reports.deliveries.read',
+  'reports.fuel.read', 'reports.export'
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -71,12 +74,13 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
     'lots.read', 'lots.costs.read',
     'inventory.read', 'inventory.movements.read', 'sales.read', 'sales.create', 'sales.update', 'sales.confirm', 'sales.void', 'sales.discount', 'sales.authorized.read', 'sales.costs.read', 'sales.margins.read',
     'inventory.costs.read', 'cash.read', 'cash.open', 'cash.close', 'cash.manual_in', 'cash.manual_out', 'cash.audit',
-    'trucks.read', 'trucks.create', 'trucks.update', 'trucks.status.manage', 'drivers.read', 'drivers.create', 'drivers.update', 'drivers.status.manage', 'trips.read', 'trips.create', 'trips.update', 'trips.ready', 'trips.start', 'trips.deliver', 'trips.cancel', 'trip_loads.read', 'trip_loads.create', 'trip_loads.update', 'trip_loads.confirm', 'trip_loads.cancel', 'fuel.read', 'fuel.create', 'fuel.void', 'fuel.costs.read', 'deliveries.read', 'deliveries.create', 'deliveries.confirm', 'deliveries.void', 'delivery_evidence.read', 'delivery_evidence.create', 'reports.read'
+    'trucks.read', 'trucks.create', 'trucks.update', 'trucks.status.manage', 'drivers.read', 'drivers.create', 'drivers.update', 'drivers.status.manage', 'trips.read', 'trips.create', 'trips.update', 'trips.ready', 'trips.start', 'trips.deliver', 'trips.cancel', 'trip_loads.read', 'trip_loads.create', 'trip_loads.update', 'trip_loads.confirm', 'trip_loads.cancel', 'fuel.read', 'fuel.create', 'fuel.void', 'fuel.costs.read', 'deliveries.read', 'deliveries.create', 'deliveries.confirm', 'deliveries.void', 'delivery_evidence.read', 'delivery_evidence.create', 'reports.read', 'reports.sales.read', 'reports.payments.read', 'reports.transfers.read', 'reports.margin.read', 'reports.cash.read', 'reports.purchases.read', 'reports.inventory.read', 'reports.inventory_movements.read', 'reports.trips.read', 'reports.deliveries.read', 'reports.fuel.read', 'reports.export'
   ],
   CASHIER: [
     'dashboard.read', 'categories.read', 'products.read', 'suppliers.read', 'inventory.read', 'customers.read',
     'customers.create', 'customers.update', 'sales.create', 'sales.update', 'sales.confirm', 'sales.own.read',
-    'sales.authorized.read', 'cash.read', 'cash.open', 'cash.close', 'deliveries.read'
+    'sales.authorized.read', 'cash.read', 'cash.open', 'cash.close', 'deliveries.read',
+    'reports.read', 'reports.sales.read', 'reports.payments.read', 'reports.transfers.read', 'reports.cash.read', 'reports.export'
   ],
   PURCHASING: [
     'dashboard.read', 'categories.read', 'categories.create', 'categories.update',
@@ -84,17 +88,20 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
     'suppliers.update', 'purchases.read', 'purchases.create', 'purchases.update',
     'purchases.confirm', 'purchases.costs.read',
     'receipts.read', 'lots.read', 'lots.costs.read',
-    'products.costs.read', 'inventory.read', 'inventory.movements.read', 'inventory.costs.read'
+    'products.costs.read', 'inventory.read', 'inventory.movements.read', 'inventory.costs.read',
+    'reports.read', 'reports.purchases.read', 'reports.inventory.read', 'reports.inventory_movements.read', 'reports.export'
   ],
   WAREHOUSE: [
     'dashboard.read', 'categories.read', 'products.read', 'suppliers.read', 'purchases.read',
     'receipts.read', 'receipts.create', 'receipts.update', 'receipts.confirm', 'receipts.cancel', 'lots.read',
     'inventory.read', 'inventory.receive',
-    'inventory.movements.read', 'inventory.adjust', 'trucks.read', 'drivers.read', 'trips.read', 'trip_loads.read', 'trip_loads.create', 'trip_loads.update', 'trip_loads.confirm', 'deliveries.read'
+    'inventory.movements.read', 'inventory.adjust', 'trucks.read', 'drivers.read', 'trips.read', 'trip_loads.read', 'trip_loads.create', 'trip_loads.update', 'trip_loads.confirm', 'deliveries.read',
+    'reports.read', 'reports.inventory.read', 'reports.inventory_movements.read', 'reports.trips.read', 'reports.deliveries.read', 'reports.export'
   ],
   LOGISTICS: [
     'dashboard.read', 'products.read', 'inventory.read', 'trucks.read', 'trucks.create', 'trucks.update', 'trucks.status.manage', 'drivers.read', 'drivers.create', 'drivers.update', 'drivers.status.manage', 'trips.read', 'trips.create', 'trips.update', 'trips.ready', 'trips.start', 'trips.deliver', 'trips.cancel',
-    'trip_loads.read', 'trip_loads.create', 'trip_loads.update', 'trip_loads.confirm', 'trip_loads.cancel', 'fuel.read', 'fuel.create', 'fuel.void', 'fuel.costs.read', 'deliveries.read', 'deliveries.create', 'deliveries.confirm', 'deliveries.void', 'delivery_evidence.read', 'delivery_evidence.create'
+    'trip_loads.read', 'trip_loads.create', 'trip_loads.update', 'trip_loads.confirm', 'trip_loads.cancel', 'fuel.read', 'fuel.create', 'fuel.void', 'fuel.costs.read', 'deliveries.read', 'deliveries.create', 'deliveries.confirm', 'deliveries.void', 'delivery_evidence.read', 'delivery_evidence.create',
+    'reports.read', 'reports.trips.read', 'reports.deliveries.read', 'reports.fuel.read', 'reports.export'
   ],
   DRIVER: [
     'dashboard.read', 'trips.read', 'trips.start', 'trips.deliver',
@@ -486,3 +493,4 @@ export * from './trip-loads.js';
 export * from './fuel.js';
 export * from './deliveries.js';
 export * from './dashboard.js';
+export * from './reports.js';

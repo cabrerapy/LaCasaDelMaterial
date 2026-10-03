@@ -39,6 +39,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:4200}
+      REPORT_EXPORT_MAX_ROWS: ${REPORT_EXPORT_MAX_ROWS:-50000}
     ports:
       - "3000:3000"
     volumes:

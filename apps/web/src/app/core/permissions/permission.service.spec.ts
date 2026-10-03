@@ -35,5 +35,8 @@ describe('PermissionService and navigation', () => {
     );
     expect(cashierItems.some((item) => item.route === '/users')).toBe(false);
     expect(cashierItems.some((item) => item.route === '/sales')).toBe(true);
+    expect(cashierItems.some((item) => item.route === '/reports')).toBe(true);
+    expect(hasPermission('DRIVER', 'reports.read')).toBe(false);
+    expect(hasPermission('CASHIER', 'reports.margin.read')).toBe(false);
   });
 });
