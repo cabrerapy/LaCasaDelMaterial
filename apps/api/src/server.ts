@@ -104,7 +104,7 @@ async function start(): Promise<void> {
   }
 }
 
-void start().catch(() => {
-  console.error('API failed to start');
+void start().catch((error: unknown) => {
+  console.error('API failed to start', error);
   process.exitCode = 1;
 });
