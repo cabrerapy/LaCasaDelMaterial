@@ -1,5 +1,7 @@
 # Roles y permisos
 
+LCM-021: `dashboard.read` permite solicitar el resumen, pero cada bloque se filtra nuevamente con sus permisos de dominio. Costos FIFO requieren `sales.costs.read`; costos de compras requieren `purchases.costs.read`; costos de combustible requieren `fuel.costs.read`. DRIVER recibe solo viajes, entregas y combustible propios, sin ventas, cobros, caja ni costos.
+
 LCM-020: `deliveries.read/create/confirm/void` controla comprobantes de entrega y `delivery_evidence.read/create` sus evidencias. ADMIN, MANAGER y LOGISTICS poseen todos; DRIVER lee, crea y confirma únicamente para su propio Trip, sin anular; WAREHOUSE tiene solo lectura. CASHIER puede leer el resultado logístico desde una venta autorizada. La pertenencia del DRIVER se valida en backend mediante `Driver.userId`.
 
 LCM-019: `fuel.read/create/void/costs.read` separa operación y datos económicos. ADMIN, MANAGER y LOGISTICS poseen todos; DRIVER lee y crea únicamente en sus viajes, pero no recibe precio ni costo. El chofer puede introducir el precio durante el alta porque `fuel.costs.read` controla lectura posterior, no captura operativa. WAREHOUSE, CASHIER y PURCHASING no acceden.

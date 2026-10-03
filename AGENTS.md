@@ -4,7 +4,7 @@ Sistema de gestión para depósito y comercio de materiales de construcción.
 
 ## Stack y arquitectura
 
-- Frontend: Angular 19 + TypeScript, standalone components.
+- Frontend: Angular 22 + TypeScript 6, standalone components.
 - Backend: Node.js + TypeScript + Fastify.
 - Persistencia: DynamoDB.
 - Infraestructura futura: AWS CDK con TypeScript.

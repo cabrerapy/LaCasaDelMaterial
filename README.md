@@ -1,11 +1,11 @@
 # La Casa del Material
 
-Bootstrap del monolito modular para la gestión de un depósito de materiales. Incluye Angular 19, Fastify, un paquete de contratos compartidos y DynamoDB Local.
+Bootstrap del monolito modular para la gestión de un depósito de materiales. Incluye Angular 22, Fastify, un paquete de contratos compartidos y DynamoDB Local.
 
 ## Requisitos
 
-- Node.js 20 o 22 (Angular 19 no soporta Node.js 24)
-- npm 10 o superior
+- Node.js 24 LTS (mínimo 24.15; use la versión indicada en `.nvmrc`)
+- npm 11 o superior
 - Docker con Docker Compose
 
 ## Desarrollo local

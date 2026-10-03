@@ -23,6 +23,6 @@
     "dev:api": "npm run dev --workspace @lcm/api"
   },
   "engines": {
-    "node": ">=20 <23"
+    "node": ">=24.15 <25"
   }
 }

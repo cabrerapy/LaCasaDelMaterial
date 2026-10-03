@@ -19,7 +19,7 @@
     <section class="panel">
       <div class="title">
         <div><h2>{{ cash.sessionNumber }}</h2><span class="badge">{{ cash.status }}</span></div>
-        <strong>{{ summary()?.expectedCashGuarani | guarani }}</strong>
+        <strong>{{ $safeNavigationMigration(summary()?.expectedCashGuarani) | guarani }}</strong>
       </div>
       <p>Apertura: {{ cash.openedAt | date:'short' }} · Inicial: {{ cash.openingCashGuarani | guarani }}</p>
 

@@ -100,6 +100,10 @@ Cada línea distingue cantidad cargada, entregada y no entregada. Una diferencia
 
 La venta descuenta inventario; TripLoad solo asigna/carga; DeliveryReceipt registra recepción física. Por tanto, `FULLY_ASSIGNED` no significa `DELIVERED`.
 
+## Dashboard (LCM-021)
+
+El Dashboard agrega datos existentes dentro de un rango máximo de 90 días y filtra bloques y campos financieros en backend según permisos. Los cobros provienen de `CashMovement`, no del total de Sale; una transferencia cuenta como cobro pero nunca como efectivo físico. El margen mostrado es margen bruto FIFO y se omite cuando el costeo está incompleto; no representa ganancia neta.
+
 ## Categories
 
 LCM-004 administra categorías ordenables con nombre y slug únicos, descripción opcional, estado activo/inactivo y auditoría básica. La asociación con productos se implementará posteriormente.

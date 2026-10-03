@@ -1124,6 +1124,13 @@ test('fuel is immutable, exact, access-controlled and excluded from inventory an
  assert.equal((await app.inject({method:'GET',url:'/api/fuel'})).statusCode,401);assert.equal((await app.inject({method:'GET',url:'/api/fuel',headers:await authorizationHeader('warehouse')})).statusCode,403);
 });
 
+test('dashboard aggregates real data and filters financial sections by permission',async()=>{
+ const admin=await app.inject({method:'GET',url:'/api/dashboard/summary?dateFrom=2026-10-01&dateTo=2026-10-31',headers:await authorizationHeader('admin')});assert.equal(admin.statusCode,200);assert.equal(admin.json().period.timezone,'America/Asuncion');assert.ok(admin.json().sales);assert.ok(admin.json().payments);assert.ok(admin.json().inventory);assert.ok(Array.isArray(admin.json().alerts));
+ const cashier=await app.inject({method:'GET',url:'/api/dashboard/summary?dateFrom=2026-10-01&dateTo=2026-10-31',headers:await authorizationHeader('cashier')});assert.equal(cashier.statusCode,200);assert.ok(cashier.json().sales);assert.ok(cashier.json().payments);assert.equal(cashier.json().sales.fifoCostGuarani,undefined);assert.equal(cashier.json().purchases,undefined);assert.equal(cashier.json().fuel,undefined);
+ const driver=await app.inject({method:'GET',url:'/api/dashboard/summary?dateFrom=2026-10-01&dateTo=2026-10-31',headers:await authorizationHeader('driver')});assert.equal(driver.statusCode,200);assert.equal(driver.json().sales,undefined);assert.equal(driver.json().payments,undefined);assert.ok(driver.json().logistics);assert.ok(driver.json().fuel);
+ assert.equal((await app.inject({method:'GET',url:'/api/dashboard/summary?dateFrom=2026-01-01&dateTo=2026-10-01',headers:await authorizationHeader('admin')})).statusCode,400);assert.equal((await app.inject({method:'GET',url:'/api/dashboard/summary'})).statusCode,401);
+});
+
 async function authorizationHeader(username: string): Promise<{ authorization: string }> {
   return { authorization: `Bearer ${loginToken(await login(adminPassword, username))}` };
 }

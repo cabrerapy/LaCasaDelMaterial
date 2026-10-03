@@ -1,5 +1,9 @@
 # Patrones de acceso conocidos
 
+## Dashboard LCM-021
+
+`GET /api/dashboard/summary` recorre todas las páginas del rango solicitado, con guardia máxima de 100 páginas, y agrega Sales, CashMovement, Products/InventoryBalance, Purchases, Trips, Deliveries y Fuel en backend. El rango máximo es 90 días y el período efectivo usa `America/Asuncion`. Los índices existentes de compras, viajes y entregas se reutilizan. Antes de considerar producción completa deben sustituirse los `Scan` heredados de los repositorios DynamoDB de Sales y Fuel por índices de fecha; el Dashboard no oculta ni trunca esa limitación.
+
 ## Deliveries LCM-020
 
 La tabla de entregas usa claves directas `DELIVERY#{id}`, `NUMBER#{deliveryNumber}`, `ACTIVE_TRIP#{tripId}` y `EVIDENCE#{id}`. `RelationIndex` resuelve entrega por Trip y evidencias por Delivery; `SaleIndex` lista entregas por venta; `DateIndex` mantiene el listado cronológico y `StatusIndex` filtra por estado. Los flujos operativos usan `Query`, no `Scan`.
