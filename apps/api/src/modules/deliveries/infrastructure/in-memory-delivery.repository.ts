@@ -9,7 +9,7 @@ export class InMemoryDeliveryRepository implements DeliveryRepository {
   async findById(id:string){return this.values.get(id)??null;}
   async findByTripId(tripId:string){return [...this.values.values()].find(x=>x.tripId===tripId&&x.status!=='VOIDED')??[...this.values.values()].find(x=>x.tripId===tripId)??null;}
   async list(o:DeliveryListOptions){const start=Number(o.nextToken??0),all=[...this.values.values()].filter(x=>(!o.saleId||x.saleId===o.saleId)&&(!o.status||x.status===o.status)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)),items=all.slice(start,start+o.limit);return{items,...(start+items.length<all.length?{nextToken:String(start+items.length)}:{})};}
-  async create(d:DeliveryReceipt){if(await this.findByTripId(d.tripId))throw new DeliveryConflictError();this.values.set(d.id,d);}
+  async create(d:DeliveryReceipt){if([...this.values.values()].some(x=>x.tripId===d.tripId&&x.status!=='VOIDED'))throw new DeliveryConflictError();this.values.set(d.id,d);}
   async update(d:DeliveryReceipt,e:string){this.check(d.id,e,'DRAFT');this.values.set(d.id,d);}
   async confirm(d:DeliveryReceipt,trip:Parameters<DeliveryRepository['confirm']>[1],truck:Parameters<DeliveryRepository['confirm']>[2],_load:Parameters<DeliveryRepository['confirm']>[3],e:string,tripExpected:string){this.check(d.id,e,'DRAFT');if(this.trips)await this.trips.deliver(trip,tripExpected,truck);this.values.set(d.id,d);}
   async void(d:DeliveryReceipt,e:string){this.check(d.id,e,'CONFIRMED');this.values.set(d.id,d);}

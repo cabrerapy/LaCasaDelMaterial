@@ -92,6 +92,14 @@ La carga no reserva, descuenta ni repone inventario. Peso y volumen se estiman c
 
 El combustible representa costo logístico interno. `Trip.freightChargeGuarani` representa flete cobrado al cliente y no es ganancia logística. Una transacción registra combustible cargado, no necesariamente combustible consumido durante ese viaje exacto; por ello el rendimiento km/l mostrado es aproximado. Fuel no modifica odómetro maestro, inventario, lotes ni caja.
 
+## Deliveries (LCM-020)
+
+`DeliveryReceipt` registra el cumplimiento físico de una carga confirmada y conserva receptor, dirección histórica, odómetro y auditoría. Sus estados son `DRAFT`, `CONFIRMED` y `VOIDED`; una confirmación es histórica e inmutable. `DeliveryOutcome` se deriva como `FULL`, `PARTIAL` o `FAILED` a partir de sus `DeliveryReceiptLine`.
+
+Cada línea distingue cantidad cargada, entregada y no entregada. Una diferencia exige incidencia y observación. Las evidencias opcionales guardan solamente metadata en DynamoDB; el binario pertenece a `DeliveryEvidenceStorage` local. Confirmar Delivery cierra el Trip y actualiza la proyección de entrega de manera transaccional, sin crear movimientos de inventario, FIFO, caja ni contabilidad.
+
+La venta descuenta inventario; TripLoad solo asigna/carga; DeliveryReceipt registra recepción física. Por tanto, `FULLY_ASSIGNED` no significa `DELIVERED`.
+
 ## Categories
 
 LCM-004 administra categorías ordenables con nombre y slug únicos, descripción opcional, estado activo/inactivo y auditoría básica. La asociación con productos se implementará posteriormente.

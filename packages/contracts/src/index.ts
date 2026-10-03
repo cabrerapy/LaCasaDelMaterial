@@ -76,7 +76,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>>
   CASHIER: [
     'dashboard.read', 'categories.read', 'products.read', 'suppliers.read', 'inventory.read', 'customers.read',
     'customers.create', 'customers.update', 'sales.create', 'sales.update', 'sales.confirm', 'sales.own.read',
-    'sales.authorized.read', 'cash.read', 'cash.open', 'cash.close'
+    'sales.authorized.read', 'cash.read', 'cash.open', 'cash.close', 'deliveries.read'
   ],
   PURCHASING: [
     'dashboard.read', 'categories.read', 'categories.create', 'categories.update',

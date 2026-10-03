@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import type { CreateSaleRequest, SaleCatalogResponse, SaleCostingResponse, SaleResponse, SalesPageResponse, SaleStatus } from '@lcm/contracts';
+import type { CreateSaleRequest, DeliveriesPageResponse, SaleCatalogResponse, SaleCostingResponse, SaleResponse, SalesPageResponse, SaleStatus, TripsPageResponse } from '@lcm/contracts';
 @Injectable({providedIn:'root'}) export class SalesApiService{
  private readonly http=inject(HttpClient);
  catalog(search=''){return this.http.get<SaleCatalogResponse>('/api/sales/catalog',{params:search?new HttpParams().set('search',search):undefined});}
@@ -11,4 +11,6 @@ import type { CreateSaleRequest, SaleCatalogResponse, SaleCostingResponse, SaleR
  void(id:string,reason:string){return this.http.post<SaleResponse>(`/api/sales/${id}/void`,{reason});}
  costing(id:string){return this.http.get<SaleCostingResponse>(`/api/sales/${id}/costing`);}
  retryCosting(id:string){return this.http.post<SaleResponse>(`/api/sales/${id}/retry-costing`,{});}
+ trips(saleId:string){return this.http.get<TripsPageResponse>('/api/trips',{params:new HttpParams().set('saleId',saleId).set('pageSize',100)});}
+ deliveries(saleId:string){return this.http.get<DeliveriesPageResponse>('/api/deliveries',{params:new HttpParams().set('saleId',saleId).set('pageSize',100)});}
 }

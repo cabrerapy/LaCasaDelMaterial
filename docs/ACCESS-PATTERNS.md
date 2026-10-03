@@ -1,5 +1,11 @@
 # Patrones de acceso conocidos
 
+## Deliveries LCM-020
+
+La tabla de entregas usa claves directas `DELIVERY#{id}`, `NUMBER#{deliveryNumber}`, `ACTIVE_TRIP#{tripId}` y `EVIDENCE#{id}`. `RelationIndex` resuelve entrega por Trip y evidencias por Delivery; `SaleIndex` lista entregas por venta; `DateIndex` mantiene el listado cronológico y `StatusIndex` filtra por estado. Los flujos operativos usan `Query`, no `Scan`.
+
+Confirmar ejecuta una sola `TransactWrite` entre Delivery, Trip, Truck, locks activos y `SaleItemDeliveryBalance` de la tabla de cargas. Libera la cantidad cargada de `assigned` e incrementa la entregada con condiciones que impiden superar vendido. VOID revierte la cantidad entregada en una transacción y no reabre el Trip. Los archivos viven en `.data/delivery-evidence`; DynamoDB conserva solo metadata y storage keys generadas por backend.
+
 ## Fuel LCM-019
 
 La tabla exclusiva usa `FUEL#{id}` para detalle, `NUMBER#{fuelNumber}` como reserva única y `COUNTER#{year}` para generar `COM-{año}-{secuencia}` atómicamente. Los registros conservan campos denormalizados de camión, viaje y chofer para lectura operativa.

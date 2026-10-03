@@ -35,6 +35,7 @@ Sistema de gestión para depósito y comercio de materiales de construcción.
 - Una sesión de caja cerrada no vuelve a abrirse ni se modifica; su efectivo esperado, contado y diferencia quedan como snapshot auditable.
 - Una carga de combustible no crea automáticamente `CashMovement`, `PurchaseLot` ni `InventoryMovement`.
 - `FuelTransaction` es inmutable; los errores se corrigen mediante anulación explícita, conservando el histórico.
+- Delivery nunca modifica inventario directamente. La cantidad entregada no puede superar la cargada y una entrega confirmada es un registro histórico inmutable.
 
 ## Calidad y documentación
 
