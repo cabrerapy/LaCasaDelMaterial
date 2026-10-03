@@ -1,7 +1,7 @@
 # Estado del proyecto
 
-- Tarea actual: LCM-020 Deliveries.
-- Estado: PARTIAL (núcleo funcional implementado; faltan validaciones reales con DynamoDB Local, Docker y E2E).
-- Funcionalidades implementadas: entregas DRAFT/CONFIRMED/VOIDED; resultados FULL/PARTIAL/FAILED calculados en backend; líneas e incidencias; receptor, odómetros y evidencias protegidas; integración con Trip, Sale y permisos; formulario responsive en viajes y resumen logístico en ventas; confirmación y anulación transaccionales en DynamoDB sin impacto de inventario.
-- Decisiones importantes: una entrega comercial confirmada es histórica e inmutable; las diferencias requieren incidencia y observación; la cantidad entregada nunca supera la cargada; Delivery no modifica inventario; las evidencias se almacenan fuera de DynamoDB y su acceso requiere autorización.
-- Pendientes inmediatos: ejecutar integración real con DynamoDB Local y Docker, agregar E2E y matriz completa de casos, incorporar scripts de conciliación/reconstrucción de saldos y exponer el estado agregado de cumplimiento en Sale; después iniciar LCM-021 Dashboard.
+- Tarea actual: LCM-020-UX-001 Delivery UX Review.
+- Estado: BLOCKED_EXTERNAL (web lint pasa, pero esbuild no puede enumerar directorios superiores en este entorno aun fuera de OneDrive; tests, build y revisión visual quedan bloqueados).
+- Funcionalidades implementadas: ruta dedicada de entrega; layout mobile-first con cards; navegación compacta y barra sticky; confirmación mediante modal; resumen y estados accesibles; diferencias y validación inline; preview local de evidencias; firma nativa con canvas; vista confirmada/anulada; logística de ventas resumida y expandible.
+- Decisiones importantes: no se modificaron reglas de negocio; el modal de Trip conserva información rápida y deriva al único formulario de Delivery; imágenes usan object URLs y la firma reutiliza DeliveryEvidence.
+- Pendientes inmediatos: abrir esta copia en un entorno con acceso normal al sistema de archivos y Node 20/22, ejecutar tests/build, agregar la cobertura frontend solicitada, realizar revisión visual en 360/390/430/768/1024/1440 y actualizar el smoke E2E; después iniciar LCM-021 Dashboard.

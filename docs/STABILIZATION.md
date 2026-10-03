@@ -19,3 +19,16 @@
 | Final verification | BLOCKED_EXTERNAL | La fase web impide continuar de forma validable a fases posteriores en esta sesión. |
 
 Estados permitidos: `TODO`, `DONE`, `BLOCKED_EXTERNAL`.
+
+## LCM-020-UX-001
+
+Repository moved to:
+`C:\Users\Ever\Documents\Codex\la-casa-del-material-lcm-020-ux-001`
+
+La ruta preferida `C:\dev\la-casa-del-material` no pudo crearse por permisos. La copia está fuera de OneDrive, conserva `.git`, código, documentación, `package-lock.json` y cambios locales, y excluyó `node_modules`, `dist`, `.angular` y `coverage`. `npm ci` finalizó correctamente. Web lint pasa después de compilar contracts, pero Vitest y Angular/esbuild continúan fallando con `Cannot read directory "../../../../..": Access is denied` por una restricción externa del entorno.
+
+Next action:
+Open Codex in `C:\Users\Ever\Documents\Codex\la-casa-del-material-lcm-020-ux-001` with Node 20/22 and rerun LCM-020-UX-001 validations before continuing UI changes.
+
+Synchronization:
+Los cambios de LCM-020-UX-001 fueron reflejados nuevamente en el repositorio principal `C:\Users\Ever\OneDrive\Escritorio\Git\LaCasaDelMaterial`. La copia externa se conserva para ejecutar validaciones sin depender de OneDrive.
