@@ -485,3 +485,4 @@ export * from './trips.js';
 export * from './trip-loads.js';
 export * from './fuel.js';
 export * from './deliveries.js';
+export * from './dashboard.js';

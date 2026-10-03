@@ -60,6 +60,8 @@ import type { DeliveryRepository } from '../modules/deliveries/domain/delivery.r
 import { DeliveriesService } from '../modules/deliveries/application/deliveries.service.js';
 import { deliveriesRoutes, deliveryEvidenceRoutes, tripDeliveryRoutes } from '../modules/deliveries/http/deliveries.routes.js';
 import type { DeliveryEvidenceStorage } from '../modules/deliveries/domain/delivery-evidence.storage.js';
+import { DashboardService } from '../modules/dashboard/application/dashboard.service.js';
+import { dashboardRoutes } from '../modules/dashboard/http/dashboard.routes.js';
 
 export interface AppDependencies {
   readonly users: UserRepository;
@@ -107,6 +109,7 @@ export async function createApp(
     prefix: '/api/auth',
     authService
   });
+  await app.register(dashboardRoutes,{prefix:'/api/dashboard',authService,service:new DashboardService(dependencies.sales,dependencies.purchases,dependencies.products,dependencies.inventory,dependencies.trips,dependencies.deliveries,dependencies.fuel,dependencies.cash,dependencies.drivers)});
   await app.register(usersRoutes, {
     prefix: '/api/users',
     authService,
