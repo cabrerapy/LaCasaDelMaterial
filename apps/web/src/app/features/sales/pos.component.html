@@ -1,7 +1,95 @@
-<header class="page-head"><div><p class="eyebrow">Ventas</p><h1>Punto de venta</h1><p>Precios actuales, stock disponible y consumidor final por defecto.</p><strong>Caja: {{cashSession()?'ABIERTA · '+cashSession()?.sessionNumber:'CERRADA'}}</strong></div></header>
-@if(error()){<div class="alert">{{error()}}</div>}
-<div class="pos-grid"><section class="panel"><div class="search"><input [(ngModel)]="search" (keyup.enter)="loadCatalog()" placeholder="Código, producto, SKU o código de barras"><button (click)="loadCatalog()">Buscar</button></div><div class="catalog">@for(item of catalog();track item.presentationId){<button class="product" (click)="add(item)"><strong>{{item.name}}</strong><span>{{item.presentationName}} · {{item.unitPriceGuarani|guarani}}</span><small>@if(item.trackStock){Disponible: {{item.availableBaseInternal}}}@else{Sin control de stock}</small></button>}@empty{<p>No hay productos activos.</p>}</div></section>
-<section class="panel cart"><h2>Venta</h2><label>Cliente<select [(ngModel)]="customerId"><option value="">Consumidor final</option>@for(c of customers();track c.id){<option [value]="c.id">{{c.displayName}}</option>}</select></label>
-@for(line of cart();track line.catalog.presentationId;let i=$index){<div class="line"><div><strong>{{line.catalog.name}}</strong><small>{{line.catalog.presentationName}} · {{line.catalog.unitPriceGuarani|guarani}}</small></div><input [ngModel]="line.quantity" (ngModelChange)="setQuantity(i,$event)" inputmode="decimal"><button class="danger" (click)="remove(i)">×</button></div>}
-<div class="fields"><label>Descuento<input type="number" min="0" [(ngModel)]="discount" [disabled]="!canDiscount"></label><label>Flete<input type="number" min="0" [(ngModel)]="freight"></label><label>Entrega<select [(ngModel)]="deliveryType"><option value="PICKUP">Retiro</option><option value="OWN_FLEET">Flota propia</option><option value="THIRD_PARTY">Tercero</option></select></label>@if(deliveryType!=='PICKUP'){<label>Dirección<input [(ngModel)]="deliveryAddress"></label>}<label>Pago<select [(ngModel)]="paymentMethod"><option value="CASH">Efectivo</option><option value="TRANSFER">Transferencia</option><option value="CARD">Tarjeta</option><option value="CREDIT">Crédito</option><option value="OTHER">Otro</option></select></label><label>Referencia<input [(ngModel)]="paymentReference"></label></div>
-<div class="total"><span>Total</span><strong>{{total()|guarani}}</strong></div><div class="actions"><button (click)="save(false)" [disabled]="saving()||!cart().length">Guardar borrador</button><button class="primary" (click)="save(true)" [disabled]="saving()||!cart().length||!cashSession()">Confirmar venta</button></div></section></div>
+<main class="pos-page">
+  <header class="pos-header">
+    <div>
+      <p class="eyebrow">Ventas</p>
+      <h1>Punto de venta</h1>
+      <p class="pos-subtitle">Registra una venta con precios actuales y stock disponible.</p>
+    </div>
+    <div class="cash-status" [class.is-open]="cashSession()" role="status">
+      <span class="cash-status__dot" aria-hidden="true"></span>
+      <span><small>Estado de caja</small><strong>{{ cashSession() ? 'Abierta' : 'Cerrada' }}</strong></span>
+      @if (cashSession()) { <span class="cash-status__number">{{ cashSession()?.sessionNumber }}</span> }
+    </div>
+  </header>
+
+  @if (error()) { <div class="alert" role="alert">{{ error() }}</div> }
+
+  <section class="pos-summary" aria-label="Resumen de la venta">
+    <article><span>Productos disponibles</span><strong>{{ catalog().length }}</strong></article>
+    <article><span>Artículos en venta</span><strong>{{ cart().length }}</strong></article>
+    <article><span>Subtotal</span><strong>{{ subtotal() | guarani }}</strong></article>
+  </section>
+
+  <div class="pos-grid">
+    <section class="panel catalog-panel" aria-labelledby="catalog-title">
+      <div class="panel-heading">
+        <div><p class="section-kicker">Catálogo</p><h2 id="catalog-title">Selecciona productos</h2></div>
+        <span class="result-count">{{ catalog().length }} resultados</span>
+      </div>
+
+      <div class="search">
+        <label class="search-field">
+          <span class="visually-hidden">Buscar productos</span><span class="search-icon" aria-hidden="true">⌕</span>
+          <input [(ngModel)]="search" (keyup.enter)="loadCatalog()" placeholder="Código, producto, SKU o código de barras" autocomplete="off">
+        </label>
+        <button type="button" class="secondary-button" (click)="loadCatalog()">Buscar</button>
+      </div>
+
+      <div class="catalog">
+        @for (item of catalog(); track item.presentationId) {
+          <button type="button" class="product" (click)="add(item)">
+            <span class="product-icon" aria-hidden="true">▧</span>
+            <span class="product-copy">
+              <strong>{{ item.name }}</strong><span>{{ item.presentationName }}</span>
+              <small>@if (item.trackStock) { Disponible: {{ item.availableBaseInternal }} } @else { Sin control de stock }</small>
+            </span>
+            <span class="product-price">{{ item.unitPriceGuarani | guarani }}</span><span class="add-label">Agregar</span>
+          </button>
+        } @empty {
+          <div class="empty-state"><span aria-hidden="true">⌕</span><h3>No encontramos productos</h3><p>Prueba con otro código o término de búsqueda.</p></div>
+        }
+      </div>
+    </section>
+
+    <section class="panel cart" aria-labelledby="cart-title">
+      <div class="panel-heading cart-heading">
+        <div><p class="section-kicker">Comprobante</p><h2 id="cart-title">Venta actual</h2></div><span class="cart-count">{{ cart().length }}</span>
+      </div>
+
+      <label class="field full-field"><span>Cliente</span><select [(ngModel)]="customerId"><option value="">Consumidor final</option>@for (customer of customers(); track customer.id) { <option [value]="customer.id">{{ customer.displayName }}</option> }</select></label>
+
+      <div class="cart-lines">
+        @for (line of cart(); track line.catalog.presentationId; let index = $index) {
+          <article class="line">
+            <div class="line-copy"><strong>{{ line.catalog.name }}</strong><small>{{ line.catalog.presentationName }} · {{ line.catalog.unitPriceGuarani | guarani }}</small></div>
+            <label class="quantity-field"><span class="visually-hidden">Cantidad de {{ line.catalog.name }}</span><input [ngModel]="line.quantity" (ngModelChange)="setQuantity(index, $event)" inputmode="decimal" aria-label="Cantidad"></label>
+            <button type="button" class="remove-button" (click)="remove(index)" [attr.aria-label]="'Quitar ' + line.catalog.name">×</button>
+          </article>
+        } @empty {
+          <div class="cart-empty"><span aria-hidden="true">▤</span><p>Agrega productos desde el catálogo para iniciar la venta.</p></div>
+        }
+      </div>
+
+      <div class="fields">
+        <label class="field"><span>Descuento</span><div class="money-input"><span>Gs.</span><input type="number" min="0" [(ngModel)]="discount" [disabled]="!canDiscount"></div></label>
+        <label class="field"><span>Flete</span><div class="money-input"><span>Gs.</span><input type="number" min="0" [(ngModel)]="freight"></div></label>
+        <label class="field"><span>Entrega</span><select [(ngModel)]="deliveryType"><option value="PICKUP">Retiro</option><option value="OWN_FLEET">Flota propia</option><option value="THIRD_PARTY">Tercero</option></select></label>
+        @if (deliveryType !== 'PICKUP') { <label class="field full-field"><span>Dirección de entrega</span><input [(ngModel)]="deliveryAddress"></label> }
+        <label class="field"><span>Forma de pago</span><select [(ngModel)]="paymentMethod"><option value="CASH">Efectivo</option><option value="TRANSFER">Transferencia</option><option value="CARD">Tarjeta</option><option value="CREDIT">Crédito</option><option value="OTHER">Otro</option></select></label>
+        <label class="field"><span>Referencia</span><input [(ngModel)]="paymentReference" placeholder="Opcional"></label>
+      </div>
+
+      <div class="total-breakdown">
+        <div><span>Subtotal</span><strong>{{ subtotal() | guarani }}</strong></div>
+        @if (discount) { <div><span>Descuento</span><strong>− {{ discount | guarani }}</strong></div> }
+        @if (freight) { <div><span>Flete</span><strong>+ {{ freight | guarani }}</strong></div> }
+      </div>
+      <div class="total"><span>Total</span><strong>{{ total() | guarani }}</strong></div>
+      @if (!cashSession()) { <p class="cash-warning">Abre una caja para poder confirmar la venta.</p> }
+      <div class="actions">
+        <button type="button" class="secondary-button" (click)="save(false)" [disabled]="saving() || !cart().length">Guardar borrador</button>
+        <button type="button" class="primary" (click)="save(true)" [disabled]="saving() || !cart().length || !cashSession()">{{ saving() ? 'Guardando…' : 'Confirmar venta' }}</button>
+      </div>
+    </section>
+  </div>
+</main>
