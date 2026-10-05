@@ -1038,10 +1038,31 @@ test('cash sessions open once, summarize manual movements and close immutably', 
   const doubleClose = await app.inject({ method: 'POST', url: `/api/cash/sessions/${opened.json().id}/close`, headers, payload: { countedCashGuarani: 595000 } }); assert.equal(doubleClose.statusCode, 409);
 });
 
+test('POS catalog normalizes search before querying persistence', async (t) => {
+  const received: (string | undefined)[] = [];
+  t.mock.method(products, 'list', async (options: { readonly search?: string }) => {
+    received.push(options.search);
+    return { items: [] };
+  });
+  const headers = await authorizationHeader('admin');
+  for (const search of ['  QA-208d4c10  CEMENTO ', 'Cemento', '   ']) {
+    const result = await app.inject({ method: 'GET', url: `/api/sales/catalog?search=${encodeURIComponent(search)}`, headers });
+    assert.equal(result.statusCode, 200);
+  }
+  assert.deepEqual(received, ['qa-208d4c10 cemento', 'cemento', undefined]);
+});
+
 test('sales POS confirms stock atomically, restricts discounts and void restores stock once', async () => {
   const cashierOpen = await app.inject({ method: 'POST', url: '/api/cash/sessions/open', headers: await authorizationHeader('cashier'), payload: { openingCashGuarani: 500000 } }); assert.equal(cashierOpen.statusCode, 201);
   const cement = await products.findByCode('CEM-CPII'); assert.ok(cement);
   const bag = (await products.listPresentations(cement.id)).find((value) => value.baseQuantityInternal === 1); assert.ok(bag);
+  const catalog = await app.inject({ method: 'GET', url: '/api/sales/catalog', headers: await authorizationHeader('cashier') });
+  assert.equal(catalog.statusCode, 200);
+  const catalogItems = catalog.json<{ items: { presentationId: string; baseQuantityInternal: number; quantityScale: number; baseUnit: string }[] }>().items;
+  const catalogBag = catalogItems.find((item) => item.presentationId === bag.id); assert.ok(catalogBag);
+  assert.equal(catalogBag.baseQuantityInternal, bag.baseQuantityInternal);
+  assert.equal(catalogBag.quantityScale, cement.quantityScale);
+  assert.equal(catalogBag.baseUnit, cement.baseUnit);
   const before = (await inventory.getBalance(cement.id))?.onHandInternal ?? 0; assert.ok(before >= 1);
   const payload = { saleDate: '2026-10-01', deliveryType: 'PICKUP', paymentMethod: 'CASH',
     items: [{ productId: cement.id, presentationId: bag.id, quantity: '1' }] };

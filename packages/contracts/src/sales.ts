@@ -37,7 +37,7 @@ export interface CreateSaleRequest {
 }
 export type UpdateSaleRequest = Partial<CreateSaleRequest>;
 export interface VoidSaleRequest { readonly reason: string; }
-export interface SaleCatalogItem { readonly productId: string; readonly presentationId: string; readonly code: string; readonly name: string; readonly presentationName: string; readonly sku?: string; readonly barcode?: string; readonly unitPriceGuarani: number; readonly availableBaseInternal?: number; readonly trackStock: boolean; }
+export interface SaleCatalogItem { readonly productId: string; readonly presentationId: string; readonly code: string; readonly name: string; readonly presentationName: string; readonly baseQuantityInternal: number; readonly baseUnit: BaseUnit; readonly quantityScale: number; readonly sku?: string; readonly barcode?: string; readonly unitPriceGuarani: number; readonly availableBaseInternal?: number; readonly trackStock: boolean; }
 export interface SaleCatalogResponse { readonly items: readonly SaleCatalogItem[]; }
 export interface SaleLotAllocationResponse {
   readonly id: string; readonly saleId: string; readonly saleItemId: string; readonly productId: string; readonly lotId: string;

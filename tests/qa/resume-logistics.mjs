@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 assert.equal(process.env.LCM_RUN_LOCAL_QA, 'yes');
-const base='http://localhost:3000/api';
+const base=process.env.LCM_QA_BASE_URL ?? 'http://localhost:3000/api';
+assert.ok(['http://localhost:3000/api', 'http://localhost:3001/api'].includes(base), 'Only fixed local QA ports allowed');
 assert.equal((await fetch(`${base}/health`).then(r=>r.json())).environment,'development');
 const login=await fetch(`${base}/auth/login`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:'qa.admin',password:process.env.LCM_QA_PASSWORD})}).then(r=>r.json());
 async function api(path,method='GET',body,expected=200){const r=await fetch(base+path,{method,headers:{authorization:`Bearer ${login.accessToken}`,...(body?{'content-type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});const text=await r.text();assert.equal(r.status,expected,`${path}: ${text}`);return JSON.parse(text);}

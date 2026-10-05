@@ -41,7 +41,7 @@
             <span class="product-icon" aria-hidden="true">▧</span>
             <span class="product-copy">
               <strong>{{ item.name }}</strong><span>{{ item.presentationName }}</span>
-              <small>@if (item.trackStock) { Disponible: {{ item.availableBaseInternal }} } @else { Sin control de stock }</small>
+              <small>@if (item.trackStock) { Disponible: {{ stockDisplay(item) }} } @else { Sin control de stock }</small>
             </span>
             <span class="product-price">{{ item.unitPriceGuarani | guarani }}</span><span class="add-label">Agregar</span>
           </button>
@@ -86,9 +86,11 @@
       </div>
       <div class="total"><span>Total</span><strong>{{ total() | guarani }}</strong></div>
       @if (!cashSession()) { <p class="cash-warning">Abre una caja para poder confirmar la venta.</p> }
+      @if (quantityWarning(); as warning) { <p class="alert" role="alert">{{ warning }}</p> }
+      @if (!quantityWarning() && stockWarning(); as warning) { <p class="alert" role="alert">{{ warning }}</p> }
       <div class="actions">
-        <button type="button" class="secondary-button" (click)="save(false)" [disabled]="saving() || !cart().length">Guardar borrador</button>
-        <button type="button" class="primary" (click)="save(true)" [disabled]="saving() || !cart().length || !cashSession()">{{ saving() ? 'Guardando…' : 'Confirmar venta' }}</button>
+        <button type="button" class="secondary-button" (click)="save(false)" [disabled]="saving() || !cart().length || quantityWarning()">Guardar borrador</button>
+        <button type="button" class="primary" (click)="save(true)" [disabled]="saving() || !cart().length || !cashSession() || quantityWarning() || stockWarning()">{{ saving() ? 'Guardando…' : 'Confirmar venta' }}</button>
       </div>
     </section>
   </div>

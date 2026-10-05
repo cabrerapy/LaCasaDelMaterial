@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto';
 
 // Explicit opt-in: creates tagged QA records, never resets or deletes user data.
 assert.equal(process.env.LCM_RUN_LOCAL_QA, 'yes', 'Set LCM_RUN_LOCAL_QA=yes to create local QA transactions');
-const base = 'http://localhost:3000/api';
+const base = process.env.LCM_QA_BASE_URL ?? 'http://localhost:3000/api';
+assert.ok(['http://localhost:3000/api', 'http://localhost:3001/api'].includes(base), 'Only fixed local QA ports allowed');
 const health = await fetch(`${base}/health`).then(r => r.json());
 assert.equal(health.environment, 'development');
 const tokens = new Map();
