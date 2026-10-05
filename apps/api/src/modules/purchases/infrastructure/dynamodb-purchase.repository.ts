@@ -39,10 +39,11 @@ export class DynamoDbPurchaseRepository implements PurchaseRepository {
     const indexName = options.supplierId ? 'SupplierDateIndex' : options.status ? 'StatusDateIndex' : 'PurchaseDateIndex';
     const partitionName = options.supplierId ? 'supplierId' : options.status ? 'status' : 'entityType';
     const partitionValue = options.supplierId ?? options.status ?? purchaseType;
-    const names: Record<string, string> = { '#partition': partitionName, '#date': 'purchaseDateCreated' };
+    const names: Record<string, string> = { '#partition': partitionName };
     const values: Record<string, unknown> = { ':partition': partitionValue };
     let keyCondition = '#partition = :partition';
     if (options.dateFrom || options.dateTo) {
+      names['#date'] = 'purchaseDateCreated';
       values[':from'] = `${options.dateFrom ?? '0000-01-01'}#`;
       values[':to'] = `${options.dateTo ?? '9999-12-31'}#\uffff`;
       keyCondition += ' AND #date BETWEEN :from AND :to';

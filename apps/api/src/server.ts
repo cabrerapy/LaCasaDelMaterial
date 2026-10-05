@@ -63,7 +63,7 @@ async function start(): Promise<void> {
   const trucks = new DynamoDbTruckRepository(documentClient, config.trucksTableName);
   const drivers = new DynamoDbDriverRepository(documentClient, config.driversTableName);
   const trips = new DynamoDbTripRepository(documentClient, config.tripsTableName, config.trucksTableName);
-  const tripLoads = new DynamoDbTripLoadRepository(documentClient, config.tripLoadsTableName);
+  const tripLoads = new DynamoDbTripLoadRepository(documentClient, config.tripLoadsTableName,config.deliveriesTableName);
   const fuel = new DynamoDbFuelRepository(documentClient, config.fuelTableName);
   const deliveries = new DynamoDbDeliveryRepository(documentClient, config.deliveriesTableName, config.tripsTableName, config.trucksTableName, config.tripLoadsTableName);
   const app = await createApp(config, {

@@ -9,7 +9,7 @@ import { SalesApiService } from './sales-api.service';
 import { CashApiService } from '../cash/cash-api.service';
 import type { CashSessionResponse } from '@lcm/contracts';
 interface CartLine{readonly catalog:SaleCatalogItem;quantity:string}
-@Component({selector:'lcm-pos',imports:[FormsModule,GuaraniPipe],templateUrl:'./pos.component.html',styleUrl:'./sales.css',changeDetection:ChangeDetectionStrategy.OnPush})
+@Component({selector:'lcm-pos',imports:[FormsModule,GuaraniPipe],templateUrl:'./pos.component.html',styleUrls:['./sales.css','./pos.component.css'],changeDetection:ChangeDetectionStrategy.OnPush})
 export class PosComponent{
  private readonly api=inject(SalesApiService);private readonly customersApi=inject(CustomersApiService);private readonly cashApi=inject(CashApiService);private readonly router=inject(Router);private readonly permissions=inject(PermissionService);
  readonly cashSession=signal<CashSessionResponse|null>(null);readonly catalog=signal<readonly SaleCatalogItem[]>([]);readonly customers=signal<readonly CustomerResponse[]>([]);readonly cart=signal<readonly CartLine[]>([]);readonly saving=signal(false);readonly error=signal<string|null>(null);readonly canDiscount=this.permissions.has('sales.discount');

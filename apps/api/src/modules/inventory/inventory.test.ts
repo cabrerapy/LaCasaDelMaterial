@@ -9,6 +9,38 @@ import { InMemoryPurchaseRepository } from '../purchases/infrastructure/in-memor
 import type { PurchaseLot, PurchaseReceipt, PurchaseReceiptLine } from '../receiving/domain/receiving.js';
 import { DynamoDbInventoryRepository } from './infrastructure/dynamodb-inventory.repository.js';
 import { TransactWriteCommand, type DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import type { Sale } from '../sales/domain/sale.js';
+import type { InventoryMovement } from './domain/inventory.js';
+
+test('maintenance validates grouped sale and void sources without requiring receipt lots', async () => {
+  const lot = lotFixture(); const { repository, receiving, service } = fixture([lot]);
+  await repository.append(service.prepareReceipt([lot]));
+  const sale: Sale = { id: randomUUID(), saleNumber: 'VTA-QA', status: 'VOIDED', saleDate: lot.receivedAt,
+    items: [20, 30].map((quantity, sortOrder) => ({ id: randomUUID(), productId: lot.productId, presentationId: lot.presentationId,
+      productSnapshot: lot.productSnapshot, presentationSnapshot: lot.presentationSnapshot, quantity: String(quantity),
+      quantityBaseInternal: quantity, unitPriceGuarani: 1, lineSubtotalGuarani: quantity, sortOrder, trackStock: true })),
+    subtotalGuarani: 50, discountGuarani: 0, freightGuarani: 0, totalGuarani: 50, deliveryType: 'PICKUP', paymentMethod: 'CASH',
+    costingStatus: 'PENDING', createdAt: lot.createdAt, updatedAt: lot.createdAt, createdBy: lot.createdBy, updatedBy: lot.createdBy };
+  const posting = (type: 'SALE' | 'SALE_VOID'): InventoryMovement => ({ id: randomUUID(), movementNumber: randomUUID(),
+    productId: lot.productId, productSnapshot: lot.productSnapshot, saleId: sale.id, type, sourceType: type,
+    sourceId: sale.id, sourceLineId: lot.productId, referenceNumber: sale.saleNumber,
+    quantityDeltaInternal: type === 'SALE' ? -50 : 50, occurredAt: lot.createdAt, createdAt: lot.createdAt, createdBy: lot.createdBy });
+  const outgoing = posting('SALE'), reversal = posting('SALE_VOID');
+  await repository.append([outgoing, reversal]);
+  const maintenance = new InventoryMaintenance(repository, receiving, undefined, { list: async () => ({ items: [sale] }) });
+  assert.deepEqual(await maintenance.verify(), []);
+  assert.equal((await repository.getBalance(lot.productId))?.onHandInternal, 100);
+  const original = repository.allMovements.bind(repository);
+  repository.allMovements = async () => (await original()).map(item => item.id === outgoing.id ? { ...item, quantityDeltaInternal: -49 } : item);
+  assert.match((await maintenance.verify()).join(), /origen de venta inconsistente/);
+  repository.allMovements = async () => (await original()).filter(item => item.id !== reversal.id);
+  assert.match((await maintenance.verify()).join(), /SALE_VOID movimientos=0/);
+  repository.allMovements = original;
+  const orphan = new InventoryMaintenance(repository, receiving, undefined, { list: async () => ({ items: [] }) });
+  assert.match((await orphan.verify()).join(), /origen de venta inconsistente/);
+  const draft = new InventoryMaintenance(repository, receiving, undefined, { list: async () => ({ items: [{ ...sale, status: 'DRAFT' }] }) });
+  assert.match((await draft.verify()).join(), /origen de venta inconsistente/);
+});
 
 export function lotFixture(overrides: Partial<PurchaseLot> = {}): PurchaseLot {
   return { id: randomUUID(), lotNumber: `LOT-${randomUUID()}`, purchaseId: randomUUID(), purchaseNumber: 'CMP-TEST',

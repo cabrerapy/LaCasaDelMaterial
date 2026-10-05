@@ -7,6 +7,7 @@ import { ensureInventoryTable } from '../../infrastructure/dynamodb/inventory-ta
 import { DynamoDbReceivingRepository } from '../receiving/infrastructure/dynamodb-receiving.repository.js';
 import { DynamoDbInventoryRepository } from './infrastructure/dynamodb-inventory.repository.js';
 import { InventoryMaintenance } from './application/inventory-maintenance.js';
+import { DynamoDbSaleRepository } from '../sales/infrastructure/dynamodb-sale.repository.js';
 
 async function main(): Promise<void> {
   loadEnv({ path: resolve(process.cwd(), '../../.env') });
@@ -14,7 +15,7 @@ async function main(): Promise<void> {
   const document = DynamoDBDocumentClient.from(client);
   const inventory = new DynamoDbInventoryRepository(document, config.inventoryTableName);
   const receipts = new DynamoDbReceivingRepository(document, config.purchasesTableName, inventory);
-  const maintenance = new InventoryMaintenance(inventory, receipts, new DynamoDbProductRepository(document, config.productsTableName));
+  const maintenance = new InventoryMaintenance(inventory, receipts, new DynamoDbProductRepository(document, config.productsTableName), new DynamoDbSaleRepository(document, config.salesTableName, inventory));
   const action = process.argv[2];
   try {
     if (action === 'backfill' || action === 'rebuild') await ensureInventoryTable(client, config.inventoryTableName);

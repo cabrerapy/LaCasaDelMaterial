@@ -1,4 +1,7 @@
-LCM-022.5 — BLOCKED_EXTERNAL
+OBSOLETO: el usuario autorizó continuar LCM-022.5 en el repositorio principal dentro de OneDrive.
+No es necesario seguir estas instrucciones de migración.
+
+LCM-022.5 — referencia del intento anterior
 
 Open:
 C:\dev\LaCasaDelMaterial

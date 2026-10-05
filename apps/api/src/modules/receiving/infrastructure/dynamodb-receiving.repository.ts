@@ -26,7 +26,7 @@ export class DynamoDbReceivingRepository implements ReceivingRepository {
     const indexName = options.purchaseId ? 'PurchaseItemsIndex' : options.supplierId ? 'SupplierDateIndex' : options.status ? 'StatusDateIndex' : 'PurchaseDateIndex';
     const partition = options.purchaseId ? 'purchaseId' : options.supplierId ? 'supplierId' : options.status ? 'status' : 'entityType';
     const value = options.purchaseId ?? options.supplierId ?? options.status ?? 'RECEIPT'; const range = options.purchaseId ? 'itemSort' : 'purchaseDateCreated';
-    const names: Record<string, string> = { '#p': partition, '#r': range }; const values: Record<string, unknown> = { ':p': value }; let condition = '#p = :p';
+    const names: Record<string, string> = { '#p': partition, ...((options.purchaseId || options.dateFrom || options.dateTo) ? { '#r': range } : {}) }; const values: Record<string, unknown> = { ':p': value }; let condition = '#p = :p';
     if (options.purchaseId) { values[':prefix'] = 'RECEIPT#'; condition += ' AND begins_with(#r, :prefix)'; }
     else if (options.dateFrom || options.dateTo) { values[':from'] = `${options.dateFrom ?? '0000-01-01'}#`; values[':to'] = `${options.dateTo ?? '9999-12-31'}#\uffff`; condition += ' AND #r BETWEEN :from AND :to'; }
     const filters: string[] = [];
@@ -66,7 +66,7 @@ export class DynamoDbReceivingRepository implements ReceivingRepository {
     const indexName = options.receiptId ? 'RelationIndex' : options.productId ? 'ProductDateIndex' : options.purchaseId ? 'PurchaseItemsIndex' : options.supplierId ? 'SupplierDateIndex' : 'PurchaseDateIndex';
     const partition = options.receiptId ? 'relationId' : options.productId ? 'productId' : options.purchaseId ? 'purchaseId' : options.supplierId ? 'supplierId' : 'entityType';
     const value = options.receiptId ?? options.productId ?? options.purchaseId ?? options.supplierId ?? 'LOT'; const range = options.receiptId ? 'relationSort' : options.purchaseId ? 'itemSort' : options.productId ? 'receivedDateCreated' : 'purchaseDateCreated';
-    const names: Record<string, string> = { '#p': partition, '#r': range }; const values: Record<string, unknown> = { ':p': value }; let condition = '#p = :p';
+    const names: Record<string, string> = { '#p': partition, ...((options.receiptId || options.purchaseId || options.dateFrom || options.dateTo) ? { '#r': range } : {}) }; const values: Record<string, unknown> = { ':p': value }; let condition = '#p = :p';
     if (options.receiptId || options.purchaseId) { values[':prefix'] = 'LOT#'; condition += ' AND begins_with(#r, :prefix)'; }
     else if (options.dateFrom || options.dateTo) { values[':from'] = `${options.dateFrom ?? '0000-01-01'}#`; values[':to'] = `${options.dateTo ?? '9999-12-31'}#\uffff`; condition += ' AND #r BETWEEN :from AND :to'; }
     const result = await this.client.send(new QueryCommand({ TableName: this.tableName, IndexName: indexName, KeyConditionExpression: condition, ExpressionAttributeNames: names, ExpressionAttributeValues: values, ScanIndexForward: false, Limit: options.limit, ...(options.nextToken ? { ExclusiveStartKey: decode(options.nextToken) } : {}) }));

@@ -1,13 +1,108 @@
 # LCM-022.5 — Aceptación integral local
 
-- Resultado: BLOCKED_EXTERNAL.
+- Resultado: PARTIAL; las limitaciones externas iniciales no impiden los flujos HTTP actuales. No se declara aceptación completa.
+
+## Validación browser POS y ventas — 2026-10-04
+
+- Nueva regresión HIGH reproducida en browser: enlaces Nuevo viaje, Editar y número de viaje carecían de rutas; Nuevo viaje redirigía al dashboard. Añadidas rutas protegidas trips/new, trips/:id/edit y trips/:id con TripDetailComponent sobre la API existente, sin cambiar negocio. Alta/edición de borrador, detalle solo lectura, selección paginada de camiones/choferes activos, rechazo de licencia vencida, flete entero y doble envío. Nueve regresiones nuevas PASS; suite web 79 PASS, lint web PASS y compilación de plantillas ngc --noEmit PASS. La selección de venta utiliza UUID (limitación UX documentada), no añade catálogo ni funcionalidad comercial nueva. Pendiente desplegar y verificar CRUD desde browser.
+- Revisión previa al cierre del frontend: 19 rutas del menú ADMIN resolvieron sus títulos esperados; console error observados = 0 en ese recorrido. No prueba todas las acciones ni todos los roles. Medición de compras con viewport real 1024 px dio scrollWidth 1105: filtros de cinco columnas excedían ancho disponible. Ajustada toolbar a dos columnas entre 851 y 1200 px; pendiente revalidar en browser. Algunas mediciones de otros breakpoints se hicieron antes de que el viewport terminara de actualizar: no se consideran PASS de los seis anchos.
+- Corrección de entrega desplegada verificada en browser: ENT-2026-000002 muestra 5/5 y ENT-2026-000001 conserva 120 cargadas, 115 entregadas, faltante 5, motivo Faltante y nota QA partial delivery. Productos desplaza a materials. Entrega parcial sin desbordamiento del documento en los seis anchos solicitados. No se anuló ninguna entrega operativa para probar VOIDED.
+- Verificación READ_ONLY actual: inventory verify issues=[], costing verify PASS y trip-loads verify PASS. Nueva ejecución de seis integraciones reales DynamoDB Local PASS (tablas aisladas); 92 tests API y suite anterior completa PASS. No se borraron datos operativos.
+- Bloqueo actual: puertos 3000 y 8000 responden, 4200 no responde; navegador recibe CONNECTION_REFUSED. Docker CLI de la sesión no puede acceder al pipe y configuración; ng build y ng serve fallan por Access is denied al directorio ancestro. Se detuvo el watcher fallido. Ngc sin emisión sí aprueba todas las plantillas; no equivale a production build. Hace falta levantar/reconstruir web desde la terminal del usuario para continuar la aceptación E2E.
+
+- Revisión browser de viajes y entrega FULL ENT-2026-000002: sin desbordamiento horizontal del documento en 360, 390, 430, 768, 1024 y 1440 px. No acredita todas las pantallas ni todos los estados. Defecto detectado: entrega confirmada no renderizaba materiales y los botones Productos/Receptor/Evidencias no tenían todos sus destinos. Plantilla corregida para CONFIRMED/VOIDED con cantidades históricas, motivo y observación, sin controles de edición; dos pruebas de renderizado PASS, suite web 70 PASS, lint PASS y diff check sin errores. Corrección aún pendiente de despliegue y comprobación browser en Docker. Build web intentado: bloqueado por Access is denied en directorio ancestro, no se declara PASS de build. Viewport temporal restaurado.
+
+- Carreras de mantenimiento PASS contra DynamoDB Local: confirmación y cancelación de carga, y VOID de entrega, intercaladas justo antes del TransactWrite de rebuild mediante middleware de planificación (sin sustituir respuestas DynamoDB). CAS rechaza reconstrucción obsoleta con TransactionCanceledException; saldo del escritor concurrente se conserva y verify posterior no informa diferencias. Reintento en reposo PASS. Seis integraciones PASS, lint/build API PASS. Tablas temporales eliminadas; no se reconstruyó el conjunto operativo. Cobertura limitada a estas tres carreras, no prueba exhaustiva de todas las intercalaciones.
+
+- Mantenimiento de cargas corregido: nuevo balance-maintenance.ts incluye entregas CONFIRMED/VOIDED, conserva sold e historia y usa TransactWrite CAS sin borrado previo. Confirmación/cancelación de cargas incrementan versión. Prueba aislada: corrupción 125 asignadas/0 entregadas detectada; rebuild recupera 5/115, segunda ejecución conserva cantidades; tras VOID conserva asignadas 5 y entregadas 0. Cinco integraciones y 92 pruebas API PASS; lint/build PASS. Verificación READ_ONLY del conjunto operativo devuelve issues=[]; no se ejecutó rebuild operativo. Límites explícitos: histórico o sold faltante impiden reconstrucción automática; máximo 100 saldos por transacción. Pendiente desplegar versionado de todos los escritores y pruebas específicas de carrera del mantenimiento.
+
+- Flujo positivo real de roles PASS (tests/qa/deliver-shortage.mjs): LOGISTICS creó viaje 87e8c382-b694-435d-8a9c-5ce5a414d530; WAREHOUSE rechazó carga 6 (409), guardó/confirmó carga 5; LOGISTICS pasó READY; DRIVER inició, creó y confirmó entrega FULL 08a5453d-9e06-407f-b477-c829edab98a8 por 5. Confirmación duplicada 409. Saldo pendiente 0, stock 80, viaje DELIVERED; no nueva venta ni cobro. Script exige faltante 5 antes de comenzar y no debe repetirse después de completar.
+- Reconciliación posterior PASS: dashboard 2 viajes entregados, 1 entrega parcial histórica y 1 completa; reporte 2 entregas, venta Gs. 7.800.000 y FIFO Gs. 6.100.000 intactos. La parcial original no se reescribe.
+
+- Pruebas negativas de escritura añadidas a role-access.mjs: 20 solicitudes válidas rechazadas HTTP 403 (CASHIER 6, PURCHASING 6, WAREHOUSE 5, DRIVER 3), para confirmación de carga/entrega, inicio de viaje, alta/anulación de combustible y anulación de entrega. Total acumulado del script: 115 comprobaciones PASS. Las mutaciones autorizadas se omiten deliberadamente; no equivale a todos los flujos positivos por rol. Verificación posterior: entrega CONFIRMED, combustible POSTED y stock 80 sin alteraciones.
+
+- Permisos HTTP reales: script tests/qa/role-access.mjs PASS, 95 comprobaciones para ADMIN/MANAGER/CASHIER/PURCHASING/WAREHOUSE/LOGISTICS/DRIVER. Trece lecturas por rol comparadas con permisos del contrato; dashboard sin FIFO/margen para roles sin acceso y compras sin costo para WAREHOUSE. No equivale a flujos de escritura ni browser E2E completo de roles.
+- DRIVER: viaje propio HTTP 200; viaje ajeno, carga ajena y entrega ajena HTTP 403. Fixture de aislamiento creado sin venta, carga ni stock: Trip b160f900-9831-40ad-b3a1-6eac27602a3b, Driver b91a6f89-b8a4-42e4-99ac-d41f108d322f. Conservado como borrador para repetir prueba; aumenta el conteo de viajes programados, no las ventas/entregas.
+
+- Saldo posterior a entrega parcial: servicio corregido para leer asignado y entregado desde BALANCE con consistencia fuerte. Restante = vendido - asignado - entregado. Confirmación de nueva carga descuenta lo entregado y verifica que no cambie concurrentemente. Regresión DynamoDB Local: 115 entregadas/0 asignadas; recarga de 6 rechazada; dos recargas de 5 simultáneas permiten solo una, saldo final 115 entregadas/5 asignadas. Suite de cinco integraciones PASS, build/lint PASS. Pendiente reconstrucción API y comprobación HTTP del saldo QA (5 restantes).
+- Pendiente adicional de QA: revisar comandos rebuild/verify de cargas, que aún reconstruyen desde cargas confirmadas históricas y no contemplan entregas; no ejecutarlos sobre datos operativos con entregas.
+
+- Concurrencia de entregas: nueva regresión real en tabla aislada DynamoDB Local PASS. Dos confirmaciones simultáneas: una aceptada, otra DeliveryConflictError; entregadas 115, asignadas 0, pendientes 5; bloqueos liberados, odómetro 1010 e índice de viaje conservado. Tabla temporal eliminada al terminar; datos operativos no borrados.
+- Suite test:dynamodb: cinco pruebas PASS; lint/build API PASS y diff --check sin errores.
+- HIGH pendiente reproducido en datos operativos: /trips/{id}/load/balances muestra asignadas 120 y restantes 0 tras entregar 115. Registro persistido BALANCE muestra asignadas 0 y entregadas 115. El servicio calcula desde cargas históricas confirmadas sin descontar entregas; no declarar reconciliación logística completa hasta corregir esa lectura y probar recarga del faltante.
+
+- QA ADMIN: POS y reporte de ventas inspeccionados en 360, 390, 430, 768, 1024 y 1440 px. Medición DOM sin desbordamiento horizontal del documento en las doce combinaciones; no equivale a validación de todas las vistas.
+- POS: agregar una bolsa calcula subtotal y total Gs. 65.000; confirmación bloqueada con caja cerrada. Producto retirado del carrito al terminar; no se guardó borrador ni nueva venta.
+- Ventas: filtro Hoy aplicado automáticamente, una venta por Gs. 7.800.000 visible. CSV vía HTTP 200 incluye cabecera y esa venta con total 7800000. Descarga desde el botón no verificable: la espera del evento del navegador agotó el tiempo; pendiente distinguir limitación del navegador de defecto de aplicación. Viewport restaurado.
+- Pendientes: responsive de otros módulos, navegación compartida (POS/reportes se muestran sin menú), concurrencia de entregas y flujo completo de siete roles.
 - Repositorio inspeccionado: `C:\Users\Ever\OneDrive\Escritorio\Git\LaCasaDelMaterial`.
 - Fuera de OneDrive: NO.
-- Condición inicial: no existe copia en `C:\dev\LaCasaDelMaterial`.
-- Intento de copia: Windows denegó crear el directorio destino; robocopy terminó con código 16.
+- Decisión del usuario: ejecutar LCM-022.5 en este repositorio dentro de OneDrive; sustituye la condición de migración. No se requiere mover el proyecto para continuar.
+- Node: v24.16.0, PASS.
+- npm: 11.13.0, PASS.
+- Docker CLI: 29.6.2; Compose: v5.3.1. Configuración Compose validada sin error de sintaxis.
+- Docker engine: BLOCKED_EXTERNAL, acceso denegado al named pipe `docker_engine` y a la configuración local.
+- Reintento después del reinicio (2026-10-04): npm ci PASS tras renovar permisos de sesión; 407 paquetes instalados, 411 auditados y 0 vulnerabilidades.
+- Lint completo: PASS. Tests API: 92 PASS. Tests frontend: 68 PASS en 18 archivos. Contracts no contiene tests ejecutables.
+- Build contracts/API: PASS. Build Angular: BLOCKED_EXTERNAL por acceso denegado al directorio ancestro que esbuild consulta al resolver archivos.
+- Evidencia del usuario: build completo PASS desde PowerShell local el 2026-10-04 a las 10:02 (America/Asuncion). Angular emitió advertencia de presupuesto: sales.css 11,39 kB frente a 8 kB. Se separaron estilos de POS en pos.component.css; nueva compilación pendiente de confirmar presupuesto.
+- Evidencia del usuario: Docker Desktop 4.85.0, Engine 29.6.2 operativo con contexto desktop-linux. Acceso desde esta sesión sigue denegado; build/up/health de Compose pendientes.
+- Docker después del reinicio: BLOCKED_EXTERNAL; named pipe docker_engine inexistente, motor no accesible. No se ejecutó aceptación Docker.
+- Inspección de procesos Windows: acceso denegado a Get-CimInstance; no se identificó ni detuvo el proceso que podría bloquear esbuild.
+- Puertos localhost 3000 y 8000: conexión TCP exitosa; esto no confirma salud funcional ni integridad de datos.
 - Cambios existentes preservados: POS HTML, estilos de ventas y estado del proyecto.
-- Versiones, módulos, roles, E2E, responsive, build, Docker, DynamoDB, concurrencia e integridad: BLOCKED, no ejecutados en esta aceptación.
+- Angular 22.2.1, CLI 22.2.1 y TypeScript web 6.0.2: dependencias reinstaladas. Vitest 4.1.11 ejecutado correctamente.
+- Módulos, roles, E2E, responsive, build, DynamoDB, concurrencia e integridad: BLOCKED, no ejecutados en esta aceptación.
 - Bugs funcionales encontrados/corregidos en esta aceptación: ninguno evaluado.
-- Pendiente: seguir `MOVE_TO_C_DEV.txt`, abrir el destino como workspace y repetir LCM-022.5.
+- Pendiente: iniciar Docker Desktop y verificar build Angular desde PowerShell local sin las restricciones de esta sesión; después continuar flujos reales, E2E, roles y reconciliación en la misma ruta solicitada.
 - Local Production Readiness: BLOCKED.
 - Safe to start LCM-023: NO.
+
+## Usuarios y pruebas contra el entorno real
+
+### Ronda posterior a reconstrucción web: aceptación todavía PARTIAL
+
+### Verificación posterior al despliegue de la corrección FIFO
+
+- Dashboard: corregida comparación de fechas UTC con días locales. Cobros se consultan por CashMovementDateIndex con paginación y filtro de pertenencia para cajeros; ya no dependen de fecha de apertura de caja ni del límite de 100 movimientos por sesión. Entregas/combustible se filtran por día America/Asuncion; combustible consulta ventana UTC ampliada y descarta eventos externos al período. Sin índices nuevos ni cambios de datos históricos.
+- Regresión dashboard: dos casos PASS, límites de medianoche UTC, 101 pagos, caja previa y aislamiento entre cajeros. Build API PASS; comprobación browser de indicadores corregidos pendiente de reconstruir API Docker.
+
+- Browser real ADMIN: login PASS; alta de categoría QA-BROWSER-20261005, edición de descripción/orden=7, recarga con persistencia y búsqueda filtrada PASS. Intento de alta vacía no creó registro; mensaje de validación específico no observado. Captura guardada como evidencia local.
+- Discrepancia browser pendiente de diagnóstico: Dashboard Hoy y 7 días (con Actualizar) muestra ventas Gs. 15.600.000 y viajes entregados=2, pero cobros=0, entregas completas/parciales=0 y combustible=0 pese a operaciones HTTP QA previas. No considerar conciliado el dashboard; revisar fechas/proyecciones/consultas antes de atribuir causa. Console error capturado: ninguno en esta ronda.
+
+- Matriz HTTP de roles sobre fixture actual: 115 comprobaciones PASS entre ADMIN, MANAGER, CASHIER, PURCHASING, WAREHOUSE, LOGISTICS y DRIVER; 91 lecturas, 20 escrituras denegadas y cuatro comprobaciones de pertenencia del chofer. Compras y dashboard no exponen campos de costos/margen a perfiles sin permiso. Chofer accede a su viaje y recibe 403 para detalle/carga/entrega del viaje ajeno f12c4708-b37e-4b3b-bcc2-1aa9f7526fc2. Este fixture se creó DRAFT con conductor QA separado, sin carga ni movimientos de stock. No se ejecutan escrituras autorizadas en la suite negativa. No equivale a CRUD browser integral.
+
+- Corrección posterior del verificador: InventoryMaintenance valida SALE/SALE_VOID contra ventas paginadas, agrupa cantidades por producto, exige estado compatible y detecta movimientos faltantes/duplicados usando sourceType en la clave. CLI conecta el repositorio de ventas. No se alteran datos ni se omite la validación de fuentes. Prueba regresiva de venta/anulación y fuentes inválidas PASS; API 94 tests PASS, build API PASS. inventory:verify operativo devuelve issues=[] (solo lectura).
+
+- Flujo HTTP real QA-208d4c10 PASS: dos recepciones de 100 a Gs. 50.000/55.000, venta 120, costo FIFO Gs. 6.100.000, total Gs. 7.800.000, stock 80. Venta 7252e434-5b1d-4022-bec9-04e0fd1d4a87. Confirmaciones repetidas rechazadas 409.
+- Caja QA existente reutilizada únicamente tras verificar openingNotes QA; incremento de efectivo esperado Gs. 7.800.000, saldo acumulado Gs. 15.700.000. Incluye venta QA anterior fallida, preservada; no es saldo de una sesión limpia.
+- Logística real PASS: viaje d32cbf6e-e5f0-4089-a8cc-718c90923684 entregó 115 con faltante 5; viaje 47b7df32-b0fc-43a8-bc82-118adb5f72d0 entregó las 5 restantes usando perfiles warehouse/logistics/driver. Saldo pendiente cero, stock 80, confirmación duplicada rechazada 409 y carga de 6 sobre saldo 5 rechazada 409.
+- Costing verify y trip-loads verify PASS contra DynamoDB operativo, con DOTENV_CONFIG_PATH apuntando al .env raíz. Inventario verify FAIL: marca las dos salidas SALE como origen/lote undefined inconsistente; InventoryMaintenance.verify aplica validación de recepción a todos los tipos de movimiento. Pendiente validar fuentes de ventas/anulaciones correctamente, no omitirlas silenciosamente.
+- Scripts QA mejorados: preflight de caja antes de crear fixtures, evidencia de IDs antes de assert FIFO y entrega de faltantes parametrizada por venta/viaje en lugar de UUID históricos.
+
+- Web compila y responde. El error de login QA se explicó por ausencia de usuarios: solo existía admin. DynamoDB Local está configurado con -inMemory; no garantiza persistencia entre reinicios. Evidencias de fixtures anteriores son históricas, no un clean run actual.
+- tests/qa/seed-users.mjs recreó siete perfiles QA y validó sus logins; segunda ejecución creó cero usuarios. No modifica cuentas existentes ni registra contraseñas en documentación.
+- Browser: 81 rutas descubiertas en los menús de siete roles abren con encabezado visible y URL esperada (ADMIN 19, MANAGER 18, CASHIER 10, PURCHASING 10, WAREHOUSE 13, LOGISTICS 8, DRIVER 3). Es smoke de navegación, no aceptación CRUD ni matriz exhaustiva de autorizaciones.
+- Compras: sin overflow documental en 360, 390, 430, 768, 1024 y 1440 px. Nuevo viaje muestra formulario en su ruta correcta.
+- Flujo real QA-9a3c31ca: compras 100 a Gs. 50.000 y 100 a Gs. 55.000, stock 200; venta 120 confirmada, stock 80. FAIL FIFO: costo Gs. 6.500.000 en lugar de Gs. 6.100.000. Venta 031aaa40-2550-4c0b-af9e-446166fa49d0 preservada como evidencia; no recosteada silenciosamente.
+- Causa: lotes del mismo día se ordenaban por lotNumber aleatorio. Corrección: ordenar por receivedAt, createdAt del lote y lotNumber estable; consultar todas las páginas del índice antes de desempatar. Sin índices nuevos ni reescritura de costos históricos.
+- Regresión: API 93 tests PASS y siete integraciones DynamoDB PASS, incluida FIFO con 101 lotes y reintento idempotente. Lint global PASS. Falta reconstruir API y verificar flujo HTTP con la corrección desplegada.
+- No declarar producción lista ni iniciar LCM-023/024: pendientes CRUD integral, logística del fixture actual, reconciliación y ejecución limpia aislada.
+
+- Creados por API local: qa.admin, qa.manager, qa.cashier, qa.purchasing, qa.warehouse, qa.logistics y qa.driver. Todos ACTIVE, con rol correspondiente y login PASS. Credenciales exclusivamente QA; contraseña no registrada en documentación.
+- Smoke API: 56 consultas de listado distribuidas entre los siete roles. Respuestas 200/403, salvo cuatro HTTP 500 de compras para perfiles autorizados; matriz exhaustiva pendiente.
+- HIGH encontrado: listado de compras sin fecha genera ValidationException por ExpressionAttributeNames #date sin uso. Corregido declarando el alias solo cuando existe filtro temporal.
+- Regresión: DynamoDB Local acepta listado sin fechas, por estado, proveedor y límites de fecha. Tres tests de integración PASS; build y lint API PASS.
+- Fix compras verificado en Docker reconstruido: GET /api/purchases devuelve HTTP 200 para qa.admin, qa.manager, qa.purchasing y qa.warehouse. HIGH de listado sin fechas cerrado.
+- Evidencia Docker del usuario: ambas imágenes Built, DynamoDB Running, API Healthy y Web Started; comprobación directa adicional GET /login HTTP 200.
+- Full business flow, browser E2E, responsive y concurrencia de ventas/logística/entregas: pendientes.
+- Flujo HTTP real QA-8db41f2a: dos compras/recepciones de 100 bolsas a Gs. 50.000 y 55.000; confirmación repetida de recepción rechazada 409; stock 200; venta de 120 confirmada, repetición rechazada 409, stock 80.
+- HIGH reproducido: FIFO queda PENDING porque listLots(productId) envía alias #r sin uso. listReceipts sin fecha presenta el mismo defecto. Ambos corregidos; lecturas directas DynamoDB Local verificadas (2 lotes y 2 recepciones). Regresión agregada para filtros opcionales. Pendiente reconstrucción Docker y retry-costing de venta 984e7731-e272-4451-baa7-3a85b1925065.
+- Script reproducible parcial: tests/qa/local-business-flow.mjs, localhost fijo, exige entorno development y opt-in explícito, crea datos etiquetados, no borra registros. Su ejecución falló en assertion de costo FIFO; no se considera Full Business Flow PASS.
+- FIFO recuperado por retry-costing HTTP 200: COSTED, costo Gs. 6.100.000, venta Gs. 7.800.000, margen bruto Gs. 1.700.000; stock 80.
+- HIGH de carga: POST /trips/f55b19e4-b882-4e40-8ed9-4926e413006d/load/confirm devolvió 500. Reproducido en tabla aislada: ConditionExpression no admite allocatedQuantityBaseInternal + :q. Corregido comparando allocated con sold menos cantidad; cantidades superiores a vendido se rechazan antes de escribir.
+- Regresión concurrente DynamoDB Local PASS: dos cargas por saldo 120, exactamente una confirmada, asignación 120, reconciliación sin diferencias. Build/lint API PASS. Pendiente reconstruir Docker y confirmar la carga existente antes de continuar combustible y entrega.
+- Confirmación HTTP de carga después de reconstruir Docker: PASS; viaje READY e IN_TRANSIT PASS. Fuel POSTED Gs. 80.000 (10 litros por Gs. 8.000).
+- Entrega parcial 2e690d14-91ed-4299-89a6-091d59a1cfb0 guardada DRAFT: 115 de 120, SHORTAGE con notas; confirmación HTTP 500 por suma no admitida en ConditionExpression de saldo entregado. Corregida calculando límite con sold leído consistentemente y manteniendo condición transaccional de asignación. Build/lint PASS; verificación transaccional/regresión y confirmación HTTP pendientes.
+- Confirmación real tras recrear API con la imagen corregida: entrega CONFIRMED/PARTIAL, 115 entregadas y 5 no entregadas; viaje DELIVERED, odómetro 1010 y stock intacto en 80. Segunda confirmación rechazada HTTP 409. Esta evidencia cierra el error de sintaxis de entrega, pero no sustituye las pruebas concurrentes ni browser E2E pendientes.
+- Browser QA ADMIN: acceso y dashboard visibles tras recargar módulos de desarrollo obsoletos. Ventas Gs. 7.800.000, margen Gs. 1.700.000, compras Gs. 10.500.000, entrega parcial 1 y combustible Gs. 80.000 coinciden. HIGH: dashboard registra cero viajes entregados; confirmación de entrega reemplaza Trip sin claves TripDateIndex ni filtros. Corregido reutilizando la proyección completa del repositorio de viajes; regresión de proyección PASS y build API PASS. Pendiente desplegar y reparar la proyección del viaje QA existente sin repetir entrega.

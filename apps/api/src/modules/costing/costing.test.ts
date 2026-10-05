@@ -30,6 +30,15 @@ test('FIFO consumes oldest lots and calculates profitability', async () => {
 test('integer helpers preserve guaranies and exact discount', () => {
   assert.deepEqual([proportionalCost(1000, 3, 0, 1), proportionalCost(1000, 3, 1, 1), proportionalCost(1000, 3, 2, 1)], [333, 333, 334]); assert.deepEqual(proportionalShares(10_001, [60_000, 40_000]), [6_000, 4_001]); assert.equal(marginBps(250_000, 1_000_000), 2500);
 });
+test('FIFO breaks same-day ties by immutable lot creation time, not random lot number', async () => {
+  const sales=new InMemorySaleRepository(new InMemoryInventoryRepository());const costing=new InMemoryCostingRepository();await sales.create(sale(120,7_800_000));
+  const earlier={...lot('LOT-Z','2026-10-04',100,5_000_000),createdAt:'2026-10-04T12:00:00.000Z'};
+  const later={...lot('LOT-A','2026-10-04',100,5_500_000),createdAt:'2026-10-04T12:01:00.000Z'};
+  const service=new FifoCostingService(costing,receiving([later,earlier]),sales);const result=await service.costSale('sale');
+  assert.equal(result.directCogsGuarani,6_100_000);
+  assert.deepEqual((await costing.allocationsBySale('sale')).map(a=>[a.lotNumber,a.quantityBaseInternal]),[['LOT-Z',100],['LOT-A',20]]);
+  await service.costSale('sale');assert.equal((await costing.allocationsBySale('sale')).length,2);
+});
 test('void restores availability and keeps reversed history', async () => {
   const sales = new InMemorySaleRepository(new InMemoryInventoryRepository()); const costing = new InMemoryCostingRepository(); await sales.create(sale(60, 3_900_000)); const service = new FifoCostingService(costing, receiving([lot('LOT-A', '2026-01-01', 100, 5_000_000)]), sales); await service.costSale('sale');
   const current = await sales.findById('sale'); assert.ok(current); await sales.replace({ ...current, status: 'VOIDED', updatedAt: 'void' }, current.updatedAt); await service.reverseSaleCost('sale', 'admin', 'error');

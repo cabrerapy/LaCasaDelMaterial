@@ -2,10 +2,12 @@ import type { ReceivingRepository } from '../../receiving/domain/receiving.repos
 import type { InventoryRepository } from '../domain/inventory.js';
 import { safeSum } from '../domain/inventory.js';
 import { InventoryService } from './inventory.service.js';
+import type { SaleRepository } from '../../sales/domain/sale.repository.js';
+import type { Sale } from '../../sales/domain/sale.js';
 
 export class InventoryMaintenance {
   private readonly service: InventoryService;
-  constructor(private readonly inventory: InventoryRepository, private readonly receiving: ReceivingRepository, private readonly products?: ProductRepository) {
+  constructor(private readonly inventory: InventoryRepository, private readonly receiving: ReceivingRepository, private readonly products?: ProductRepository, private readonly sales?: Pick<SaleRepository, 'list'>) {
     this.service = new InventoryService(inventory);
   }
   async backfill(): Promise<{ created: number; skipped: number; issues: readonly string[] }> {
@@ -33,16 +35,43 @@ export class InventoryMaintenance {
     const movements = await this.inventory.allMovements(); const source = await this.receiving.auditSnapshot();
     const balances = await this.inventory.allBalances(); const issues: string[] = [];
     const totals = new Map<string, number>(); const keys = new Set<string>();
+    const saleSources: Sale[] = [];
+    if (this.sales) {
+      let nextToken: string | undefined;
+      do {
+        const page = await this.sales.list({ limit: 100, ...(nextToken ? { nextToken } : {}) });
+        saleSources.push(...page.items); nextToken = page.nextToken;
+      } while (nextToken);
+    }
     for (const movement of movements) {
       totals.set(movement.productId, safeSum(totals.get(movement.productId) ?? 0, movement.quantityDeltaInternal));
-      const key = `${movement.sourceId}/${movement.sourceLineId}`;
+      const key = `${movement.sourceType}/${movement.sourceId}/${movement.sourceLineId}`;
       if (keys.has(key)) issues.push(`Fuente duplicada ${key}; movimiento ${movement.id}`); keys.add(key);
+      if (movement.type === 'SALE' || movement.type === 'SALE_VOID') {
+        const sale = saleSources.find((item) => item.id === movement.sourceId);
+        const quantity = sale?.items.filter((item) => item.trackStock && item.productId === movement.productId)
+          .reduce((total, item) => safeSum(total, item.quantityBaseInternal), 0) ?? 0;
+        if (!sale || (movement.type === 'SALE' ? !['CONFIRMED', 'VOIDED'].includes(sale.status) : sale.status !== 'VOIDED')
+          || movement.sourceType !== movement.type || movement.saleId !== sale.id || movement.sourceLineId !== movement.productId
+          || quantity <= 0 || movement.quantityDeltaInternal !== (movement.type === 'SALE' ? -quantity : quantity)) {
+          issues.push(`Movimiento ${movement.id}: origen de venta inconsistente${this.sales ? '' : '; repositorio de ventas requerido'}`);
+        }
+        continue;
+      }
       const lot = source.lots.find((item) => item.id === movement.lotId);
       const receipt = source.receipts.find((item) => item.id === movement.sourceId);
       if (!lot || receipt?.status !== 'CONFIRMED' || lot.receiptLineId !== movement.sourceLineId
         || lot.receiptId !== movement.sourceId || lot.productId !== movement.productId
         || lot.purchaseId !== movement.purchaseId || lot.receivedQuantityBaseInternal !== movement.quantityDeltaInternal
         || lot.directPurchaseCostGuarani !== movement.costGuarani) issues.push(`Movimiento ${movement.id}: origen/lote ${movement.lotId} inconsistente`);
+    }
+    for (const sale of saleSources.filter((item) => item.status === 'CONFIRMED' || item.status === 'VOIDED')) {
+      for (const productId of new Set(sale.items.filter((item) => item.trackStock).map((item) => item.productId))) {
+        for (const type of sale.status === 'VOIDED' ? ['SALE', 'SALE_VOID'] as const : ['SALE'] as const) {
+          const postings = movements.filter((item) => item.sourceType === type && item.sourceId === sale.id && item.sourceLineId === productId);
+          if (postings.length !== 1) issues.push(`Venta ${sale.id}, producto ${productId}: ${type} movimientos=${postings.length}`);
+        }
+      }
     }
     for (const receipt of source.receipts.filter((item) => item.status === 'CONFIRMED')) {
       const lines = source.lines.filter((item) => item.receiptId === receipt.id);

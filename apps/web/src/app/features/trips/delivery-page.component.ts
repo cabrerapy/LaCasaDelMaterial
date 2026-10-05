@@ -31,6 +31,7 @@ export class DeliveryPageComponent {
   retryEvidence(){const trip=this.trip();if(trip)this.uploadPending(trip.id).subscribe({next:()=>this.feedback.set('Evidencia cargada correctamente.'),error:()=>undefined});}
   signatureChanged(blob:Blob){this.signatureBlob.set(blob);}
   scrollTo(id:string){document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});}
+  incidentLabel(type:DeliveryIncidentType){const labels:Record<DeliveryIncidentType,string>={NONE:'Sin incidente',SHORTAGE:'Faltante',DAMAGED:'Dañado',REJECTED:'Rechazado',CUSTOMER_ABSENT:'Cliente ausente',ACCESS_PROBLEM:'Problema de acceso',OTHER:'Otro'};return labels[type];}
   display(value:number,scale:number){return internalToDisplay(value,scale);}format(value:number){return new Intl.NumberFormat('es-PY',{maximumFractionDigits:3}).format(value);}
   totalDelivered(){return this.delivery()?.lines.reduce((n,x)=>n+Number(this.quantities[x.tripLoadLineId]??0),0)??0;}completeCount(){return this.delivery()?.lines.filter(x=>this.difference(x)===0).length??0;}differenceCount(){return this.delivery()?.lines.filter(x=>this.difference(x)>0).length??0;}
   hasSignature(){return this.evidence().some(item=>item.type==='SIGNATURE');}
