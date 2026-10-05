@@ -64,6 +64,12 @@
 
 ### Verificación posterior al despliegue de la corrección FIFO
 
+- Browser LOGISTICS: alta vacía de viaje rechazada con mensaje, alta DRAFT QA-BROWSER-TRIP-20261005 y edición de ciudad/notas PASS. Recarga conserva datos. Viaje 52e044b6-4364-472a-b1f4-7d78201f46d2 / VIA-2026-9336484C, fecha 2026-10-05, sin venta asociada, sin carga ni inicio; no modifica stock. Sin errores de consola observados. Captura qa-viaje-browser.png. Número de viaje aparece como link en AX nativo pero generic sin href en DOM; se verificó persistencia desde enlace Editar, no detalle por número.
+
+- Browser reportes ADMIN (2026-10-05): cobros mensuales 2/Gs. 15.600.000 y filtro saleId corregida 1/Gs. 7.800.000 PASS; margen filtrado venta corregida ingreso Gs. 7.800.000, FIFO Gs. 6.100.000, margen Gs. 1.700.000/21,79% PASS; inventario 80 bolsas por cada producto QA PASS; entregas 2, FULL=1/PARTIAL=1 PASS. Descarga CSV intentada con espera acotada: sin evento download ni error visible/consola; NOT VERIFIED, no atribuir causa a la aplicación aún. Formulario del usuario trips/new preservado; pruebas ejecutadas en pestaña independiente.
+
+- Dashboard corregido desplegado: browser ADMIN con Actualizar, período amplio y Hoy PASS. Total cobrado Gs. 15.600.000 (2 pagos CASH), entregas FULL=1/PARTIAL=1, combustible 10 litros/Gs. 80.000. Sin errores de consola observados. Captura local qa-dashboard-corregido.png. Cierra discrepancia temporal de esta muestra; no sustituye aceptación integral ni clean run.
+
 - Dashboard: corregida comparación de fechas UTC con días locales. Cobros se consultan por CashMovementDateIndex con paginación y filtro de pertenencia para cajeros; ya no dependen de fecha de apertura de caja ni del límite de 100 movimientos por sesión. Entregas/combustible se filtran por día America/Asuncion; combustible consulta ventana UTC ampliada y descarta eventos externos al período. Sin índices nuevos ni cambios de datos históricos.
 - Regresión dashboard: dos casos PASS, límites de medianoche UTC, 101 pagos, caja previa y aislamiento entre cajeros. Build API PASS; comprobación browser de indicadores corregidos pendiente de reconstruir API Docker.
 
