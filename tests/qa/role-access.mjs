@@ -9,6 +9,8 @@ assert.equal(health.environment, 'development');
 const saleId = process.env.LCM_QA_SALE_ID;
 const tripId = process.env.LCM_QA_TRIP_ID;
 assert.ok(saleId); assert.ok(tripId);
+const expectedStock = Number(process.env.LCM_QA_EXPECTED_STOCK ?? '80');
+assert.ok(Number.isSafeInteger(expectedStock) && expectedStock >= 0, 'Expected QA stock must be a non-negative integer');
 const adminLogin = await fetch(`${base}/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'qa.admin', password: process.env.LCM_QA_PASSWORD }) });
 assert.equal(adminLogin.status, 200);
 const adminHeaders = { authorization: `Bearer ${(await adminLogin.json()).accessToken}` };
@@ -75,7 +77,7 @@ for (const role of ['ADMIN', 'MANAGER', 'CASHIER', 'PURCHASING', 'WAREHOUSE', 'L
   if (role === 'ADMIN') {
     const headers = { authorization: `Bearer ${session.accessToken}` };
     const stock = await fetch(`${base}/inventory/stock/${sale.items[0].productId}`, { headers }).then(r => r.json());
-    assert.equal(stock.onHandInternal, 80);
+    assert.equal(stock.onHandInternal, expectedStock);
   }
   console.log(JSON.stringify({ role, result: 'PASS', readChecks: routes.length, deniedWriteChecks: writeChecks }));
 }

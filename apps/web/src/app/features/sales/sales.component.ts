@@ -6,12 +6,23 @@ import { PermissionService } from '../../core/permissions/permission.service';
 import { GuaraniPipe } from '../../shared/guarani.pipe';
 import { SalesApiService } from './sales-api.service';
 import { internalToDisplay } from '../../shared/quantity';
+import { finalize } from 'rxjs';
 @Component({ selector: 'lcm-sales', imports: [FormsModule, RouterLink, GuaraniPipe], templateUrl: './sales.component.html', styleUrls: ['./sales.css', './costing.css'], changeDetection: ChangeDetectionStrategy.OnPush })
 export class SalesComponent {
   private readonly api = inject(SalesApiService); private readonly route = inject(ActivatedRoute); private readonly permissions = inject(PermissionService);
   readonly sales = signal<readonly SaleResponse[]>([]); readonly selected = signal<SaleResponse | null>(null); readonly costing = signal<SaleCostingResponse | null>(null); readonly error = signal<string | null>(null);
   readonly trips=signal<readonly TripResponse[]>([]);readonly deliveries=signal<readonly DeliveryReceiptResponse[]>([]);
   readonly logisticsExpanded=signal(false);
+  readonly confirming=signal(false);
+  readonly canConfirm=this.permissions.has('sales.confirm');
+  confirmDraft(sale: SaleResponse) {
+    if (!this.canConfirm || sale.status !== 'DRAFT' || this.confirming()) return;
+    this.confirming.set(true); this.error.set(null);
+    this.api.confirm(sale.id).pipe(finalize(() => this.confirming.set(false))).subscribe({
+      next: value => { this.selected.set(value); this.loadDetail(value.id); },
+      error: (error: { error?: { message?: string } }) => this.error.set(error.error?.message ?? 'No se pudo confirmar la venta.')
+    });
+  }
   readonly canReadCosts = this.permissions.has('sales.costs.read'); readonly canReadMargins = this.permissions.has('sales.margins.read'); search = ''; status: 'ALL' | SaleStatus = 'ALL';
   constructor() { const id = this.route.snapshot.paramMap.get('id'); if (id) this.loadDetail(id); else this.load(); }
   load() { this.api.list({ ...(this.search.trim() ? { search: this.search.trim() } : {}), ...(this.status === 'ALL' ? {} : { status: this.status }) }).subscribe({ next: (page) => this.sales.set(page.items), error: () => this.error.set('No se pudieron cargar las ventas.') }); }
