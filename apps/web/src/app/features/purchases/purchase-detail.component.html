@@ -34,7 +34,12 @@
       <p><span>Otros costos</span><strong>{{ form.controls.additionalCostsGuarani.value | guarani }}</strong></p><p class="grand"><span>Total</span><strong>{{ total() | guarani }}</strong></p>
     </section>
     <section class="card"><h2>Observaciones</h2><textarea formControlName="notes" rows="4"></textarea></section>
-    @if (form.invalid) { <p class="feedback error">Revisa los datos obligatorios y los importes enteros.</p> }
+    @if (form.invalid) {
+      <div class="feedback error" role="alert">
+        <p>Corrige los siguientes campos antes de guardar:</p>
+        <ul>@for (message of validationMessages(); track message) { <li>{{ message }}</li> }</ul>
+      </div>
+    }
     <div class="form-actions"><a class="button" routerLink="/purchases">Cancelar</a><button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar borrador' }}</button></div>
   </form>
 } @else { @if (purchase(); as current) {

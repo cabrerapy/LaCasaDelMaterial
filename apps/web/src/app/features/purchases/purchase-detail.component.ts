@@ -116,6 +116,25 @@ export class PurchaseDetailComponent {
       error: (error: { error?: { message?: string } }) => this.errorMessage.set(error.error?.message ?? 'No fue posible guardar la compra.')
     });
   }
+  validationMessages(): readonly string[] {
+    const messages: string[] = [];
+    const controls = this.form.controls;
+    if (controls.supplierId.invalid) messages.push('Proveedor: selecciona un proveedor.');
+    if (controls.purchaseDate.invalid) messages.push('Fecha: indica la fecha de compra.');
+    if (controls.supplierInvoiceNumber.invalid) messages.push('Factura del proveedor: máximo 100 caracteres.');
+    if (controls.discountGuarani.invalid) messages.push('Descuento: ingresa un importe entero mayor o igual a 0 Gs.');
+    if (controls.additionalCostsGuarani.invalid) messages.push('Otros costos: ingresa un importe entero mayor o igual a 0 Gs.');
+    if (controls.notes.invalid) messages.push('Observaciones: máximo 1500 caracteres.');
+    this.items.controls.forEach((item, index) => {
+      const prefix = `Producto ${index + 1}`;
+      if (item.controls.productId.invalid) messages.push(`${prefix}: selecciona un producto.`);
+      if (item.controls.presentationId.invalid) messages.push(`${prefix} · Presentación: selecciona una presentación.`);
+      if (item.controls.quantity.invalid) messages.push(`${prefix} · Cantidad: ingresa un número entero mayor o igual a 1.`);
+      if (item.controls.unitPurchasePriceGuarani.invalid) messages.push(`${prefix} · Costo unitario: ingresa un importe entero mayor o igual a 0 Gs.`);
+      if (item.controls.notes.invalid) messages.push(`${prefix} · Observación: máximo 500 caracteres.`);
+    });
+    return messages;
+  }
   confirm(): void {
     if (!this.purchaseId) return; this.saving.set(true);
     this.api.confirm(this.purchaseId).pipe(finalize(() => this.saving.set(false))).subscribe({

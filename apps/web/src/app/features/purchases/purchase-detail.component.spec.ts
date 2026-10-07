@@ -80,6 +80,43 @@ describe('PurchaseDetailComponent', () => {
     component.form.patchValue({ notes: 'Actualizada' }); component.save();
     expect(api.update).toHaveBeenCalledWith(purchase.id, expect.objectContaining({ notes: 'Actualizada' }));
   });
+  it.each([0, 0.5])('identifies invalid quantity %s and prevents updating', (quantity) => {
+    routeId = purchase.id; router.url = `/purchases/${purchase.id}/edit`;
+    const component = create(); component.items.at(0).controls.quantity.setValue(quantity);
+    expect(component.validationMessages()).toEqual(['Producto 1 · Cantidad: ingresa un número entero mayor o igual a 1.']);
+    component.save(); expect(api.update).not.toHaveBeenCalled(); expect(api.create).not.toHaveBeenCalled();
+    expect(component.items.at(0).controls.quantity.touched).toBe(true);
+  });
+  it.each([-1, 0.5])('identifies invalid cost %s and prevents updating', (cost) => {
+    routeId = purchase.id; router.url = `/purchases/${purchase.id}/edit`;
+    const component = create(); component.items.at(0).controls.unitPurchasePriceGuarani.setValue(cost);
+    expect(component.validationMessages()).toEqual(['Producto 1 · Costo unitario: ingresa un importe entero mayor o igual a 0 Gs.']);
+    component.save(); expect(api.update).not.toHaveBeenCalled();
+  });
+  it('identifies missing selections and prevents creating', () => {
+    const component = create();
+    expect(component.validationMessages()).toEqual([
+      'Proveedor: selecciona un proveedor.', 'Producto 1: selecciona un producto.',
+      'Producto 1 · Presentación: selecciona una presentación.'
+    ]);
+    component.save(); expect(api.create).not.toHaveBeenCalled();
+  });
+  it('identifies header and second-line errors and clears corrected messages', () => {
+    routeId = purchase.id; router.url = `/purchases/${purchase.id}/edit`;
+    const component = create(); component.addItem();
+    component.form.patchValue({ purchaseDate: '', supplierInvoiceNumber: 'x'.repeat(101),
+      discountGuarani: -1, additionalCostsGuarani: 0.5, notes: 'x'.repeat(1501) });
+    component.items.at(1).patchValue({ productId: product.id, presentationId: product.presentations[0]!.id, notes: 'x'.repeat(501) });
+    expect(component.validationMessages()).toEqual([
+      'Fecha: indica la fecha de compra.', 'Factura del proveedor: máximo 100 caracteres.',
+      'Descuento: ingresa un importe entero mayor o igual a 0 Gs.',
+      'Otros costos: ingresa un importe entero mayor o igual a 0 Gs.',
+      'Observaciones: máximo 1500 caracteres.', 'Producto 2 · Observación: máximo 500 caracteres.'
+    ]);
+    component.form.patchValue({ purchaseDate: '2026-10-07', supplierInvoiceNumber: '', discountGuarani: 0, additionalCostsGuarani: 0, notes: '' });
+    component.items.at(1).controls.notes.setValue('');
+    expect(component.validationMessages()).toEqual([]); expect(component.form.valid).toBe(true);
+  });
   it('confirms and cancels through explicit actions', () => {
     routeId = purchase.id; router.url = `/purchases/${purchase.id}`; const component = create();
     component.confirm(); expect(api.confirm).toHaveBeenCalledWith(purchase.id);

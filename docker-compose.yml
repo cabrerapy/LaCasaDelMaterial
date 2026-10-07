@@ -1,7 +1,10 @@
 services:
   dynamodb-local:
     image: amazon/dynamodb-local:latest
-    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
+    user: "0:0"
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
     ports:
       - "8000:8000"
     networks:
@@ -73,4 +76,5 @@ networks:
     driver: bridge
 
 volumes:
+  dynamodb-data:
   delivery-evidence:
