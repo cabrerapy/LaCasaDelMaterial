@@ -84,6 +84,7 @@
           <small>{{ historicalSession.openedAt | date:'short' }} · {{ historicalSession.status }}</small>
         </div>
         <strong>{{ (historicalSession.differenceGuarani ?? 0) | guarani }}</strong>
+        <button type="button" (click)="selectHistoricalSession(historicalSession)">Ver caja {{ historicalSession.sessionNumber }}</button>
       </div>
     }
   </section>

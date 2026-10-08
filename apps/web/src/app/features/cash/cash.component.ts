@@ -14,6 +14,19 @@ export class CashComponent {
   constructor() { this.refresh(); if (this.canAudit) this.api.list().subscribe((page) => this.history.set(page.items)); }
   refresh() { this.api.current().subscribe({ next: (session) => { this.session.set(session); if (session) this.loadSession(session.id); }, error: () => this.error.set('No se pudo cargar la caja.') }); }
   loadSession(id: string) { this.api.summary(id).subscribe((summary) => this.summary.set(summary)); this.api.movements(id).subscribe((page) => this.movements.set(page.items)); }
+  selectHistoricalSession(session: CashSessionResponse) {
+    if (!this.canAudit) return;
+    this.error.set(null);
+    this.summary.set(null);
+    this.movements.set([]);
+    this.manualAmount = 0;
+    this.manualReason = '';
+    this.manualNotes = '';
+    this.counted = 0;
+    this.closingNotes = '';
+    this.session.set(session);
+    this.loadSession(session.id);
+  }
   open() { this.api.open(Number(this.opening), this.openingNotes).subscribe({ next: (session) => { this.session.set(session); this.loadSession(session.id); }, error: (error) => this.fail(error) }); }
   manual(type: 'in' | 'out') { const session = this.session(); if (!session) return; this.api.manual(session.id, type, Number(this.manualAmount), this.manualReason, this.manualNotes).subscribe({ next: () => { this.manualAmount = 0; this.manualReason = ''; this.loadSession(session.id); }, error: (error) => this.fail(error) }); }
   close() { const session = this.session(); if (!session) return; this.api.close(session.id, Number(this.counted), this.closingNotes).subscribe({ next: (closed) => { this.session.set(closed); this.loadSession(closed.id); }, error: (error) => this.fail(error) }); }

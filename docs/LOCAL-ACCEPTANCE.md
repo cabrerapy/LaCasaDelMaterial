@@ -1,6 +1,73 @@
 # LCM-022.5 — Aceptación integral local
 
+## Matriz consolidada de cierre — base 2026-10-07
+
+Esta matriz resume el alcance de LCM-022.5 en 42 criterios agrupados, no en 42 tests individuales. Cada fila pesa uno; PASS exige evidencia del alcance indicado. PARTIAL significa evidencia incompleta; PENDING significa que no se encontró evidencia suficiente para cerrar el criterio, no que la funcionalidad esté rota. Las entradas cronológicas posteriores son el detalle de evidencia; un PASS HTTP no acredita browser ni todas las variantes del módulo.
+
+Comprobaciones de esta consolidación: npm.cmd test PASS (API 100 y web 107; contracts sin tests), npm.cmd run lint PASS; build contracts/API PASS, build web BLOCKED_EXTERNAL por Access denied del directorio ancestro. DynamoDB siete PASS corresponde a la ejecución previa documentada, no repetida aquí. Solo documentación modificada; sin nuevas pruebas browser ni operaciones de negocio. Conteo de filas y git diff --check verificados.
+
+Avance de cierre: **9 / 42 = 21,4 %**. Distribución: 9 PASS, 26 PARTIAL y 7 PENDING. No es porcentaje de código terminado, de tests automatizados aprobados ni estimación de tiempo restante. Base inicial conservadora; nuevas filas o cambios de alcance deben registrarse y recalcular el denominador, nunca eliminar pendientes para elevar el porcentaje. Evidencia antigua no sustituye la corrida final con la versión vigente.
+
+| ID | Criterio y alcance | Estado | Evidencia disponible / condición pendiente |
+| --- | --- | --- | --- |
+| QA-01 | Entorno local, versiones y precheck reproducible | PARTIAL | Node 24/Angular 22 registrados; actualizar precheck de cierre. OneDrive autorizado posteriormente por el usuario. |
+| QA-02 | Regresión automatizada existente API/web/DynamoDB | PASS | Últimas ejecuciones documentadas: API 100, web 107, DynamoDB 7; no equivalen a E2E. |
+| QA-03 | Lint del repositorio | PASS | Última ejecución raíz aprobada; volver a ejecutar al cambiar código. |
+| QA-04 | Build de producción con código final | PARTIAL | Build completo del usuario anterior PASS; web del agente bloqueado por permisos; ng serve no acredita production build final. |
+| QA-05 | Docker: build, arranque y salud final | PARTIAL | Imágenes y servicios levantados por usuario; falta cierre reproducible con versión final. |
+| QA-06 | Persistencia y recuperación local | PARTIAL | Volumen/dbPath y reinicio de contenedor verificados; no reboot de host ni restauración final independiente. |
+| QA-07 | Auth: válido/inválido/logout/refresh/protegidas/INACTIVE | PARTIAL | Login QA real y navegación; completar negativas y sesión de extremo a extremo. |
+| QA-08 | RBAC completo: menús/rutas/botones/API de siete roles | PARTIAL | Smoke de 81 rutas y matriz HTTP 115 checks; faltan acciones browser por rol y cierre de tres errores HTTP históricos. |
+| QA-09 | Aislamiento HTTP DRIVER propio frente a ajeno | PASS | Viaje propio permitido; detalle/carga/entrega ajenos rechazados 403 en matriz actual. |
+| QA-10 | Users: CRUD, roles, activar/desactivar y último ADMIN | PENDING | Seed de usuarios no acredita este flujo de administración. |
+| QA-11 | Categories: CRUD, búsqueda, duplicados y estados | PARTIAL | Alta/edición/búsqueda browser históricas; completar duplicados y estados. |
+| QA-12 | Products: CRUD, unidades, presentaciones, SKU y estados | PARTIAL | Productos/presentaciones QA usados; falta matriz completa browser de variantes. |
+| QA-13 | Suppliers: CRUD, duplicados y proveedor INACTIVE | PARTIAL | Proveedores QA en compras; completar variantes y restricciones. |
+| QA-14 | Customers: CRUD, búsqueda, estados y validaciones | PARTIAL | Alta/edición/selección POS documentadas; completar estados y negativas. |
+| QA-15 | Cantidades BAG/UNIT/M3 y conversiones escaladas | PARTIAL | BAG real y regresiones de escalas; falta 0,5 m³ real sin mostrar 500 m³. |
+| QA-16 | Dinero entero, totales y formato en flujos principales | PARTIAL | Totales Gs. y FIFO comprobados; completar transferencias, descuentos y cierre. |
+| QA-17 | Compra y recepciones parciales integradas browser | PARTIAL | Compra/recepción positiva y parcial documentadas; completar sobre-recepción, lotes/histórico y negativas integrales. |
+| QA-18 | Compra DRAFT: crear/editar/persistir y tres negativas | PASS | Fixture retenido; cantidades 0/0,5 y costo -1 bloquean guardado; mensajes y recarga validados. No cubre todo CRUD. |
+| QA-19 | Recepciones listado: búsqueda/estado/fechas/vacío/rango invertido | PASS | Browser ocho registros, búsqueda exacta, CANCELLED, fechas exactas/vacío y recuperación del rango invertido. No cubre paginación >25. |
+| QA-20 | Recepciones detalle: estados, permisos y solo lectura | PARTIAL | Confirmada browser PASS; CANCELLED/costos cubiertos con mocks; completar estados y permisos reales. |
+| QA-21 | Reconciliación de inventario, FIFO y cargas actuales | PASS | inventory:verify issues=[], costing:verify y trip-loads:verify aprobados de solo lectura. |
+| QA-22 | Stock OK/LOW/OUT/NOT_TRACKED/sin balance | PENDING | Consultas de stock no acreditan todas las variantes requeridas. |
+| QA-23 | POS/ventas: CRUD, presentaciones, descuentos y anulación | PARTIAL | Borrador/confirmación y búsqueda probados; completar variantes y compensaciones. |
+| QA-24 | FIFO canónico HTTP: 100×50.000 + 20×55.000 | PASS | Flujo aislado actual: costo 6.100.000, ingreso 7.800.000, margen 1.700.000. |
+| QA-25 | Stock del flujo HTTP: 200 menos venta 120 = 80 | PASS | Flujo aislado y reconciliación; entregas no descontaron stock nuevamente. |
+| QA-26 | Stock insuficiente y rechazo transaccional integral | PARTIAL | Aviso/bloqueo POS browser y regresiones; completar variantes concurrentes reales de ventas. |
+| QA-27 | Cobro CASH del flujo HTTP y efectivo esperado | PASS | Flujo aislado: Payment y caja inicial 100.000 + 7.800.000 = 7.900.000. No cubre cierre ni TRANSFER. |
+| QA-28 | TRANSFER no aumenta efectivo físico | PARTIAL | HTTP aislado PASS en venta/caja/dashboard/reportes: 195.000 transferido, delta físico cero. Falta browser; cuenta es referencia libre, no catálogo. |
+| QA-29 | Transferencias en cuentas A y B | PENDING | HTTP agrupa dos referencias 65.000/130.000 y filtros PASS; no existe catálogo TransferAccount ni selección de cuentas reales del modelo. Diferencia de alcance pendiente de decisión. |
+| QA-30 | Pago mixto CASH + TRANSFER si el dominio lo admite | PENDING | Inspección: CreateSaleRequest/Sale admiten un paymentMethod por venta; sin pagos parciales múltiples. No implementar en estabilización; confirmar exclusión del criterio condicional al cierre. |
+| QA-31 | Cierre de caja, diferencia e inmutabilidad | PARTIAL | HTTP aislado PASS: apertura/CASH/TRANSFER/ingreso/egreso/cierre, diferencia -1.000 y snapshot intacto ante rechazos. Falta browser. |
+| QA-32 | Trucks/Drivers: CRUD, estados, capacidad y licencia | PARTIAL | Altas y uso real; completar mantenimiento, INACTIVE, vencimientos y validaciones. |
+| QA-33 | Trips: CRUD, asociación, bloqueos y transiciones | PARTIAL | Alta/edición, READY/IN_TRANSIT/DELIVERED; completar bloqueo simultáneo y variantes negativas. |
+| QA-34 | Loads: cantidades, peso/volumen, carga parcial y cancelación | PARTIAL | Sobreasignación y carreras DynamoDB aprobadas; falta matriz de capacidades y acciones browser. |
+| QA-35 | Fuel: registrar/anular/histórico y efectos laterales | PARTIAL | Registro real 10 litros/80.000; completar anulación, negativas e invariantes integrales. |
+| QA-36 | Deliveries: FULL/PARTIAL/FAILED, VOID, evidencias/firma | PARTIAL | FULL/PARTIAL, faltante y saldo real aprobados; falta FAILED/VOID y adjuntos/firma local según soporte existente. |
+| QA-37 | Dashboard: totales/períodos/permisos incluidos TRANSFER | PARTIAL | Cobros CASH/logística/FIFO y fechas corregidos; completar cuentas y roles/períodos restantes. |
+| QA-38 | Reportes: todos los tipos/filtros/paginación/CSV/impresión | PARTIAL | Ventas/cobros/margen/entregas e HTTP CSV; archivos del usuario históricos verificados. Faltan descarga actual y otros reportes/print/inyección de fórmulas. |
+| QA-39 | Idempotencia y concurrencia de todas las operaciones críticas | PARTIAL | Siete integraciones y rechazos duplicados; faltan ventas/caja/pagos y variantes no incluidas. |
+| QA-40 | Cierre browser limpio: responsive, teclado, estados, errores y flujo integral | PENDING | Evidencia parcial por vista no acredita cierre global: completar 360/390/430/768/1024/1440, red/pageerror, back/forward, doble submit y flujo limpio por roles. |
+| QA-41 | Rendimiento local y ausencia de Scan crítico innecesario | PENDING | Falta inspección dirigida de trips/loads/fuel/dashboard/reports; sin benchmark ni rediseño. |
+| QA-42 | Seguridad local y dependencias finales | PENDING | Audit anterior cero vulnerabilidades; completar secretos/logs/uploads y audit final sin actualización masiva. |
+
+Orden de cierre: primero TRANSFER/cuentas/pagos mixtos/cierre de caja (QA-28 a QA-31); luego administración, unidades y estados (QA-10 a QA-17, QA-22); después logística/reportes/concurrencia; finalizar con QA-40 a QA-42, production build y Docker. No repetir ventas/recepciones confirmadas ni cerrar la caja operativa para rellenar evidencia: usar fixtures locales aislados. LCM-023/024 continúan fuera de alcance. Un porcentaje alto nunca sustituye los hard gates originales: cero defectos críticos/altos/bloqueantes y flujo final aprobado.
+
 ## Flujo aislado actual — 2026-10-07
+
+- Diagnóstico del bloqueo financiero: salida original del hijo ocultada por stdio ignore. Lanzador ahora captura stdout/stderr solo durante startup, con límite 64 KB y diagnóstico de 6 KB, redactando credenciales QA/JWT/Bearer. Reproducción: Fastify informa EADDRINUSE 127.0.0.1:3001; comprobación previa de localhost podía no detectar ocupación IPv4. Preflight cambiado a TCP exacto 127.0.0.1:3001, rechazo ante ocupación, timeout o errores antes de generar prefijo/tablas. Reintento del agente rechazado ETIMEDOUT sin crear datos: no acredita recuperación. Tablas de intentos previos conservadas; no se detuvieron procesos desconocidos. Pendiente identificar PID del listener en PowerShell del usuario y recuperar API QA. Browser financiero BLOCKED; porcentaje sin cambios.
+
+- Preparación financiera browser: isolated-finance.mjs admite LCM_QA_BROWSER=yes y contraseña QA por LCM_QA_PASSWORD sin imprimirla; crea tablas nuevas/usuarios/producto sin stock y espera STOP/EOF/SIGINT/SIGTERM, deteniendo API en finally. No abre caja ni confirma ventas en este modo. proxy.qa.conf.json dirige /api únicamente a 127.0.0.1:3001; frontend QA separado en localhost:4202. Inicio del frontend por agente BLOCKED_EXTERNAL (Access denied de ancestro); watcher fallido detenido. API QA retenida para continuar: prefijo lcm-qa-finance-c64e277c-2074-4069-9ff0-9047a9722d00, producto 3de4b108-ccad-4913-b35d-f259d0aa626c. Primer preflight por pipes terminó correctamente al recibir EOF (prefijo cffaa1c2-d9cb-4bf2-925f-d3311c0f720d); tablas conservadas, no aceptación PASS. Pendiente usuario: ejecutar `npm.cmd exec --workspace @lcm/web -- ng serve --host 127.0.0.1 --port 4202 --proxy-config proxy.qa.conf.json` desde la raíz principal y conservarlo corriendo. No modifica web/API operativas en 4200/3000. Browser financiero NOT RUN; porcentaje sin cambios.
+
+- Verificación del nuevo script financiero: node --check PASS, lint raíz PASS, build API PASS y suite API 100/100 PASS; git diff --check sin errores. No se modificó código funcional ni frontend; no requiere rebuild Docker para estos cambios de pruebas/documentación. El build web sigue con la limitación externa registrada anteriormente.
+
+- Finanzas HTTP aisladas PASS: tests/qa/isolated-finance.mjs, prefijo lcm-qa-finance-793c54df-7914-46d3-bcea-2d6e234c64df, API temporal 127.0.0.1:3001 y DynamoDB localhost:8000; tablas nuevas retenidas, proceso detenido en finally. Caja 55a20f73-7d01-4f6c-9a84-7cfc88f436f1: apertura 100.000, venta CASH 65.000, TRANSFER 65.000/130.000 por referencias QA A/B. Cobrado 260.000, transferencia 195.000, efectivo 165.000; dashboard, cobros y transferencias/filtros coinciden. Movimientos TRANSFER cashDelta=0; reporte de caja los excluye. ADMIN registra ingreso 20.000/egreso 10.000; esperado 175.000, contado 174.000, diferencia -1.000. Segundo cierre y movimiento posterior 409, snapshot idéntico y current null; confirmaciones repetidas de ventas 409. CASHIER manual-in 403 según permisos. Primer intento abortó por asumir permiso manual del cajero, no defecto de aplicación: tablas fcc435d8-26f2-45ea-b570-9f0b64376f06 conservadas, prueba corregida usa ADMIN y nueva corrida PASS. Producto QA sin seguimiento de stock; sin lotes ni inventario operativo, sin mock HTTP/DynamoDB. Browser NOT RUN; no catálogo de cuentas ni pagos mixtos por venta implementados. No elevar esos criterios a PASS ni ampliar funcionalidad sin decisión.
+
+- Rango invertido de Recepciones post-rebuild browser PASS con QA PURCHASING: Desde 2026-10-07/Hasta 2026-10-06 muestra alerta y cero artículos; corregir Desde a 2026-10-06 restaura ocho artículos y cero alertas. Consola errors=[]. Evidencia qa-recepciones-rango-invertido-20261007.png inspeccionada. Solo filtros, sin cambios comerciales/stock; pestaña temporal cerrada y viewport restaurado. Fallo HTTP no inducido en navegador, conserva cobertura mock de la regresión anterior. Aceptación global PARTIAL.
+
+- Manejo de errores de lista de Recepciones implementado: rango invertido bloquea consulta y muestra alerta; fallo HTTP limpia resultados anteriores y muestra mensaje genérico; reintento correcto elimina alerta. Dos tests nuevos con datos simulados verifican esos escenarios, sin operaciones comerciales. Frontend 107 tests PASS y lint raíz PASS. Build web del agente bloqueado por Access denied de ancestro; browser del nuevo ajuste NOT RUN hasta rebuild web. Aceptación global PARTIAL.
 
 - Filtros de fecha de Recepciones browser PASS con QA PURCHASING: Desde/Hasta 2026-10-06 devuelve ocho registros, todos fecha 2026-10-06 (día exacto incluido); ambos 2026-10-07 devuelven No hay recepciones, sin artículos residuales; limpiar ambas fechas y Filtrar restaura ocho registros. Estado vacío móvil 390 px inspeccionado, evidencia qa-recepciones-fechas-vacio-20261007.png. Consola errors=[]. Solo lectura; sin cambios comerciales/stock. Viewport restaurado y pestaña temporal cerrada. No acredita rangos invertidos, fechas malformadas ni paginación de más de 25 registros.
 

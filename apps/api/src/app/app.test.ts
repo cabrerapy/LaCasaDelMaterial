@@ -1036,6 +1036,18 @@ test('cash sessions open once, summarize manual movements and close immutably', 
   const summary = await app.inject({ method: 'GET', url: `/api/cash/sessions/${opened.json().id}/summary`, headers }); assert.equal(summary.json().expectedCashGuarani, 600000); assert.equal(summary.json().manualInGuarani, 200000); assert.equal(summary.json().manualOutGuarani, 100000);
   const closed = await app.inject({ method: 'POST', url: `/api/cash/sessions/${opened.json().id}/close`, headers, payload: { countedCashGuarani: 595000, notes: 'Faltante' } }); assert.equal(closed.statusCode, 200); assert.equal(closed.json().differenceGuarani, -5000);
   const doubleClose = await app.inject({ method: 'POST', url: `/api/cash/sessions/${opened.json().id}/close`, headers, payload: { countedCashGuarani: 595000 } }); assert.equal(doubleClose.statusCode, 409);
+  const beforeMovements = await app.inject({ method: 'GET', url: `/api/cash/sessions/${opened.json().id}/movements`, headers });
+  for (const type of ['in', 'out']) {
+    const rejected = await app.inject({ method: 'POST', url: `/api/cash/sessions/${opened.json().id}/manual-${type}`, headers, payload: { amountGuarani: 1000, reason: 'Caja cerrada' } });
+    assert.equal(rejected.statusCode, 409);
+  }
+  const persisted = await app.inject({ method: 'GET', url: `/api/cash/sessions/${opened.json().id}`, headers });
+  assert.equal(persisted.statusCode, 200);
+  assert.deepEqual(persisted.json(), closed.json());
+  const afterMovements = await app.inject({ method: 'GET', url: `/api/cash/sessions/${opened.json().id}/movements`, headers });
+  assert.deepEqual(afterMovements.json(), beforeMovements.json());
+  const afterCloseCurrent = await app.inject({ method: 'GET', url: '/api/cash/sessions/current', headers });
+  assert.equal(afterCloseCurrent.json(), null);
 });
 
 test('POS catalog normalizes search before querying persistence', async (t) => {
