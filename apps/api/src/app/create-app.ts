@@ -88,14 +88,16 @@ export interface AppDependencies {
   readonly deliveryEvidenceStorage: DeliveryEvidenceStorage;
 }
 
+export const API_LOGGER_OPTIONS = {
+  redact: { paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]', 'password', 'passwordHash', 'accessToken', 'refreshToken', 'token', 'secret', '*.password', '*.passwordHash', '*.accessToken', '*.refreshToken', '*.token', '*.secret'], censor: '[REDACTED]' }
+};
+
 export async function createApp(
   config: AppConfig,
   dependencies: AppDependencies
 ): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: config.nodeEnv === 'test' ? false : {
-      redact: { paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]', 'password', 'passwordHash', 'accessToken', 'refreshToken', 'token', 'secret', '*.password', '*.passwordHash', '*.accessToken', '*.refreshToken', '*.token', '*.secret'], censor: '[REDACTED]' }
-    }
+    logger: config.nodeEnv === 'test' ? false : API_LOGGER_OPTIONS
   });
 
   await app.register(cors, { origin: config.webOrigin });

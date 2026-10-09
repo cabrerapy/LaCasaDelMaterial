@@ -11,7 +11,7 @@ import type { DeliveryOutcome, DeliveryStatus } from '@lcm/contracts';
 export class DeliveryStatusBadgeComponent {
   readonly outcome = input<DeliveryOutcome | undefined>();
   readonly status = input<DeliveryStatus | undefined>();
-  label() { if (this.status() === 'VOIDED') return 'Entrega anulada'; switch(this.outcome()){case'FULL':return'Entrega completa';case'PARTIAL':return'Entrega parcial';case'FAILED':return'Entrega fallida';default:return this.status()==='DRAFT'?'Borrador':'Pendiente';} }
-  icon() { if (this.status() === 'VOIDED' || this.outcome() === 'FAILED') return '✕'; if (this.outcome() === 'FULL') return '✓'; if (this.outcome() === 'PARTIAL') return '⚠'; return '●'; }
-  tone() { if (this.status() === 'VOIDED' || this.outcome() === 'FAILED') return 'danger'; if (this.outcome() === 'FULL') return 'success'; if (this.outcome() === 'PARTIAL') return 'warning'; return 'neutral'; }
+  label() { if (this.status() === 'VOIDED') return 'Entrega anulada'; if (this.status() === 'DRAFT') return 'Borrador'; switch(this.outcome()){case'FULL':return'Entrega completa';case'PARTIAL':return'Entrega parcial';case'FAILED':return'Entrega fallida';default:return'Pendiente';} }
+  icon() { if (this.status() === 'DRAFT') return '●'; if (this.status() === 'VOIDED' || this.outcome() === 'FAILED') return '✕'; if (this.outcome() === 'FULL') return '✓'; if (this.outcome() === 'PARTIAL') return '⚠'; return '●'; }
+  tone() { if (this.status() === 'DRAFT') return 'neutral'; if (this.status() === 'VOIDED' || this.outcome() === 'FAILED') return 'danger'; if (this.outcome() === 'FULL') return 'success'; if (this.outcome() === 'PARTIAL') return 'warning'; return 'neutral'; }
 }
