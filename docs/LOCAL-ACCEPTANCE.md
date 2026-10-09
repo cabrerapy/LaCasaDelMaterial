@@ -1,25 +1,25 @@
 # LCM-022.5 — Aceptación integral local
 
-## Matriz consolidada de cierre — base 2026-10-07
+## Matriz consolidada de cierre — actualizada 2026-10-08
 
 Esta matriz resume el alcance de LCM-022.5 en 42 criterios agrupados, no en 42 tests individuales. Cada fila pesa uno; PASS exige evidencia del alcance indicado. PARTIAL significa evidencia incompleta; PENDING significa que no se encontró evidencia suficiente para cerrar el criterio, no que la funcionalidad esté rota. Las entradas cronológicas posteriores son el detalle de evidencia; un PASS HTTP no acredita browser ni todas las variantes del módulo.
 
 Comprobaciones de esta consolidación: npm.cmd test PASS (API 100 y web 107; contracts sin tests), npm.cmd run lint PASS; build contracts/API PASS, build web BLOCKED_EXTERNAL por Access denied del directorio ancestro. DynamoDB siete PASS corresponde a la ejecución previa documentada, no repetida aquí. Solo documentación modificada; sin nuevas pruebas browser ni operaciones de negocio. Conteo de filas y git diff --check verificados.
 
-Avance de cierre: **9 / 42 = 21,4 %**. Distribución: 9 PASS, 26 PARTIAL y 7 PENDING. No es porcentaje de código terminado, de tests automatizados aprobados ni estimación de tiempo restante. Base inicial conservadora; nuevas filas o cambios de alcance deben registrarse y recalcular el denominador, nunca eliminar pendientes para elevar el porcentaje. Evidencia antigua no sustituye la corrida final con la versión vigente.
+Avance de cierre: **12 / 42 = 28,6 %**. Distribución: 12 PASS, 24 PARTIAL y 6 PENDING. Actualización 2026-10-08: QA-04, QA-28 y QA-31 cerrados con build final y evidencia financiera HTTP/browser; QA-10 pasa a PARTIAL por alta/edición/estados reales, no cerrado. No es porcentaje de código terminado, de tests automatizados aprobados ni estimación de tiempo restante. Nuevas filas o cambios de alcance deben registrarse y recalcular el denominador, nunca eliminar pendientes para elevar el porcentaje. Evidencia antigua no sustituye la corrida final con la versión vigente.
 
 | ID | Criterio y alcance | Estado | Evidencia disponible / condición pendiente |
 | --- | --- | --- | --- |
 | QA-01 | Entorno local, versiones y precheck reproducible | PARTIAL | Node 24/Angular 22 registrados; actualizar precheck de cierre. OneDrive autorizado posteriormente por el usuario. |
-| QA-02 | Regresión automatizada existente API/web/DynamoDB | PASS | Últimas ejecuciones documentadas: API 100, web 107, DynamoDB 7; no equivalen a E2E. |
+| QA-02 | Regresión automatizada existente API/web/DynamoDB | PASS | 2026-10-08: npm test raíz PASS, API 100 y web 109; contratos sin tests. DynamoDB 7 ejecución previa, no repetida en esta ronda; no equivalen a E2E. |
 | QA-03 | Lint del repositorio | PASS | Última ejecución raíz aprobada; volver a ejecutar al cambiar código. |
-| QA-04 | Build de producción con código final | PARTIAL | Build completo del usuario anterior PASS; web del agente bloqueado por permisos; ng serve no acredita production build final. |
+| QA-04 | Build de producción con código final | PASS | npm.cmd run build raíz ejecutado por agente 2026-10-08: contratos/API/web exit 0. Warning CSS POS +152 bytes no bloqueante; lint raíz PASS. |
 | QA-05 | Docker: build, arranque y salud final | PARTIAL | Imágenes y servicios levantados por usuario; falta cierre reproducible con versión final. |
 | QA-06 | Persistencia y recuperación local | PARTIAL | Volumen/dbPath y reinicio de contenedor verificados; no reboot de host ni restauración final independiente. |
 | QA-07 | Auth: válido/inválido/logout/refresh/protegidas/INACTIVE | PARTIAL | Login QA real y navegación; completar negativas y sesión de extremo a extremo. |
 | QA-08 | RBAC completo: menús/rutas/botones/API de siete roles | PARTIAL | Smoke de 81 rutas y matriz HTTP 115 checks; faltan acciones browser por rol y cierre de tres errores HTTP históricos. |
 | QA-09 | Aislamiento HTTP DRIVER propio frente a ajeno | PASS | Viaje propio permitido; detalle/carga/entrega ajenos rechazados 403 en matriz actual. |
-| QA-10 | Users: CRUD, roles, activar/desactivar y último ADMIN | PENDING | Seed de usuarios no acredita este flujo de administración. |
+| QA-10 | Users: CRUD, roles, activar/desactivar y último ADMIN | PARTIAL | Browser aislado: qa.users.test creado por usuario, nombre editado/persistido, desactivado/reactivado y cambio autorizado Facturador a Depósito persistido. Login real realizado por usuario: identidad correcta, inventario permitido, rutas users/pos rechazadas con pantalla 403; dashboard sin cobros ni costos y consola sin errores. Alta vacía rechazada; usuario inmutable y contraseña ausente al editar. Tres tests API dirigidos PASS: INACTIVE no inicia sesión, último ADMIN no se desactiva y matriz ADMIN/CASHIER. Falta login real INACTIVE; cuenta permanece ACTIVE/WAREHOUSE. No tocar administradores QA para simular último ADMIN. |
 | QA-11 | Categories: CRUD, búsqueda, duplicados y estados | PARTIAL | Alta/edición/búsqueda browser históricas; completar duplicados y estados. |
 | QA-12 | Products: CRUD, unidades, presentaciones, SKU y estados | PARTIAL | Productos/presentaciones QA usados; falta matriz completa browser de variantes. |
 | QA-13 | Suppliers: CRUD, duplicados y proveedor INACTIVE | PARTIAL | Proveedores QA en compras; completar variantes y restricciones. |
@@ -37,10 +37,10 @@ Avance de cierre: **9 / 42 = 21,4 %**. Distribución: 9 PASS, 26 PARTIAL y 7 PEN
 | QA-25 | Stock del flujo HTTP: 200 menos venta 120 = 80 | PASS | Flujo aislado y reconciliación; entregas no descontaron stock nuevamente. |
 | QA-26 | Stock insuficiente y rechazo transaccional integral | PARTIAL | Aviso/bloqueo POS browser y regresiones; completar variantes concurrentes reales de ventas. |
 | QA-27 | Cobro CASH del flujo HTTP y efectivo esperado | PASS | Flujo aislado: Payment y caja inicial 100.000 + 7.800.000 = 7.900.000. No cubre cierre ni TRANSFER. |
-| QA-28 | TRANSFER no aumenta efectivo físico | PARTIAL | HTTP aislado PASS en venta/caja/dashboard/reportes: 195.000 transferido, delta físico cero. Falta browser; cuenta es referencia libre, no catálogo. |
+| QA-28 | TRANSFER no aumenta efectivo físico | PASS | HTTP aislado y browser 2026-10-08: transferencias 65.000/130.000, delta físico cero; caja 165.000 antes de manuales, cobros/dashboard 260.000 y reporte caja excluye TRANSFER. Referencias libres, no catálogo (QA-29). |
 | QA-29 | Transferencias en cuentas A y B | PENDING | HTTP agrupa dos referencias 65.000/130.000 y filtros PASS; no existe catálogo TransferAccount ni selección de cuentas reales del modelo. Diferencia de alcance pendiente de decisión. |
 | QA-30 | Pago mixto CASH + TRANSFER si el dominio lo admite | PENDING | Inspección: CreateSaleRequest/Sale admiten un paymentMethod por venta; sin pagos parciales múltiples. No implementar en estabilización; confirmar exclusión del criterio condicional al cierre. |
-| QA-31 | Cierre de caja, diferencia e inmutabilidad | PARTIAL | HTTP aislado PASS: apertura/CASH/TRANSFER/ingreso/egreso/cierre, diferencia -1.000 y snapshot intacto ante rechazos. Falta browser. |
+| QA-31 | Cierre de caja, diferencia e inmutabilidad | PASS | Browser CAJ-2026-7603F5EF: ingreso ADMIN 20.000, egreso 10.000, cierre CASHIER esperado 175.000/contado 174.000/diferencia -1.000. Historial CLOSED sin mutaciones; cinco movimientos y snapshot conservados tras reinicio real DynamoDB y recarga. Negativas HTTP y tests API: cierre/movimientos posteriores 409, snapshot intacto y current null. Reinicio API no acreditado (QA-06). |
 | QA-32 | Trucks/Drivers: CRUD, estados, capacidad y licencia | PARTIAL | Altas y uso real; completar mantenimiento, INACTIVE, vencimientos y validaciones. |
 | QA-33 | Trips: CRUD, asociación, bloqueos y transiciones | PARTIAL | Alta/edición, READY/IN_TRANSIT/DELIVERED; completar bloqueo simultáneo y variantes negativas. |
 | QA-34 | Loads: cantidades, peso/volumen, carga parcial y cancelación | PARTIAL | Sobreasignación y carreras DynamoDB aprobadas; falta matriz de capacidades y acciones browser. |
@@ -51,9 +51,20 @@ Avance de cierre: **9 / 42 = 21,4 %**. Distribución: 9 PASS, 26 PARTIAL y 7 PEN
 | QA-39 | Idempotencia y concurrencia de todas las operaciones críticas | PARTIAL | Siete integraciones y rechazos duplicados; faltan ventas/caja/pagos y variantes no incluidas. |
 | QA-40 | Cierre browser limpio: responsive, teclado, estados, errores y flujo integral | PENDING | Evidencia parcial por vista no acredita cierre global: completar 360/390/430/768/1024/1440, red/pageerror, back/forward, doble submit y flujo limpio por roles. |
 | QA-41 | Rendimiento local y ausencia de Scan crítico innecesario | PENDING | Falta inspección dirigida de trips/loads/fuel/dashboard/reports; sin benchmark ni rediseño. |
-| QA-42 | Seguridad local y dependencias finales | PENDING | Audit anterior cero vulnerabilidades; completar secretos/logs/uploads y audit final sin actualización masiva. |
+| QA-42 | Seguridad local y dependencias finales | PENDING | npm audit --json final 2026-10-08 exit 0: cero vulnerabilidades reportadas (547 dependencias). git ls-files de .env/.data solo devuelve .env.example, sin archivos privados en esos patrones. Falta revisión completa de secretos/logs/uploads; no equivale a auditoría de seguridad integral. Sin actualización de paquetes. |
 
 Orden de cierre: primero TRANSFER/cuentas/pagos mixtos/cierre de caja (QA-28 a QA-31); luego administración, unidades y estados (QA-10 a QA-17, QA-22); después logística/reportes/concurrencia; finalizar con QA-40 a QA-42, production build y Docker. No repetir ventas/recepciones confirmadas ni cerrar la caja operativa para rellenar evidencia: usar fixtures locales aislados. LCM-023/024 continúan fuera de alcance. Un porcentaje alto nunca sustituye los hard gates originales: cero defectos críticos/altos/bloqueantes y flujo final aprobado.
+
+## Evidencia de usuarios — 2026-10-08
+
+- Cuenta aislada qa.users.test creada por usuario, nombre actualizado a QA Prueba Usuarios Editada y persistido tras recarga. Desactivación/reactivación confirmadas en navegador. Cambio autorizado de Facturador a Depósito persistido; login realizado por usuario, inventario permitido y users/pos rechazados con pantalla 403. Dashboard sin secciones financieras; sin errores de consola en esas comprobaciones.
+- Cuenta desactivada nuevamente como WAREHOUSE. Intento manual de login muestra «Usuario o contraseña incorrectos.» y permanece en /login; evidencia qa-inactive-login-rejected-20261008.png. Usuario confirma que no recuerda la contraseña: intento NO acredita rechazo por INACTIVE. No se leyó ni registró contraseña. Rechazo por INACTIVE y último ADMIN cubiertos por tres tests API dirigidos PASS. Dos tests users.component PASS. QA-10 conserva PARTIAL hasta repetir con credenciales correctas conocidas por usuario; cuenta queda INACTIVE/WAREHOUSE, sin tocar administradores existentes.
+
+## Evidencia financiera y regresión — 2026-10-08
+
+- Entorno browser aislado retenido: prefijo lcm-qa-finance-af97d2c6-afbc-4530-b54e-0f2fd1530a00, API 3001 y frontend 4202. Caja CAJ-2026-7603F5EF; ventas VTA-2026-DE57EE8A CASH 65.000, VTA-2026-C06B12EF TRANSFER 65.000 y VTA-2026-C94553DC TRANSFER 130.000. Dashboard/cobros/transferencias conciliados; ingreso manual 20.000 y egreso 10.000 vía ADMIN tras corregir selección del historial. Cierre CASHIER esperado 175.000, contado 174.000, diferencia -1.000. Reporte caja ingresos 85.000, egresos 10.000, neto 75.000; tres filas físicas, sin transferencias. Usuario reinicia DynamoDB Local; recarga y selección de historial vuelven a cargar CLOSED y cinco movimientos, consola sin errores. No reinicio API QA ni aceptación global.
+- Evidencias PNG: qa-finance-cash-20261008.png, qa-finance-transfers-20261008.png, qa-finance-closed-20261008.png, qa-finance-cash-report-20261008.png y qa-cash-after-dynamo-restart-20261008.png en la carpeta de visualizaciones de esta conversación. No datos operativos modificados. Catálogo de cuentas y pago mixto siguen pendientes de decisión.
+- Regresión final: build/lint/test raíz exit 0; 100 tests API y 109 web, contratos sin tests. Dos nuevos tests de selección de historial; negativas de ingreso/egreso en caja cerrada agregadas al caso API existente, sin cambios de negocio backend. TEMP/TMP dirigidos a .data/qa-temp solo por comando para resolver EPERM del sandbox. Warning CSS POS +152 bytes y Vite CommonJS no bloqueantes. git diff --check sin errores.
 
 ## Flujo aislado actual — 2026-10-07
 

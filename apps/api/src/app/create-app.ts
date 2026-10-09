@@ -93,7 +93,9 @@ export async function createApp(
   dependencies: AppDependencies
 ): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: config.nodeEnv !== 'test'
+    logger: config.nodeEnv === 'test' ? false : {
+      redact: { paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]', 'password', 'passwordHash', 'accessToken', 'refreshToken', 'token', 'secret', '*.password', '*.passwordHash', '*.accessToken', '*.refreshToken', '*.token', '*.secret'], censor: '[REDACTED]' }
+    }
   });
 
   await app.register(cors, { origin: config.webOrigin });
