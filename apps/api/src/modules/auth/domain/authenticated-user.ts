@@ -6,6 +6,7 @@ export interface AuthenticatedUser {
 }
 
 export interface AuthenticationProvider {
+  readonly supportsPasswordLogin?: boolean;
   createToken(user: AuthenticatedUser): string;
-  authenticate(authorizationHeader: string | undefined): AuthenticatedUser;
+  authenticate(authorizationHeader: string | undefined): AuthenticatedUser | Promise<AuthenticatedUser>;
 }

@@ -16,6 +16,7 @@ export class AuthService {
   ) {}
 
   async login(username: string, password: string): Promise<LoginResponse> {
+    if (this.authentication.supportsPasswordLogin === false) throw new AuthenticationError();
     const user = await this.users.findByUsername(username.trim().toLowerCase());
     if (
       !user ||
@@ -42,7 +43,7 @@ export class AuthService {
   }
 
   private async resolveActiveUser(authorizationHeader: string | undefined): Promise<User> {
-    const identity = this.authentication.authenticate(authorizationHeader);
+    const identity = await this.authentication.authenticate(authorizationHeader);
     const user = await this.users.findById(identity.userId);
     if (!user || user.status !== 'ACTIVE') {
       throw new AuthenticationError();
