@@ -1,6 +1,25 @@
 # LCM-022.5 — Aceptación integral local
 
+## Cierre mínimo para beta controlada — autorizado 2026-10-09
+
+El usuario autoriza priorizar seis gates de beta; la matriz exhaustiva de 42 criterios se conserva sin convertir pendientes en PASS. No autoriza desplegar, contratar infraestructura ni operar dinero real. Firma manuscrita diferida. Cuentas bancarias catalogadas y pagos mixtos requieren decisión de alcance antes de incluirlos en la beta. Sin cierre de los gates no declarar listo para producción.
+
+| Gate | Estado | Evidencia y pendiente de cierre |
+| --- | --- | --- |
+| BETA-1 Flujo completo | PARTIAL | Corrida HTTP comercial/logística/reportes PASS; cobros, margen y entregas CSV correctos. Falta recorrido integrado browser. |
+| BETA-2 Integridad | PARTIAL | Stock 80, FIFO 6.100.000, venta 7.800.000, caja 7.900.000 y verificadores sin diferencias; compensaciones/cierre financiero disponibles en evidencia anterior, falta aceptación conjunta final. |
+| BETA-3 Permisos | PARTIAL | Siete logins, acciones positivas por rol y 112 checks HTTP de lectura/escrituras prohibidas PASS; costos protegidos y CSV financiero DRIVER 403. Falta navegación por roles y ajeno DRIVER en corrida final. |
+| BETA-4 Errores críticos | PARTIAL | Duplicar recepción/venta/entrega y cargar sobre faltante rechazados; regresiones concurrentes previas PASS. Completar ventas/caja simultáneas y doble clic final. |
+| BETA-5 Recuperación | PARTIAL | Backup y restauración independiente de 16 tablas/75 registros con igualdad exacta y reconciliación PASS; reinicios previos con persistencia. Falta aplicación sobre restaurado y recuperación del entorno productivo/archivos de evidencias. |
+| BETA-6 Despliegue seguro | PENDING | Build/lint raíz actuales PASS; no acredita HTTPS, secretos, frontend productivo, monitoreo ni entorno productivo. |
+
+Corrida aislada: `LCM_RUN_LOCAL_QA=yes`, `LCM_QA_ISOLATED_PORT=3003`, `node tests/qa/isolated-flow.mjs`. Nuevo prefijo retenido `lcm-qa-31bad8a7-d8cb-4998-a362-d1684d7ae93e`, venta `34af138c-7036-4812-a545-01db5ae8b9e3`, producto `f939a9bd-8c61-482d-9688-3db674dca7f8`, caja `8d93dbc5-eb3c-46f4-8da1-feb72884841c`. Compra/recepción 100 a 50.000 y 100 a 55.000; venta 120, stock 80, FIFO 6.100.000, ingreso 7.800.000, esperado caja 7.900.000. Entrega parcial 115 y faltante 5 completado por roles; saldo pendiente cero, stock intacto. Inventory/costing/trip-loads verify PASS read-only. API temporal detenida al terminar; tablas retenidas para auditoría, credenciales aleatorias no impresas. API QA 3001 y tablas preexistentes no reutilizadas. Lint/build raíz PASS, warning CSS POS +152 bytes previo. No ejecutar nuevamente sobre los mismos fixtures confirmados; una nueva corrida crea otro prefijo.
+
 ## Matriz consolidada de cierre — actualizada 2026-10-08
+
+Recuperación beta: snapshot de prefijo QA detenido `lcm-qa-b8de7b15-182d-40c7-aebc-d216b9f80d52` restaurado en `lcm-restore-409f47ac-d38d-4c09-954c-f249805a738d`, sin tocar tablas originales. Snapshot privado `.data/dynamodb-backups/snapshot-2026-10-10T00-31-25-508Z.json`, SHA-256 `72b5188956d5fe1d594a2e28d8a4035069ffc2c0583b527a42b6ba877811c7e7`. RESTORE VERIFIED y verify independiente PASS: 16 tablas, 75 items, esquemas e items comparados exactamente. Inventory/costing/trip-loads verify sobre restaurado PASS read-only. Scripts admiten únicamente prefijo UUID lcm-qa como fuente y UUID lcm-restore como destino; ruta de backup restringida, checksum obligatorio y prohibición de sobrescribir filas distintas conservados. Fuente 3003 detenida, no parada de API 3000/3001. Tablas restauradas y snapshot retenidos; backup no versionado ni compartido. Build/lint raíz PASS. No incluye archivos de evidencias externos a DynamoDB, restauración en AWS ni recorrido de aplicación restaurada; BETA-5 PARTIAL.
+
+Actualización beta: runner integrado comercial/logística/reportes/permisos PASS en 3003 con prefijo nuevo `lcm-qa-b8de7b15-182d-40c7-aebc-d216b9f80d52`, venta `0baa1852-6aa8-46f1-90db-a4a293eaac65`. CSV cobros 222 bytes, margen 223 bytes y entregas 399 bytes contienen venta, total 7.800.000, costo FIFO 6.100.000, margen 1.700.000 y entregas FULL/PARTIAL. Exportación financiera DRIVER 403. Matriz HTTP 112 checks PASS; no ejecuta mutaciones autorizadas ni prueba viaje ajeno sin fixture. Verificadores inventory/costing/trip-loads PASS, stock 80 y faltante final cero. Tablas nuevas retenidas; API temporal detenida y QA 3001 intacta. Build/lint raíz PASS, warning CSS POS previo. No browser E2E ni cierre de los seis gates por esta ejecución.
 
 Esta matriz resume el alcance de LCM-022.5 en 42 criterios agrupados, no en 42 tests individuales. Cada fila pesa uno; PASS exige evidencia del alcance indicado. PARTIAL significa evidencia incompleta; PENDING significa que no se encontró evidencia suficiente para cerrar el criterio, no que la funcionalidad esté rota. Las entradas cronológicas posteriores son el detalle de evidencia; un PASS HTTP no acredita browser ni todas las variantes del módulo.
 
@@ -56,6 +75,12 @@ Avance de cierre: **12 / 42 = 28,6 %**. Distribución: 12 PASS, 24 PARTIAL y 6 P
 Orden de cierre: primero TRANSFER/cuentas/pagos mixtos/cierre de caja (QA-28 a QA-31); luego administración, unidades y estados (QA-10 a QA-17, QA-22); después logística/reportes/concurrencia; finalizar con QA-40 a QA-42, production build y Docker. No repetir ventas/recepciones confirmadas ni cerrar la caja operativa para rellenar evidencia: usar fixtures locales aislados. LCM-023/024 continúan fuera de alcance. Un porcentaje alto nunca sustituye los hard gates originales: cero defectos críticos/altos/bloqueantes y flujo final aprobado.
 
 ## Adjunto positivo HTTP aislado — 2026-10-09
+
+- Viajes frontend: cuatro regresiones independientes con el resto de campos válidos rechazan UUID de venta inválido y fletes negativo, fraccionario o fuera de rango entero seguro. No invocan create/update, no navegan, muestran error y liberan estado de guardado. Suite web 117/117 PASS, lint/build PASS, warning CSS POS +152 bytes previo. Solo pruebas y documentación; sin viajes nuevos ni cambios QA. Alcance mocks de componente, no recorrido browser de cada negativa; matriz sin incremento.
+
+- Frontend: cobertura de solo lectura ampliada a CONFIRMED/PARTIAL, CONFIRMED/FAILED, VOIDED/PARTIAL y VOIDED/FAILED. Cantidades históricas 115/120 o 0/120, diferencias, motivos y navegación conservados; sin inputs ni botón Confirmar. Suite web 113/113 PASS (26 archivos), lint/build PASS; warning CSS POS +152 bytes previo. Primer intento no inició pruebas por EPERM al renombrar caché temporal; reejecución con TEMP/TMP exclusivos del comando en Documents/Codex pasó. No se cambiaron configuración del sistema ni datos QA. Pruebas con mocks: no sustituyen recorrido browser de FAILED/VOIDED; matriz sin aumento.
+
+- Inmutabilidad HTTP QA 3001 sobre ENT-2026-000001 CONFIRMED: PATCH de notas, repetición de confirmación con mismo odómetro y subida de PNG válido rechazados 409/409/409. Comprobante completo y listado de evidencias comparados antes/después, idénticos. Complementa solo lectura browser; no se ejecutó anulación ni nuevas operaciones positivas.
 
 - Histórico browser QA 4202 ADMIN: ENT-2026-000001 CONFIRMED/FULL muestra Entrega completa, cargado/entregado 1 UNIT, receptor QA Receptor ficticio y odómetro 2352 km, coincidentes con la reconsulta API anterior. Sin botones Guardar/Confirmar, campos de texto ni entradas de cantidades; dos evidencias de 68 bytes con botón Descargar. Consola sin errores. Evidencia qa-delivery-confirmed-readonly.png. No se anula, guarda, confirma ni descarga firma. Vista confirmada solo lectura PASS; vistas FAILED/VOIDED y recorrido positivo de esos estados aún pendientes, QA-36 PARTIAL.
 

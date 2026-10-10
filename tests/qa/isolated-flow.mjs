@@ -3,14 +3,17 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 assert.equal(process.env.LCM_RUN_LOCAL_QA, 'yes');
-const base = 'http://localhost:3001/api';
-try { await fetch(`${base}/health`); throw new Error('Port 3001 already occupied; refusing to reuse'); }
+const port = process.env.LCM_QA_ISOLATED_PORT ?? '3001';
+assert.ok(['3001', '3003'].includes(port), 'Only isolated local ports 3001/3003 allowed');
+const base = `http://localhost:${port}/api`;
+try { await fetch(`${base}/health`); throw new Error(`Port ${port} already occupied; refusing to reuse`); }
 catch (error) { if (error.message.includes('occupied')) throw error; }
 const prefix = `lcm-qa-${randomUUID()}`;
-const env = { ...process.env, NODE_ENV: 'development', API_HOST: '127.0.0.1', API_PORT: '3001',
+const env = { ...process.env, NODE_ENV: 'development', API_HOST: '127.0.0.1', API_PORT: port,
   DYNAMODB_ENDPOINT: 'http://localhost:8000', AWS_ACCESS_KEY_ID: 'local', AWS_SECRET_ACCESS_KEY: 'local',
   AWS_REGION: 'us-east-1', INITIAL_ADMIN_PASSWORD: randomBytes(20).toString('hex'), JWT_SECRET: randomBytes(32).toString('hex'),
   LCM_QA_PASSWORD: `Qa!${randomBytes(20).toString('hex')}`, LCM_QA_BASE_URL: base };
+delete env.AWS_SESSION_TOKEN;
 for (const name of ['USERS','CATEGORIES','PRODUCTS','SUPPLIERS','CUSTOMERS','PURCHASES','INVENTORY','SALES','COSTING','CASH','TRUCKS','DRIVERS','TRIPS','TRIP_LOADS','FUEL','DELIVERIES']) env[`DYNAMODB_${name}_TABLE`] = `${prefix}-${name.toLowerCase()}`;
 const server = spawn(process.execPath, ['apps/api/dist/server.js'], { env, stdio: 'ignore' });
 async function run(file, extra = {}) {
@@ -42,6 +45,12 @@ try {
   const commercial = (await run('local-business-flow.mjs')).at(-1);
   const logistics = (await run('resume-logistics.mjs', { LCM_QA_SALE_ID: commercial.saleId })).at(-1);
   await run('deliver-shortage.mjs', { LCM_QA_SALE_ID: commercial.saleId, LCM_QA_TRIP_ID: logistics.tripId });
+  await run('report-export.mjs', {
+    LCM_QA_SALE_ID: commercial.saleId,
+    LCM_QA_DATE_FROM: new Date(Date.now() - 86400000).toISOString(),
+    LCM_QA_DATE_TO: new Date(Date.now() + 86400000).toISOString()
+  });
+  await run('role-access.mjs', { LCM_QA_SALE_ID: commercial.saleId, LCM_QA_TRIP_ID: logistics.tripId });
   for (const module of ['inventory', 'costing', 'trip-loads']) await verify(module);
-  console.log(JSON.stringify({ result: 'PASS isolated HTTP commercial and logistics flow', prefix, saleId: commercial.saleId, stock: 80, retainedTables: true, browserE2E: 'NOT RUN' }));
+  console.log(JSON.stringify({ result: 'PASS isolated HTTP commercial, logistics, reports and role checks', prefix, saleId: commercial.saleId, stock: 80, retainedTables: true, browserE2E: 'NOT RUN' }));
 } finally { server.kill(); }

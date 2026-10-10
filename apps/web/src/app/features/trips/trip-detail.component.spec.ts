@@ -21,6 +21,19 @@ describe('Trip detail routes and actions',()=>{
   it('registers protected create, edit and read routes',()=>{for(const [path,permission] of [['trips/new','trips.create'],['trips/:id/edit','trips.update'],['trips/:id','trips.read']])expect(routes.find(r=>r.path===path)?.data?.['permission']).toBe(permission);});
   it('creates a trimmed draft with integer guaranies',()=>{const c=component();c.form.patchValue({...trip,destinationName:' Obra ',freightChargeGuarani:120000});c.save();expect(api.create).toHaveBeenCalledWith(expect.objectContaining({destinationName:'Obra',freightChargeGuarani:120000}));expect(router.navigate).toHaveBeenCalledWith(['/trips']);});
   it('rejects empty fields, whitespace destinations, invalid UUID and fractional money',()=>{const c=component();c.save();c.form.patchValue({...trip,destinationName:' '});c.save();c.form.patchValue({destinationName:'Obra',saleId:'invalid'});c.save();c.form.patchValue({saleId:'',freightChargeGuarani:1.5});c.save();expect(api.create).not.toHaveBeenCalled();});
+  for (const invalid of [
+    {name:'invalid sale UUID',value:{saleId:'invalid'}},
+    {name:'negative freight',value:{freightChargeGuarani:-1}},
+    {name:'fractional freight',value:{freightChargeGuarani:1.5}},
+    {name:'unsafe integer freight',value:{freightChargeGuarani:Number.MAX_SAFE_INTEGER+1}}
+  ]) {
+    it(`independently rejects ${invalid.name} without sending or navigating`,()=>{
+      const c=component();c.form.patchValue({...trip,...invalid.value});c.save();
+      expect(api.create).not.toHaveBeenCalled();expect(api.update).not.toHaveBeenCalled();
+      expect(router.navigate).not.toHaveBeenCalled();expect(c.error()).toContain('entero no negativo');
+      expect(c.saving()).toBe(false);expect(c.form.controls.freightChargeGuarani.touched).toBe(true);
+    });
+  }
   it('edits only the loaded draft',()=>{const c=component('trips/:id/edit');c.form.patchValue({destinationName:'Obra nueva'});c.save();expect(api.update).toHaveBeenCalledWith('trip',expect.objectContaining({destinationName:'Obra nueva'}));});
   it('keeps non-draft trips read-only without fetching catalogs',()=>{api.get.mockReturnValue(of({...trip,status:'DELIVERED'}));const c=component('trips/:id/edit');c.save();expect(c.readonly()).toBe(true);expect(trucks.list).not.toHaveBeenCalled();expect(api.update).not.toHaveBeenCalled();});
   it('keeps detail route read-only',()=>{const c=component('trips/:id');c.save();expect(c.readonly()).toBe(true);expect(api.update).not.toHaveBeenCalled();});

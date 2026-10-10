@@ -3,7 +3,8 @@ import { hasPermission } from '../../packages/contracts/dist/index.js';
 
 assert.equal(process.env.LCM_RUN_LOCAL_QA, 'yes', 'Explicit local QA opt-in required');
 assert.ok(process.env.LCM_QA_PASSWORD, 'QA password required');
-const base = 'http://localhost:3000/api';
+const base = process.env.LCM_QA_BASE_URL ?? 'http://localhost:3000/api';
+assert.ok(['http://localhost:3000/api', 'http://localhost:3001/api', 'http://localhost:3003/api'].includes(base), 'Only fixed local QA ports allowed');
 const health = await fetch(`${base}/health`).then(r => r.json());
 assert.equal(health.environment, 'development');
 const saleId = process.env.LCM_QA_SALE_ID;

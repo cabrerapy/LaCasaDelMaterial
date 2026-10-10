@@ -10,7 +10,11 @@ assert.ok(['verify', 'restore'].includes(mode));
 assert.equal(process.env.LCM_RUN_LOCAL_QA, 'yes');
 assert.equal(process.env.LCM_QA_WRITERS_PAUSED, 'yes');
 if (mode === 'restore') assert.equal(process.env.LCM_RESTORE_LOCAL_QA, 'yes');
-try { await fetch('http://localhost:3000/api/health', { signal: AbortSignal.timeout(3000) }); assert.fail('API must remain stopped'); }
+const qaPrefix = process.env.LCM_QA_BACKUP_PREFIX;
+const restorePrefix = process.env.LCM_QA_RESTORE_PREFIX;
+if (qaPrefix) { assert.match(qaPrefix, /^lcm-qa-[0-9a-f-]{36}$/); assert.match(restorePrefix ?? '', /^lcm-restore-[0-9a-f-]{36}$/); }
+else assert.equal(restorePrefix, undefined, 'Restore mapping requires isolated QA source');
+try { await fetch(qaPrefix ? 'http://localhost:3003/api/health' : 'http://localhost:3000/api/health', { signal: AbortSignal.timeout(3000) }); assert.fail('API must remain stopped'); }
 catch (error) { assert.equal(error.cause?.code, 'ECONNREFUSED', 'API state uncertain or running'); }
 const root = fileURLToPath(new URL('../../.data/dynamodb-backups/', import.meta.url));
 assert.ok(process.env.LCM_QA_SNAPSHOT);
@@ -24,7 +28,13 @@ const snapshot = JSON.parse(payload.toString('utf8'));
 assert.equal(snapshot.format, 'lcm-local-dynamodb-attribute-values-base64-v1');
 assert.equal(snapshot.endpoint, 'http://localhost:8000');
 const allowed = ['users', 'categories', 'products', 'suppliers', 'customers', 'purchases', 'inventory', 'sales', 'costing', 'cash', 'trucks', 'drivers', 'trips', 'trip-loads', 'fuel', 'deliveries'].map(x => `lcm-local-${x}`);
+if (qaPrefix) for (let i=0;i<allowed.length;i++) allowed[i]=`${qaPrefix}-${allowed[i].slice('lcm-local-'.length).replace('trip-loads','trip_loads')}`;
 assert.deepEqual(snapshot.tables.map(t => t.name).sort(), allowed.sort());
+if (qaPrefix) for (const table of snapshot.tables) {
+  assert.equal(table.schema.TableName, table.name);
+  table.name = `${restorePrefix}${table.name.slice(qaPrefix.length)}`;
+  table.schema.TableName = table.name;
+}
 const client = new DynamoDBClient({ endpoint: 'http://localhost:8000', region: 'us-east-1', credentials: { accessKeyId: 'local', secretAccessKey: 'local' } });
 function canonical(v) {
   if (v instanceof Uint8Array) return Buffer.from(v).toString('base64');

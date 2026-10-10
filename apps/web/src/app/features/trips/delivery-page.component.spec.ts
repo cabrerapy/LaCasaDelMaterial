@@ -43,10 +43,16 @@ describe('Delivery read-only template', () => {
     expect(evidenceFile).toHaveBeenCalledWith('evidence');expect(component.downloading()).toBe(false);
     expect(fixture.nativeElement.textContent).toContain('No se pudo descargar la evidencia');
   });
-  for (const status of ['CONFIRMED','VOIDED'] as const) {
-    it(`shows persisted quantities and navigation targets for ${status}`, async () => {
+  for (const scenario of [
+    {status:'CONFIRMED',outcome:'PARTIAL',delivered:115,missing:5},
+    {status:'CONFIRMED',outcome:'FAILED',delivered:0,missing:120},
+    {status:'VOIDED',outcome:'PARTIAL',delivered:115,missing:5},
+    {status:'VOIDED',outcome:'FAILED',delivered:0,missing:120}
+  ] as const) {
+    const {status,outcome,delivered,missing}=scenario;
+    it(`shows persisted quantities and navigation targets for ${status}/${outcome}`, async () => {
       await resolveComponentResources(url => Promise.resolve(readFileSync(resolve('src/app/features/trips',url),'utf8')));
-      TestBed.configureTestingModule({ imports:[DeliveryPageComponent], providers:[provideRouter([]), {provide:ActivatedRoute,useValue:{snapshot:{paramMap:convertToParamMap({id:'trip'})}}}, {provide:PermissionService,useValue:{has:()=>false}}, {provide:TripsApiService,useValue:{get:()=>of(trip),getDelivery:()=>of({...delivery,status}),evidence:()=>of([])}}] });
+      TestBed.configureTestingModule({ imports:[DeliveryPageComponent], providers:[provideRouter([]), {provide:ActivatedRoute,useValue:{snapshot:{paramMap:convertToParamMap({id:'trip'})}}}, {provide:PermissionService,useValue:{has:()=>false}}, {provide:TripsApiService,useValue:{get:()=>of(trip),getDelivery:()=>of({...delivery,status,outcome,lines:delivery.lines.map(line=>({...line,deliveredQuantityBaseInternal:delivered,undeliveredQuantityBaseInternal:missing}))}),evidence:()=>of([])}}] });
       TestBed.overrideComponent(DeliveryPageComponent,{set:{template:readFileSync(resolve('src/app/features/trips/delivery-page.component.html'),'utf8'),styles:[],templateUrl:undefined,styleUrl:undefined}});
       await TestBed.compileComponents();
       const fixture=TestBed.createComponent(DeliveryPageComponent);
@@ -55,8 +61,8 @@ describe('Delivery read-only template', () => {
       const materials=root.querySelector('#materials');
       expect(materials?.textContent).toContain('Cemento QA');
       expect(materials?.textContent).toContain('120 UN');
-      expect(materials?.textContent).toContain('115 UN');
-      expect(materials?.textContent).toContain('No entregado: 5 UN');
+      expect(materials?.textContent).toContain(`${delivered} UN`);
+      expect(materials?.textContent).toContain(`No entregado: ${missing} UN`);
       expect(materials?.textContent).toContain('Motivo: Faltante');
       expect(materials?.textContent).toContain('Faltan cinco unidades');
       for(const id of ['summary','materials','receiver','evidence']) expect(root.querySelector(`#${id}`)).not.toBeNull();

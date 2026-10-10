@@ -7,12 +7,16 @@ import { DynamoDBClient, ListTablesCommand, DescribeTableCommand, ScanCommand } 
 // Read-only database export. Never stops, resets, restores or deletes a database.
 assert.equal(process.env.LCM_RUN_LOCAL_QA, 'yes', 'Explicit local QA opt-in required');
 assert.equal(process.env.LCM_QA_WRITERS_PAUSED, 'yes', 'Pause all writers before exporting');
+const qaPrefix = process.env.LCM_QA_BACKUP_PREFIX;
+if (qaPrefix) assert.match(qaPrefix, /^lcm-qa-[0-9a-f-]{36}$/);
+const healthUrl = qaPrefix ? 'http://localhost:3003/api/health' : 'http://localhost:3000/api/health';
 let apiReachable = false;
-try { await fetch('http://localhost:3000/api/health', { signal: AbortSignal.timeout(3000) }); apiReachable = true; }
+try { await fetch(healthUrl, { signal: AbortSignal.timeout(3000) }); apiReachable = true; }
 catch (error) { assert.equal(error.cause?.code, 'ECONNREFUSED', 'API state uncertain; do not export'); }
 assert.equal(apiReachable, false, 'Stop API/web, not DynamoDB, before exporting');
 const client = new DynamoDBClient({ endpoint: 'http://localhost:8000', region: 'us-east-1', credentials: { accessKeyId: 'local', secretAccessKey: 'local' } });
 const allowed = ['users', 'categories', 'products', 'suppliers', 'customers', 'purchases', 'inventory', 'sales', 'costing', 'cash', 'trucks', 'drivers', 'trips', 'trip-loads', 'fuel', 'deliveries'].map(x => `lcm-local-${x}`);
+if (qaPrefix) for (let i=0;i<allowed.length;i++) allowed[i]=`${qaPrefix}-${allowed[i].slice('lcm-local-'.length).replace('trip-loads','trip_loads')}`;
 const discovered = [];
 let cursor;
 do { const page = await client.send(new ListTablesCommand({ ...(cursor ? { ExclusiveStartTableName: cursor } : {}) })); discovered.push(...(page.TableNames ?? [])); cursor = page.LastEvaluatedTableName; } while (cursor);

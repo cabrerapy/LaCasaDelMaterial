@@ -6,7 +6,7 @@ assert.equal(process.env.LCM_RUN_LOCAL_QA, 'yes', 'Explicit local QA opt-in requ
 assert.ok(process.env.LCM_QA_PASSWORD, 'QA password required');
 config({ path: '.env', quiet: true });
 const base=process.env.LCM_QA_BASE_URL ?? 'http://localhost:3000/api';
-assert.ok(['http://localhost:3000/api', 'http://localhost:3001/api'].includes(base), 'Only fixed local QA ports allowed');
+assert.ok(['http://localhost:3000/api', 'http://localhost:3001/api', 'http://localhost:3003/api'].includes(base), 'Only fixed local QA ports allowed');
 const health=await fetch(`${base}/health`).then(r=>r.json());
 assert.equal(health.environment,'development','Local development API required');
 assert.ok(process.env.INITIAL_ADMIN_PASSWORD,'Bootstrap admin password required');
