@@ -9,7 +9,7 @@
     "start": "node dist/server.js",
     "lint": "tsc -p tsconfig.json --noEmit",
     "pretest": "npm run build",
-    "test": "node --test dist/app/app.test.js dist/app/dynamodb-repositories.test.js dist/modules/inventory/inventory.test.js dist/modules/inventory/stock.test.js dist/modules/costing/costing.test.js dist/modules/dashboard/dashboard.test.js dist/shared/security.test.js",
+    "test": "node --test dist/app/app.test.js dist/app/dynamodb-repositories.test.js dist/app/lambda-handler.test.js dist/modules/inventory/inventory.test.js dist/modules/inventory/stock.test.js dist/modules/costing/costing.test.js dist/modules/dashboard/dashboard.test.js dist/shared/security.test.js",
     "inventory:backfill-receipts": "npm run build && node dist/modules/inventory/cli.js backfill",
     "inventory:rebuild-balances": "npm run build && node dist/modules/inventory/cli.js rebuild",
     "inventory:verify": "npm run build && node dist/modules/inventory/cli.js verify",
@@ -24,6 +24,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.883.0",
     "@aws-sdk/lib-dynamodb": "^3.883.0",
+    "@fastify/aws-lambda": "6.4.2",
     "@fastify/cors": "^10.1.0",
     "@lcm/contracts": "0.1.0",
     "argon2": "^0.44.0",
@@ -32,8 +33,9 @@
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
-    "@types/node": "^22.18.1",
+    "@types/aws-lambda": "8.10.164",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.18.1",
     "tsx": "^4.20.5",
     "typescript": "~5.7.3"
   }
