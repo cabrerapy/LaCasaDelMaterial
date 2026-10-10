@@ -4,6 +4,8 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 assert.equal(process.env.LCM_RUN_LOCAL_QA, 'yes');
 const port = process.env.LCM_QA_ISOLATED_PORT ?? '3001';
+const concurrency = process.env.LCM_QA_CONCURRENCY === 'yes';
+if (concurrency) assert.equal(port, '3003', 'Concurrency requires its isolated port 3003');
 assert.ok(['3001', '3003'].includes(port), 'Only isolated local ports 3001/3003 allowed');
 const base = `http://localhost:${port}/api`;
 try { await fetch(`${base}/health`); throw new Error(`Port ${port} already occupied; refusing to reuse`); }
@@ -51,6 +53,9 @@ try {
     LCM_QA_DATE_TO: new Date(Date.now() + 86400000).toISOString()
   });
   await run('role-access.mjs', { LCM_QA_SALE_ID: commercial.saleId, LCM_QA_TRIP_ID: logistics.tripId });
+  if (concurrency) await run('concurrent-sales-cash.mjs', {
+    LCM_QA_CONCURRENCY_PREFIX: prefix, LCM_QA_PRODUCT_ID: commercial.productId
+  });
   for (const module of ['inventory', 'costing', 'trip-loads']) await verify(module);
-  console.log(JSON.stringify({ result: 'PASS isolated HTTP commercial, logistics, reports and role checks', prefix, saleId: commercial.saleId, stock: 80, retainedTables: true, browserE2E: 'NOT RUN' }));
+  console.log(JSON.stringify({ result: 'PASS isolated HTTP commercial, logistics, reports and role checks', prefix, saleId: commercial.saleId, ...(concurrency ? { concurrency: 'PASS; final balances in concurrency result' } : {stock:80}), retainedTables: true, browserE2E: 'NOT RUN' }));
 } finally { server.kill(); }
