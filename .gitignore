@@ -1,4 +1,5 @@
 node_modules/
+cdk.out/
 .npm-cache/
 .cache/npm-qa/
 .docker-config/

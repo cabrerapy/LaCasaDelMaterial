@@ -7,6 +7,8 @@
     "packages/*"
   ],
   "scripts": {
+    "aws:synth": "npm --prefix infrastructure/aws run synth",
+    "aws:test": "npm --prefix infrastructure/aws test",
     "build": "npm run build --workspace @lcm/contracts && npm run build --workspace @lcm/api && npm run build --workspace @lcm/web",
     "lint": "npm run build --workspace @lcm/contracts && npm run lint --workspace @lcm/contracts && npm run lint --workspace @lcm/api && npm run lint --workspace @lcm/web",
     "test": "npm run test --workspace @lcm/contracts && npm run test --workspace @lcm/api && npm run test --workspace @lcm/web",
