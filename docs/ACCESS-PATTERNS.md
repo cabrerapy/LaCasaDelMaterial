@@ -1,5 +1,9 @@
 # Patrones de acceso conocidos
 
+## Identidad Cognito LCM-023
+
+Un pool por entorno. La tabla Users conserva usuarios por UUID y añade reservas sin username/email: `COGNITO_SUB#{sub}` y `COGNITO_USER#{userId}`. Vinculación explícita mediante una transacción: comprobar usuario existente y escribir ambas reservas condicionalmente; acepta repetir el mismo par pero impide cambiarlo o asignar otro sub al usuario. No hay índice adicional ni búsqueda por correo. Resolver usa dos Get fuertes para comprobar vínculo bidireccional y luego Get fuerte del usuario para rol/estado actual. Listado Users filtra registros sin username y conserva cursor, incluso páginas vacías. No hay API de vinculación, migración automática ni operación de borrado/reasignación; la administración Cognito y compensación siguen pendientes.
+
 ## Reports LCM-022
 
 Los reportes temporales consultan páginas por cursor y calculan el resumen recorriendo todas las páginas del rango. Sales usa `SaleDateIndex` (`datePk=SALE`, `dateSk=saleDate#createdAt#id`), Fuel usa `FuelDateIndex` (`datePk=FUEL`, `dateSk=occurredAt#createdAt#id`), CashMovement usa `CashMovementDateIndex` y Trips usa `TripDateIndex`; reemplazan los `Scan` operativos anteriores por `Query`. Purchases, InventoryMovement y Deliveries reutilizan sus índices temporales existentes. Los filtros secundarios se aplican sobre el conjunto temporal acotado. Inventario actual y stock bajo consultan catálogo paginado más balances por lote, porque representan estado presente y no histórico.

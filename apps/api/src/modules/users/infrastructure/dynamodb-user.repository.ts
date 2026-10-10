@@ -17,7 +17,8 @@ export class DynamoDbUserRepository implements UserRepository {
   async findById(id: string): Promise<User | null> {
     const result = await this.client.send(new GetCommand({
       TableName: this.tableName,
-      Key: { id }
+      Key: { id },
+      ConsistentRead: true
     }));
     return (result.Item as User | undefined) ?? null;
   }
@@ -50,6 +51,7 @@ export class DynamoDbUserRepository implements UserRepository {
     const result = await this.client.send(new ScanCommand({
       TableName: this.tableName,
       Limit: limit,
+      FilterExpression: 'attribute_exists(username)',
       ...(nextToken ? { ExclusiveStartKey: decodeToken(nextToken) } : {})
     }));
     return {
