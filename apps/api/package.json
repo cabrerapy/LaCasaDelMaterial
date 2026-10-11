@@ -6,8 +6,12 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
+    "package:lambda": "npm run build --workspace @lcm/contracts && node scripts/package-lambda.mjs",
     "start": "node dist/server.js",
     "lint": "tsc -p tsconfig.json --noEmit",
+    "test:production-config": "npm run build && node --test dist/config/production-environment.test.js",
+    "test:lambda-production": "npm run build && node --test dist/lambda.test.js dist/app/lambda-handler.test.js dist/config/production-environment.test.js",
+    "test:s3-evidence": "npm run build && node --test dist/modules/deliveries/infrastructure/s3-delivery-evidence.storage.test.js dist/modules/deliveries/application/evidence-download.test.js",
     "pretest": "npm run build",
     "test": "node --test dist/app/app.test.js dist/modules/users/application/stage-cognito-user.test.js dist/app/dynamodb-repositories.test.js dist/app/lambda-handler.test.js dist/modules/users/infrastructure/dynamodb-cognito-link.repository.test.js dist/modules/auth/infrastructure/cognito-authentication.test.js dist/modules/inventory/inventory.test.js dist/modules/inventory/stock.test.js dist/modules/costing/costing.test.js dist/modules/dashboard/dashboard.test.js dist/shared/security.test.js",
     "inventory:backfill-receipts": "npm run build && node dist/modules/inventory/cli.js backfill",
@@ -24,7 +28,9 @@
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "3.1149.0",
     "@aws-sdk/client-dynamodb": "^3.883.0",
+    "@aws-sdk/client-s3": "3.1149.0",
     "@aws-sdk/lib-dynamodb": "^3.883.0",
+    "@aws-sdk/s3-request-presigner": "3.1149.0",
     "@fastify/aws-lambda": "6.4.2",
     "@fastify/cors": "^10.1.0",
     "@lcm/contracts": "0.1.0",

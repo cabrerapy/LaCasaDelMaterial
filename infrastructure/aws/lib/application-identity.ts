@@ -1,4 +1,4 @@
-import { CfnOutput, Duration, RemovalPolicy, Stack } from 'aws-cdk-lib';
+import { CfnOutput, Duration, RemovalPolicy, Stack, Token } from 'aws-cdk-lib';
 import { UserPool, UserPoolClient, FeaturePlan, Mfa, AccountRecovery, OAuthScope } from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
 
@@ -17,6 +17,7 @@ export class ApplicationIdentity extends Construct {
     if (webLogin) {
       if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(webLogin.domainPrefix)) throw new Error('Invalid Cognito domain prefix');
       for (const value of [webLogin.callbackUrl, webLogin.logoutUrl]) {
+        if (Token.isUnresolved(value)) continue;
         const url = new URL(value);
         if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) throw new Error('Cognito redirect must use HTTPS without query or fragment');
       }

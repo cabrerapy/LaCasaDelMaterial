@@ -7,6 +7,7 @@
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test dist/test/*.test.js",
     "synth": "npm run build && cdk synth --no-lookups",
+    "synth:review": "npm run build && cdk synth --no-lookups --app \"node dist/bin/review-app.js\" --output cdk.out-review",
     "prepare:runtime": "npm run build && node dist/bin/prepare-runtime-publication.js",
     "deploy": "node scripts/deploy-blocked.mjs"
   },

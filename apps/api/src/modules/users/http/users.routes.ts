@@ -13,6 +13,7 @@ import type { UsersService } from '../application/users.service.js';
 interface UsersRouteOptions {
   readonly authService: AuthService;
   readonly usersService: UsersService;
+  readonly readOnly?: boolean;
 }
 
 interface IdParams { readonly id: string; }
@@ -60,6 +61,9 @@ export async function usersRoutes(app: FastifyInstance, options: UsersRouteOptio
     },
     async (request) => options.usersService.getById(request.params.id)
   );
+
+  // Cognito lifecycle must be coordinated explicitly; local user mutations are unsafe there.
+  if (options.readOnly) return;
 
   app.post<{ Body: CreateUserRequest }>(
     '/',

@@ -22,7 +22,7 @@ import { DynamoDbDeliveryRepository } from '../modules/deliveries/infrastructure
 export type DynamoDbRepositories = Omit<AppDependencies, 'passwordHasher' | 'authentication' | 'deliveryEvidenceStorage'>;
 
 // Composition only: provisioning and admin bootstrap belong to explicit startup workflows.
-export function createDynamoDbRepositories(config: AppConfig, documentClient: DynamoDBDocumentClient): DynamoDbRepositories {
+export function createDynamoDbRepositories(config: Pick<AppConfig, Extract<keyof AppConfig, `${string}TableName`>>, documentClient: DynamoDBDocumentClient): DynamoDbRepositories {
   const users = new DynamoDbUserRepository(
     documentClient,
     config.usersTableName
@@ -45,4 +45,3 @@ export function createDynamoDbRepositories(config: AppConfig, documentClient: Dy
   const deliveries = new DynamoDbDeliveryRepository(documentClient, config.deliveriesTableName, config.tripsTableName, config.trucksTableName, config.tripLoadsTableName);
   return { users, categories, products, suppliers, purchases, receiving, inventory, customers, sales, costing, cash, trucks, drivers, trips, tripLoads, fuel, deliveries };
 }
-

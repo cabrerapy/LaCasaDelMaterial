@@ -93,7 +93,7 @@ export const API_LOGGER_OPTIONS = {
 };
 
 export async function createApp(
-  config: AppConfig,
+  config: Pick<AppConfig, 'nodeEnv' | 'webOrigin' | 'reportExportMaxRows'>,
   dependencies: AppDependencies
 ): Promise<FastifyInstance> {
   const app = Fastify({
@@ -120,7 +120,8 @@ export async function createApp(
   await app.register(usersRoutes, {
     prefix: '/api/users',
     authService,
-    usersService: new UsersService(dependencies.users, dependencies.passwordHasher)
+    usersService: new UsersService(dependencies.users, dependencies.passwordHasher),
+    readOnly: dependencies.authentication.supportsPasswordLogin === false
   });
   await app.register(categoriesRoutes, {
     prefix: '/api/categories',

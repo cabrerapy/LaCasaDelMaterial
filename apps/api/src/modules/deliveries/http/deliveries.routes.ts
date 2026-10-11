@@ -30,4 +30,10 @@ export async function deliveriesRoutes(app:FastifyInstance,o:{authService:AuthSe
  app.get<{Params:{id:string}}>('/:id',{preHandler:requirePermission(o.authService,'deliveries.read'),schema:{params:idParams}},r=>{const a=authenticatedUser(r);return o.service.get(r.params.id,a.userId,a.role);});
  app.post<{Params:{id:string};Body:{reason:string}}>('/:id/void',{preHandler:requirePermission(o.authService,'deliveries.void'),schema:{params:idParams,body:{type:'object',additionalProperties:false,required:['reason'],properties:{reason:{type:'string',minLength:1,maxLength:500}}}}},r=>o.service.void(r.params.id,r.body.reason,authenticatedUser(r).userId));
 }
-export async function deliveryEvidenceRoutes(app:FastifyInstance,o:{authService:AuthService;service:DeliveriesService}){app.get<{Params:{id:string}}>('/:id/file',{preHandler:requirePermission(o.authService,'delivery_evidence.read'),schema:{params:idParams}},async(r,reply)=>{const a=authenticatedUser(r),file=await o.service.evidenceFile(r.params.id,a.userId,a.role);reply.header('Content-Disposition',`inline; filename="${file.fileName.replace(/["\r\n]/g,'')}"`).type(file.mimeType);return reply.send(createReadStream(file.path));});}
+export async function deliveryEvidenceRoutes(app:FastifyInstance,o:{authService:AuthService;service:DeliveriesService}){
+ app.get<{Params:{id:string}}>('/:id/download',{preHandler:requirePermission(o.authService,'delivery_evidence.read'),schema:{params:idParams}},async(r,reply)=>{
+  const a=authenticatedUser(r);reply.header('Cache-Control','no-store');
+  return o.service.evidenceDownload(r.params.id,a.userId,a.role);
+ });
+ app.get<{Params:{id:string}}>('/:id/file',{preHandler:requirePermission(o.authService,'delivery_evidence.read'),schema:{params:idParams}},async(r,reply)=>{const a=authenticatedUser(r),file=await o.service.evidenceFile(r.params.id,a.userId,a.role);reply.header('Cache-Control','no-store').header('Content-Disposition',`inline; filename="${file.fileName.replace(/["\r\n]/g,'')}"`).type(file.mimeType);return reply.send(createReadStream(file.path));});
+}

@@ -1,5 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { of, switchMap, throwError, type Observable } from 'rxjs';
 import type { CreateDeliveryRequest, CreateTripRequest, DeliverTripRequest, DeliveryEvidenceResponse, DeliveryReceiptResponse, SaleItemDeliveryBalanceResponse, SaveTripLoadRequest, StartTripRequest, TripLoadResponse, TripResponse, TripsPageResponse, UpdateDeliveryRequest, UpdateTripRequest } from '@lcm/contracts';
 @Injectable({providedIn:'root'}) export class TripsApiService {
  private readonly http=inject(HttpClient);
@@ -7,6 +8,12 @@ import type { CreateDeliveryRequest, CreateTripRequest, DeliverTripRequest, Deli
  get(id:string){return this.http.get<TripResponse>(`/api/trips/${id}`);} create(v:CreateTripRequest){return this.http.post<TripResponse>('/api/trips',v);} update(id:string,v:UpdateTripRequest){return this.http.patch<TripResponse>(`/api/trips/${id}`,v);} ready(id:string){return this.http.post<TripResponse>(`/api/trips/${id}/ready`,{});} start(id:string,v:StartTripRequest){return this.http.post<TripResponse>(`/api/trips/${id}/start`,v);} deliver(id:string,v:DeliverTripRequest){return this.http.post<TripResponse>(`/api/trips/${id}/deliver`,v);} cancel(id:string,reason:string){return this.http.post<TripResponse>(`/api/trips/${id}/cancel`,{reason});}
  getLoad(id:string){return this.http.get<TripLoadResponse|null>(`/api/trips/${id}/load`);} getBalances(id:string){return this.http.get<readonly SaleItemDeliveryBalanceResponse[]>(`/api/trips/${id}/load/balances`);} saveLoad(id:string,v:SaveTripLoadRequest,exists:boolean){return exists?this.http.patch<TripLoadResponse>(`/api/trips/${id}/load`,v):this.http.post<TripLoadResponse>(`/api/trips/${id}/load`,v);} confirmLoad(id:string){return this.http.post<TripLoadResponse>(`/api/trips/${id}/load/confirm`,{});} cancelLoad(id:string){return this.http.post<TripLoadResponse>(`/api/trips/${id}/load/cancel`,{});}
  getDelivery(id:string){return this.http.get<DeliveryReceiptResponse|null>(`/api/trips/${id}/delivery`);} createDelivery(id:string,v:CreateDeliveryRequest){return this.http.post<DeliveryReceiptResponse>(`/api/trips/${id}/delivery`,v);} updateDelivery(id:string,v:UpdateDeliveryRequest){return this.http.patch<DeliveryReceiptResponse>(`/api/trips/${id}/delivery`,v);} confirmDelivery(id:string,odometerEndKm:number){return this.http.post<DeliveryReceiptResponse>(`/api/trips/${id}/delivery/confirm`,{odometerEndKm});}
- evidenceFile(id:string){return this.http.get(`/api/delivery-evidence/${id}/file`,{responseType:'blob'});}
+ evidenceFile(id:string):Observable<Blob|string>{
+  return this.http.get<{kind:'local'}|{kind:'signed';url:string}>(`/api/delivery-evidence/${id}/download`).pipe(switchMap(result=>{
+   if(result.kind==='local')return this.http.get(`/api/delivery-evidence/${id}/file`,{responseType:'blob'});
+   if(result.kind==='signed'){try{const url=new URL(result.url);if(url.protocol==='https:'&&!url.username&&!url.password)return of(url.href);}catch{/* reject malformed download */}}
+   return throwError(()=>new Error('Invalid evidence download'));
+  }));
+ }
  evidence(id:string){return this.http.get<readonly DeliveryEvidenceResponse[]>(`/api/trips/${id}/delivery/evidence`);} uploadEvidence(id:string,file:File,type:'PHOTO'|'DOCUMENT'|'SIGNATURE'='PHOTO'){const params=new HttpParams().set('type',type).set('fileName',file.name);return this.http.post<DeliveryEvidenceResponse>(`/api/trips/${id}/delivery/evidence`,file,{params,headers:{'Content-Type':file.type}});}
 }
