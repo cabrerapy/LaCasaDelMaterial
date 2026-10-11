@@ -9,7 +9,7 @@
     "start": "node dist/server.js",
     "lint": "tsc -p tsconfig.json --noEmit",
     "pretest": "npm run build",
-    "test": "node --test dist/app/app.test.js dist/app/dynamodb-repositories.test.js dist/app/lambda-handler.test.js dist/modules/users/infrastructure/dynamodb-cognito-link.repository.test.js dist/modules/auth/infrastructure/cognito-authentication.test.js dist/modules/inventory/inventory.test.js dist/modules/inventory/stock.test.js dist/modules/costing/costing.test.js dist/modules/dashboard/dashboard.test.js dist/shared/security.test.js",
+    "test": "node --test dist/app/app.test.js dist/modules/users/application/stage-cognito-user.test.js dist/app/dynamodb-repositories.test.js dist/app/lambda-handler.test.js dist/modules/users/infrastructure/dynamodb-cognito-link.repository.test.js dist/modules/auth/infrastructure/cognito-authentication.test.js dist/modules/inventory/inventory.test.js dist/modules/inventory/stock.test.js dist/modules/costing/costing.test.js dist/modules/dashboard/dashboard.test.js dist/shared/security.test.js",
     "inventory:backfill-receipts": "npm run build && node dist/modules/inventory/cli.js backfill",
     "inventory:rebuild-balances": "npm run build && node dist/modules/inventory/cli.js rebuild",
     "inventory:verify": "npm run build && node dist/modules/inventory/cli.js verify",
@@ -22,6 +22,7 @@
     "test:dynamodb": "npm run build && node --test dist/modules/inventory/dynamodb.integration.test.js dist/modules/reports/dynamodb.integration.test.js dist/modules/purchases/dynamodb.integration.test.js dist/modules/trip-loads/dynamodb.integration.test.js dist/modules/deliveries/dynamodb.integration.test.js dist/modules/costing/dynamodb.integration.test.js"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "3.1149.0",
     "@aws-sdk/client-dynamodb": "^3.883.0",
     "@aws-sdk/lib-dynamodb": "^3.883.0",
     "@fastify/aws-lambda": "6.4.2",

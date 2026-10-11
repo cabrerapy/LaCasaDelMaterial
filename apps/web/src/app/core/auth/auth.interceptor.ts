@@ -9,7 +9,8 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const session = inject(AuthSessionService);
   const router = inject(Router);
   const token = session.token;
-  const authenticatedRequest = token
+  const isApplicationApi = request.url === '/api' || request.url.startsWith('/api/');
+  const authenticatedRequest = token && isApplicationApi
     ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
     : request;
 
@@ -18,6 +19,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
       if (
         error instanceof HttpErrorResponse &&
         error.status === 401 &&
+        isApplicationApi &&
         !request.url.endsWith('/api/auth/login')
       ) {
         session.clear();
