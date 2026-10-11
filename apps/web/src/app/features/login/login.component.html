@@ -15,6 +15,13 @@
       <h1 id="login-title">Bienvenido</h1>
       <p class="intro">Ingresa tus datos para continuar.</p>
 
+      @if (usesCognito) {
+        <p>Continúa al acceso seguro para verificar tu identidad.</p>
+        @if (errorMessage()) { <p class="form-error" role="alert">{{ errorMessage() }}</p> }
+        <button class="primary-button" type="button" (click)="submit()" [disabled]="loading()">
+          {{ loading() ? 'Redirigiendo…' : 'Continuar al acceso seguro' }}
+        </button>
+      } @else {
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <label for="username">Usuario</label>
       <input id="username" formControlName="username" type="text" placeholder="admin" autocomplete="username">
@@ -36,6 +43,7 @@
         {{ loading() ? 'Iniciando…' : 'Iniciar sesión' }}
       </button>
       </form>
+      }
       <small>Acceso seguro para personal autorizado</small>
     </div>
   </section>

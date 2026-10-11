@@ -1,7 +1,7 @@
 import { webcrypto, createHash } from 'node:crypto';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { CognitoPkce } from './cognito-pkce';
-const config = { domain: 'https://offline.auth.us-east-1.amazoncognito.com', clientId: 'offline-client', redirectUri: 'https://app.example.invalid/auth/callback' };
+const config = { domain: 'https://offline.auth.us-east-1.amazoncognito.com', clientId: 'offline-client', redirectUri: 'https://app.example.invalid/auth/callback', logoutUri: 'https://app.example.invalid/login' };
 beforeEach(() => sessionStorage.clear());
 function client() { return new CognitoPkce(config, sessionStorage, webcrypto as unknown as Crypto); }
 
@@ -50,5 +50,24 @@ it('rejects mismatched state, callback origin and expired transactions before ne
 it('requires HTTPS configuration and callback without query or fragment', () => {
   for (const invalid of [{ ...config, domain: 'http://wrong.invalid' }, { ...config, redirectUri: config.redirectUri + '#fragment' }]) {
     expect(() => new CognitoPkce(invalid, sessionStorage)).toThrow();
+  }
+});
+
+it('builds Hosted UI logout without tokens and cancels pending login', async () => {
+  const pkce = client();
+  await pkce.begin();
+  const url = new URL(pkce.logoutUrl());
+  expect(url.origin).toBe(new URL(config.domain).origin);
+  expect(url.pathname).toBe('/logout');
+  expect([...url.searchParams.entries()]).toEqual([
+    ['client_id', config.clientId], ['logout_uri', config.logoutUri]
+  ]);
+  expect(sessionStorage.getItem('lcm.cognito.pending')).toBeNull();
+});
+
+it('rejects unsafe or cross-origin logout destinations', () => {
+  for (const logoutUri of ['http://app.example.invalid/login', 'https://other.invalid/login',
+    config.logoutUri + '?token=x', config.logoutUri + '#fragment', 'https://user:pass@app.example.invalid/login']) {
+    expect(() => new CognitoPkce({ ...config, logoutUri }, sessionStorage)).toThrow();
   }
 });

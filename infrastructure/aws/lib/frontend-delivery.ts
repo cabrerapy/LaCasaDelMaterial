@@ -25,6 +25,8 @@ export class FrontendDelivery extends Construct {
         functionAssociations: [{ function: routing, eventType: FunctionEventType.VIEWER_REQUEST }],
       },
       additionalBehaviors: {
+        'runtime-config.json': { origin, viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: CachePolicy.CACHING_DISABLED, responseHeadersPolicy: headers },
         '*.js': { origin, viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: CachePolicy.CACHING_OPTIMIZED, responseHeadersPolicy: headers },
         '*.css': { origin, viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,

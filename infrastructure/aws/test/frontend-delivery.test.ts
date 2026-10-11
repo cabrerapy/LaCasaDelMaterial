@@ -13,7 +13,7 @@ test('SPA routing preserves assets and API errors', () => {
   for (const uri of ['/', '/dashboard', '/trips/uuid/delivery', '/reports/sales']) {
     assert.equal(handler({ request: { uri, method: 'GET' } }).uri, '/index.html');
   }
-  for (const uri of ['/missing.js', '/missing.css', '/assets/missing', '/api', '/api/health']) {
+  for (const uri of ['/runtime-config.json', '/missing.js', '/missing.css', '/assets/missing', '/api', '/api/health']) {
     assert.equal(handler({ request: { uri, method: 'GET' } }).uri, uri);
   }
   assert.equal(handler({ request: { uri: '/sales', method: 'POST' } }).uri, '/sales');
@@ -31,6 +31,8 @@ test('candidate frontend signs S3 requests and redirects viewers to HTTPS', () =
   template.hasResourceProperties('AWS::CloudFront::Distribution', {
     DistributionConfig: Match.objectLike({
       DefaultCacheBehavior: Match.objectLike({ ViewerProtocolPolicy: 'redirect-to-https' }),
+      CacheBehaviors: Match.arrayWith([Match.objectLike({ PathPattern: 'runtime-config.json',
+        CachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad', ViewerProtocolPolicy: 'redirect-to-https' })]),
     }),
   });
   const resources = template.findResources('AWS::CloudFront::Distribution');

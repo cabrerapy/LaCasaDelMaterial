@@ -43,7 +43,11 @@ export class DashboardComponent {
   }
 
   logout(): void {
-    this.auth.logout();
+    const logoutUrl = this.auth.logout();
+    if (logoutUrl) {
+      window.location.assign(logoutUrl);
+      return;
+    }
     void this.router.navigate(['/login']);
   }
   selectPeriod(value:string){this.period=value;const now=new Date(),day=(d:Date)=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Asuncion',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);this.dateTo=day(now);if(value==='YESTERDAY'){const d=new Date(now);d.setDate(d.getDate()-1);this.dateFrom=this.dateTo=day(d);}else if(value==='7D'){const d=new Date(now);d.setDate(d.getDate()-6);this.dateFrom=day(d);}else if(value==='MONTH'){this.dateFrom=`${this.dateTo.slice(0,7)}-01`;}else this.dateFrom=this.dateTo;if(value!=='CUSTOM')this.load();}

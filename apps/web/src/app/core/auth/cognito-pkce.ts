@@ -2,6 +2,7 @@ export interface CognitoBrowserConfig {
   readonly domain: string;
   readonly clientId: string;
   readonly redirectUri: string;
+  readonly logoutUri: string;
 }
 interface PendingLogin { readonly state: string; readonly verifier: string; readonly startedAt: number; }
 const KEY = 'lcm.cognito.pending';
@@ -14,10 +15,13 @@ export class CognitoPkce {
     private readonly cryptoApi: Crypto = globalThis.crypto) {
     this.domain = new URL(config.domain);
     this.callback = new URL(config.redirectUri);
+    const logout = new URL(config.logoutUri);
     if (this.domain.protocol !== 'https:' || this.domain.username || this.domain.password ||
       this.domain.pathname !== '/' || this.domain.search || this.domain.hash ||
       this.callback.protocol !== 'https:' || this.callback.username || this.callback.password ||
-      this.callback.search || this.callback.hash || !config.clientId.trim()) {
+      this.callback.search || this.callback.hash || !config.clientId.trim() ||
+      logout.protocol !== 'https:' || logout.username || logout.password || logout.search || logout.hash ||
+      logout.origin !== this.callback.origin) {
       throw new Error('Invalid Cognito browser configuration');
     }
   }
@@ -58,6 +62,13 @@ export class CognitoPkce {
       typeof payload.access_token !== 'string' || !payload.access_token ||
       !('token_type' in payload) || payload.token_type !== 'Bearer') throw new Error('Invalid Cognito response');
     return payload.access_token; // backend /me must validate it before starting a session
+  }
+
+  logoutUrl(): string {
+    this.cancel();
+    const url = new URL('/logout', this.domain);
+    url.search = new URLSearchParams({ client_id: this.config.clientId, logout_uri: this.config.logoutUri }).toString();
+    return url.href;
   }
 
   cancel(): void { this.storage.removeItem(KEY); }

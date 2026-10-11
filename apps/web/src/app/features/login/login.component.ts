@@ -16,6 +16,7 @@ export class LoginComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  readonly usesCognito = this.auth.usesCognito;
 
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -26,6 +27,14 @@ export class LoginComponent {
 
   submit(): void {
     this.errorMessage.set(null);
+    if (this.usesCognito) {
+      this.loading.set(true);
+      void this.auth.beginCognitoLogin().then(url => window.location.assign(url)).catch(() => {
+        this.loading.set(false);
+        this.errorMessage.set('No fue posible iniciar el acceso seguro. Intenta nuevamente.');
+      });
+      return;
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
