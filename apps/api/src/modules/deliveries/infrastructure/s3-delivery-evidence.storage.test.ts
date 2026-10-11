@@ -4,6 +4,18 @@ import { S3DeliveryEvidenceStorage } from './s3-delivery-evidence.storage.js';
 import type { PutObjectCommand } from '@aws-sdk/client-s3';
 const id = '12345678-1234-1234-1234-123456789012';
 const pdf = Buffer.from('%PDF-1.4\nfixture\n%%EOF');
+test('accepts the 4 MiB boundary with room for the Lambda event envelope', async () => {
+  const content = Buffer.alloc(4 * 1024 * 1024);
+  pdf.copy(content);
+  Buffer.from('\n%%EOF').copy(content, content.length - 6);
+  let calls = 0;
+  const storage = new S3DeliveryEvidenceStorage('offline-evidence', '123456789012', {
+    async send() { calls++; return { $metadata: {} }; }
+  }, async () => 'https://offline.invalid/file');
+  await storage.save(id, 'pdf', content);
+  assert.equal(calls, 1);
+  assert.ok(Buffer.byteLength(JSON.stringify({ body: content.toString('base64'), headers: { authorization: 'x'.repeat(16000) } })) < 6000000);
+});
 test('writes immutable private evidence with server-generated key and owner protection', async () => {
   const calls: PutObjectCommand[] = [];
   const storage = new S3DeliveryEvidenceStorage('offline-evidence', '123456789012', {
@@ -25,7 +37,10 @@ test('rejects traversal, unsupported content and oversized evidence before S3', 
   await assert.rejects(storage.save('../escape', 'pdf', pdf));
   await assert.rejects(storage.save(id, 'html', pdf));
   await assert.rejects(storage.save(id, 'pdf', Buffer.from('<html>')));
-  await assert.rejects(storage.save(id, 'pdf', Buffer.alloc(5 * 1024 * 1024 + 1)));
+  const oversized = Buffer.alloc(4 * 1024 * 1024 + 1);
+  pdf.copy(oversized);
+  Buffer.from('\n%%EOF').copy(oversized, oversized.length - 6);
+  await assert.rejects(storage.save(id, 'pdf', oversized));
   await assert.rejects(storage.signedRead('deliveries/../../secret.pdf'));
   assert.equal(calls, 0);
 });

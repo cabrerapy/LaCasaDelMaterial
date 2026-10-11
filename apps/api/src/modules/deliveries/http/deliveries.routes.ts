@@ -10,7 +10,7 @@ const idParams={type:'object',required:['id'],properties:{id:{type:'string',form
 const line={type:'object',additionalProperties:false,required:['tripLoadLineId','deliveredQuantityBaseInternal','incidentType'],properties:{tripLoadLineId:{type:'string',format:'uuid'},deliveredQuantityBaseInternal:{type:'integer',minimum:0},incidentType:{type:'string',enum:[...DELIVERY_INCIDENT_TYPES]},incidentNotes:{type:'string',maxLength:1000}}}as const;
 const body={type:'object',additionalProperties:false,properties:{receiverName:{type:'string',maxLength:150},receiverDocument:{type:'string',maxLength:60},receiverPhone:{type:'string',maxLength:60},generalNotes:{type:'string',maxLength:1500},lines:{type:'array',maxItems:25,items:line}}}as const;
 export async function tripDeliveryRoutes(app:FastifyInstance,o:{authService:AuthService;service:DeliveriesService}){
- app.addContentTypeParser(['image/jpeg','image/png','image/webp','application/pdf'],{parseAs:'buffer',bodyLimit:5*1024*1024},(request,body,done)=>{
+ app.addContentTypeParser(['image/jpeg','image/png','image/webp','application/pdf'],{parseAs:'buffer',bodyLimit:4*1024*1024},(request,body,done)=>{
   const content = Buffer.isBuffer(body) ? body : Buffer.from(body);
   if (!matchesEvidenceContent(request.headers['content-type'] ?? '', content)) {
    done(Object.assign(new Error('El contenido no coincide con el tipo de archivo permitido'), { statusCode: 400 }));

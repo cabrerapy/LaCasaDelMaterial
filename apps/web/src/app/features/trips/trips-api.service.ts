@@ -15,5 +15,5 @@ import type { CreateDeliveryRequest, CreateTripRequest, DeliverTripRequest, Deli
    return throwError(()=>new Error('Invalid evidence download'));
   }));
  }
- evidence(id:string){return this.http.get<readonly DeliveryEvidenceResponse[]>(`/api/trips/${id}/delivery/evidence`);} uploadEvidence(id:string,file:File,type:'PHOTO'|'DOCUMENT'|'SIGNATURE'='PHOTO'){const params=new HttpParams().set('type',type).set('fileName',file.name);return this.http.post<DeliveryEvidenceResponse>(`/api/trips/${id}/delivery/evidence`,file,{params,headers:{'Content-Type':file.type}});}
+ evidence(id:string){return this.http.get<readonly DeliveryEvidenceResponse[]>(`/api/trips/${id}/delivery/evidence`);} uploadEvidence(id:string,file:File,type:'PHOTO'|'DOCUMENT'|'SIGNATURE'='PHOTO'){if(file.size===0||file.size>4*1024*1024)return throwError(()=>new Error('La evidencia debe pesar entre 1 byte y 4 MB.'));const params=new HttpParams().set('type',type).set('fileName',file.name);return this.http.post<DeliveryEvidenceResponse>(`/api/trips/${id}/delivery/evidence`,file,{params,headers:{'Content-Type':file.type}});}
 }

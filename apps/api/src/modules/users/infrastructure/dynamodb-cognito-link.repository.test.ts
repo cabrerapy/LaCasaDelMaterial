@@ -20,6 +20,36 @@ function fixture(outputs: Record<string, unknown>[] = []) {
   return { client, commands, links: new DynamoDbCognitoLinkRepository(client, 'offline-users') };
 }
 
+test('activation transaction protects inactive status, both links and current admin without overwriting role', async () => {
+  const { links, client, commands } = fixture();
+  const actor = 'c2e086e2-47fd-4a56-90fd-3f9b772b0230';
+  try {
+    await links.activateInactive(userId, sub, actor);
+    const items = commands[0]?.['TransactItems'] as Array<{ Update?: {
+      UpdateExpression: string; ConditionExpression: string; ExpressionAttributeValues: Record<string, unknown>
+    }; ConditionCheck?: { Key: { id: string }; ConditionExpression: string } }>;
+    assert.equal(items.length, 4);
+    assert.equal(items[0]?.Update?.ConditionExpression, 'attribute_exists(username) AND #status = :inactive AND passwordHash = :cognito');
+    assert.equal(items[0]?.Update?.ExpressionAttributeValues[':actor'], actor);
+    assert.equal(items[0]?.Update?.UpdateExpression, 'SET #status = :active, updatedAt = :now, updatedBy = :actor');
+    assert.equal(items[1]?.ConditionCheck?.Key.id, actor);
+    assert.equal(items[1]?.ConditionCheck?.ConditionExpression, '#role = :admin AND #status = :active');
+    assert.equal(items[2]?.ConditionCheck?.Key.id, `COGNITO_SUB#${sub}`);
+    assert.equal(items[3]?.ConditionCheck?.Key.id, `COGNITO_USER#${userId}`);
+    await assert.rejects(links.activateInactive(userId, sub, 'invalid'));
+    assert.equal(commands.length, 1);
+    await links.deactivateAfterFailure(userId, actor);
+    assert.equal(commands[1]?.['UpdateExpression'], 'SET #status = :inactive, updatedAt = :now, updatedBy = :actor');
+    assert.equal(commands[1]?.['ConditionExpression'], 'attribute_exists(username) AND passwordHash = :cognito');
+    await links.prepareInvitation(userId, sub, actor);
+    const invitation = commands[2]?.['TransactItems'] as typeof items;
+    assert.equal(invitation.length, 4);
+    assert.equal(invitation[0]?.Update?.ExpressionAttributeValues[':active'], 'INACTIVE');
+    assert.equal(invitation[0]?.Update?.ExpressionAttributeValues[':actor'], actor);
+    assert.equal(invitation[1]?.ConditionCheck?.Key.id, actor);
+  } finally { client.destroy(); }
+});
+
 test('link writes two conditional reservations and user existence check in one transaction', async () => {
   const { links, client, commands } = fixture();
   try {

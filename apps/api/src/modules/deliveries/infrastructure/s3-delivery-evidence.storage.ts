@@ -21,7 +21,7 @@ export class S3DeliveryEvidenceStorage implements DeliveryEvidenceStorage {
   }
   async save(deliveryId: string, extension: string, content: Buffer): Promise<{ storageKey: string }> {
     if (!new RegExp(`^${UUID}$`, 'i').test(deliveryId) || !Object.hasOwn(MIME, extension) ||
-      content.length === 0 || content.length > 5 * 1024 * 1024) throw new Error('Invalid evidence object');
+      content.length === 0 || content.length > 4 * 1024 * 1024) throw new Error('Invalid evidence object');
     const mimeType = MIME[extension as Extension];
     if (!matchesEvidenceContent(mimeType, content)) throw new Error('Invalid evidence content');
     const storageKey = `deliveries/${deliveryId}/${randomUUID()}.${extension}`;

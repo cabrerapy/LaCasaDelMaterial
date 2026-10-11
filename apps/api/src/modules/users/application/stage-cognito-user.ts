@@ -34,6 +34,9 @@ export class StageCognitoUser {
     // Use the internal UUID, not a mutable email/username, for the Cognito name.
     try {
       const sub = await this.identities.createSuppressed(user.id, email, user.name);
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sub)) {
+        throw new Error('Invalid Cognito subject; provisioning requires reconciliation');
+      }
       await this.identities.disable(user.id);
       await this.links.link(user.id, sub);
     } catch (error: unknown) {

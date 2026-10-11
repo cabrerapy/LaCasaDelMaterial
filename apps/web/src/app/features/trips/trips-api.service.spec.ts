@@ -15,6 +15,23 @@ describe('Evidence downloads', () => {
   });
   afterEach(() => http.verify());
 
+  it('rejects empty and oversized uploads without sending a request', async () => {
+    for (const size of [0, 4 * 1024 * 1024 + 1]) {
+      const file = new File([new Uint8Array(size)], 'qa.pdf', { type: 'application/pdf' });
+      await expect(firstValueFrom(service.uploadEvidence('trip', file))).rejects.toThrow('4 MB');
+      http.expectNone(request => request.method === 'POST');
+    }
+  });
+
+  it('allows an upload at the 4 MiB boundary', async () => {
+    const file = new File([new Uint8Array(4 * 1024 * 1024)], 'qa.pdf', { type: 'application/pdf' });
+    const result = firstValueFrom(service.uploadEvidence('trip', file));
+    const request = http.expectOne(request => request.method === 'POST');
+    expect(request.request.body).toBe(file);
+    request.flush({ id: 'evidence' });
+    expect(await result).toEqual({ id: 'evidence' });
+  });
+
   it('preserves the authenticated local blob download', async () => {
     const result = firstValueFrom(service.evidenceFile('evidence'));
     http.expectOne('/api/delivery-evidence/evidence/download').flush({ kind: 'local' });

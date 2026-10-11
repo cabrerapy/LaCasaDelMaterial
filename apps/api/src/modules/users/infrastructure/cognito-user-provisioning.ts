@@ -1,4 +1,4 @@
-import { AdminCreateUserCommand, AdminDisableUserCommand, type CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
+import { AdminCreateUserCommand, AdminDisableUserCommand, AdminEnableUserCommand, AdminGetUserCommand, type CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import type { CognitoUserProvisioning } from '../application/stage-cognito-user.js';
 
 export class CognitoUserProvisioningAdapter implements CognitoUserProvisioning {
@@ -13,7 +13,9 @@ export class CognitoUserProvisioningAdapter implements CognitoUserProvisioning {
       UserAttributes: [{ Name: 'email', Value: email }, { Name: 'name', Value: name }]
     }));
     const sub = response.User?.Attributes?.find(attribute => attribute.Name === 'sub')?.Value;
-    if (!sub) throw new Error('Cognito did not return a subject');
+    if (!sub || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sub)) {
+      throw new Error('Cognito did not return a valid subject');
+    }
     return sub;
   }
 
@@ -23,5 +25,25 @@ export class CognitoUserProvisioningAdapter implements CognitoUserProvisioning {
     } catch (error: unknown) {
       if (!(error instanceof Error && error.name === 'UserNotFoundException')) throw error;
     }
+  }
+
+  async inspect(username: string): Promise<{ sub: string; confirmed: boolean; email: string; passwordChangeRequired: boolean }> {
+    const user = await this.client.send(new AdminGetUserCommand({ UserPoolId: this.poolId, Username: username }));
+    const sub = user.UserAttributes?.find(attribute => attribute.Name === 'sub')?.Value;
+    if (!sub || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sub)) {
+      throw new Error('Cognito did not return a valid subject');
+    }
+    return { sub, confirmed: user.UserStatus === 'CONFIRMED',
+      email: user.UserAttributes?.find(attribute => attribute.Name === 'email')?.Value ?? '',
+      passwordChangeRequired: user.UserStatus === 'FORCE_CHANGE_PASSWORD' };
+  }
+
+  async enable(username: string): Promise<void> {
+    await this.client.send(new AdminEnableUserCommand({ UserPoolId: this.poolId, Username: username }));
+  }
+
+  async resendInvitation(username: string): Promise<void> {
+    await this.client.send(new AdminCreateUserCommand({ UserPoolId: this.poolId, Username: username,
+      MessageAction: 'RESEND', DesiredDeliveryMediums: ['EMAIL'], ForceAliasCreation: false }));
   }
 }

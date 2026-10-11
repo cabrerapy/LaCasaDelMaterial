@@ -6,6 +6,21 @@ import { InMemoryUserRepository } from '../infrastructure/in-memory-user.reposit
 const input = { name: 'QA user', username: 'qa.user', email: 'qa@example.invalid', role: 'CASHIER' as const };
 const sub = 'a2e086e2-47fd-4a56-90fd-3f9b772b0230';
 const actor = 'b2e086e2-47fd-4a56-90fd-3f9b772b0230';
+test('invalid Cognito subjects never link or activate and trigger compensation', async () => {
+  for (const subject of ['', 'qa@example.invalid', 'invalid-subject']) {
+    const users = new InMemoryUserRepository();
+    let disabled = 0;
+    let linked = 0;
+    const service = new StageCognitoUser(users, {
+      createSuppressed: async () => subject,
+      disable: async () => { disabled++; }
+    }, { link: async () => { linked++; } });
+    await assert.rejects(service.execute(input, actor), /Invalid Cognito subject/);
+    assert.equal(disabled, 1);
+    assert.equal(linked, 0);
+    assert.equal((await users.findByUsername(input.username))?.status, 'INACTIVE');
+  }
+});
 test('Cognito staging remains inactive, audited and passwordless locally', async () => {
   const users = new InMemoryUserRepository();
   const order: string[] = [];
