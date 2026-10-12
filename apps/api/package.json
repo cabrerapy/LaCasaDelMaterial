@@ -9,6 +9,7 @@
     "package:lambda": "npm run build --workspace @lcm/contracts && node scripts/package-lambda.mjs",
     "start": "node dist/server.js",
     "lint": "tsc -p tsconfig.json --noEmit",
+    "test:bootstrap": "npm run build && node --test dist/modules/users/infrastructure/dynamodb-bootstrap-reservation.test.js dist/modules/users/application/bootstrap-preflight.test.js dist/modules/users/application/bootstrap-resource-check.test.js",
     "test:production-config": "npm run build && node --test dist/config/production-environment.test.js",
     "test:lambda-production": "npm run build && node --test dist/lambda.test.js dist/app/lambda-handler.test.js dist/config/production-environment.test.js dist/config/enrollment-client.test.js",
     "test:s3-evidence": "npm run build && node --test dist/modules/deliveries/infrastructure/s3-delivery-evidence.storage.test.js dist/modules/deliveries/application/evidence-download.test.js",
