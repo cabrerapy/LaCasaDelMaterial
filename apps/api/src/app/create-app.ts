@@ -13,6 +13,8 @@ import type { UserRepository } from '../modules/users/domain/user.repository.js'
 import { UsersService } from '../modules/users/application/users.service.js';
 import { usersRoutes } from '../modules/users/http/users.routes.js';
 import { cognitoUsersRoutes, type CognitoUserLifecycle } from '../modules/users/http/cognito-users.routes.js';
+import { pendingAdminTotpRoutes } from '../modules/users/http/pending-admin-totp.routes.js';
+import type { PendingAdminTotp } from '../modules/users/application/pending-admin-totp.js';
 import { registerErrorHandler } from '../shared/error-handler.js';
 import type { CategoryRepository } from '../modules/categories/domain/category.repository.js';
 import { CategoriesService } from '../modules/categories/application/categories.service.js';
@@ -67,6 +69,7 @@ import { ReportsService } from '../modules/reports/application/reports.service.j
 import { reportsRoutes } from '../modules/reports/http/reports.routes.js';
 
 export interface AppDependencies {
+  readonly pendingAdminTotp?: Pick<PendingAdminTotp, 'begin' | 'complete'>;
   readonly cognitoUserLifecycle?: CognitoUserLifecycle;
   readonly users: UserRepository;
   readonly passwordHasher: PasswordHasher;
@@ -91,7 +94,7 @@ export interface AppDependencies {
 }
 
 export const API_LOGGER_OPTIONS = {
-  redact: { paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]', 'password', 'passwordHash', 'accessToken', 'refreshToken', 'token', 'secret', '*.password', '*.passwordHash', '*.accessToken', '*.refreshToken', '*.token', '*.secret'], censor: '[REDACTED]' }
+redact: { paths: ['secretCode', 'SecretCode', 'code', 'UserCode', 'AccessToken', 'Session', '*.secretCode', '*.SecretCode', '*.code', '*.UserCode', '*.AccessToken', '*.Session', 'req.body.code', 'req.body.secretCode', 'res.body.secretCode', 'req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]', 'password', 'passwordHash', 'accessToken', 'refreshToken', 'token', 'secret', '*.password', '*.passwordHash', '*.accessToken', '*.refreshToken', '*.token', '*.secret'], censor: '[REDACTED]' }
 };
 
 export async function createApp(
@@ -117,6 +120,10 @@ export async function createApp(
     prefix: '/api/auth',
     authService
   });
+  if (dependencies.pendingAdminTotp) {
+    if (dependencies.authentication.supportsPasswordLogin !== false) throw new Error('Enrollment requires Cognito authentication');
+    await app.register(pendingAdminTotpRoutes, { prefix: '/api/auth/enrollment/totp', enrollment: dependencies.pendingAdminTotp });
+  }
   await app.register(dashboardRoutes,{prefix:'/api/dashboard',authService,service:new DashboardService(dependencies.sales,dependencies.purchases,dependencies.products,dependencies.inventory,dependencies.trips,dependencies.deliveries,dependencies.fuel,dependencies.cash,dependencies.drivers)});
   await app.register(reportsRoutes, { prefix: '/api/reports', authService, service: new ReportsService(dependencies.sales, dependencies.cash, dependencies.purchases, dependencies.products, dependencies.categories, dependencies.inventory, dependencies.trips, dependencies.deliveries, dependencies.fuel, config.reportExportMaxRows) });
   await app.register(usersRoutes, {

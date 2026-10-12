@@ -20,6 +20,12 @@ test('full review stack synthesizes without cyclic dependencies or local configu
     ThrottlingRateLimit: 5, ThrottlingBurstLimit: 10, DetailedMetricsEnabled: false
   } });
   template.resourceCountIs('AWS::Cognito::UserPool', 1);
+  template.resourceCountIs('AWS::Cognito::UserPoolClient', 2);
+  const functions = Object.values(template.findResources('AWS::Lambda::Function'));
+  const environment = functions[0]!.Properties.Environment.Variables;
+  assert.ok(environment.COGNITO_ENROLLMENT_CLIENT_ID);
+  assert.notDeepEqual(environment.COGNITO_ENROLLMENT_CLIENT_ID, environment.COGNITO_CLIENT_ID);
+  assert.equal(environment.LCM_COGNITO_ENROLLMENT_ENABLED, undefined);
   const json = JSON.stringify(template.toJSON());
   assert.ok(!json.includes('JWT_SECRET'));
   assert.ok(!json.includes('INITIAL_ADMIN_PASSWORD'));

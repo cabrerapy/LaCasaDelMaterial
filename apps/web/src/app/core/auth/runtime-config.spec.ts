@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { loadRuntimeLogin } from './runtime-config';
+import { loadRuntimeLogin, loadRuntimeAuth } from './runtime-config';
 
 const origin = 'https://app.example.invalid';
 const config = { authMode: 'cognito', cognito: {
@@ -10,6 +10,17 @@ function fetchConfig(value: unknown) {
   return vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(value)));
 }
 beforeEach(() => sessionStorage.clear());
+
+it('accepts isolated enrollment configuration without sharing the commercial client', async () => {
+  const extra = { ...config.cognito, clientId: 'dedicated', redirectUri: origin + '/auth/enrollment/callback' };
+  const result = await loadRuntimeAuth(sessionStorage, origin, fetchConfig({ ...config, cognitoEnrollment: extra }));
+  expect(result.login).not.toBe(result.enrollment);
+  expect(new URL(result.enrollment!.logoutUrl()).searchParams.get('client_id')).toBe('dedicated');
+  for (const invalid of [null, { ...extra, clientId: 'offline' }, { ...extra, secret: 'forbidden' },
+    { ...extra, redirectUri: origin + '/auth/callback' }, { ...extra, domain: 'https://foreign.invalid' }]) {
+    await expect(loadRuntimeAuth(sessionStorage, origin, fetchConfig({ ...config, cognitoEnrollment: invalid }))).rejects.toThrow();
+  }
+});
 
 it('keeps explicit local mode without auth headers or cached config', async () => {
   const fetcher = fetchConfig({ authMode: 'local' });

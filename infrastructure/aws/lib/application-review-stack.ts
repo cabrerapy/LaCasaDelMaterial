@@ -29,7 +29,8 @@ export class ApplicationReviewStack extends Stack {
     const frontend = new FrontendDelivery(this, 'Web', frontendBucket, httpApi);
     const webOrigin = `https://${frontend.distribution.distributionDomainName}`;
     const identity = new ApplicationIdentity(this, 'Identity', {
-      domainPrefix: props.cognitoDomainPrefix, callbackUrl: `${webOrigin}/auth/callback`, logoutUrl: `${webOrigin}/login`
+      domainPrefix: props.cognitoDomainPrefix, callbackUrl: `${webOrigin}/auth/callback`, logoutUrl: `${webOrigin}/login`,
+      enrollmentCallbackUrl: `${webOrigin}/auth/enrollment/callback`
     });
     const data = new ApplicationData(this, 'Data');
     new ApplicationApi(this, 'Api', { code: props.lambdaCode, data, identity, evidence: evidenceBucket, webOrigin, httpApi });

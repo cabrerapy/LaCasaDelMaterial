@@ -37,6 +37,7 @@ export class ApplicationApi extends Construct {
       environment: { NODE_ENV: 'production', AUTH_MODE: 'cognito', WEB_ORIGIN: props.webOrigin,
         COGNITO_USER_POOL_ID: props.identity.pool.userPoolId,
         COGNITO_CLIENT_ID: props.identity.webClient.userPoolClientId,
+        ...(props.identity.enrollmentClient ? { COGNITO_ENROLLMENT_CLIENT_ID: props.identity.enrollmentClient.userPoolClientId } : {}),
         DELIVERY_EVIDENCE_BUCKET: props.evidence.bucketName, AWS_ACCOUNT_ID: Stack.of(this).account }
     });
     bindApplicationData(this.fn, props.data);

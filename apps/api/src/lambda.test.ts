@@ -25,6 +25,7 @@ test('production entrypoint serves health without provisioning or local password
       COGNITO_USER_POOL_ID: 'us-east-1_Offline', COGNITO_CLIENT_ID: 'offlineclient', WEB_ORIGIN: 'https://offline.invalid',
       DELIVERY_EVIDENCE_BUCKET: 'offline-evidence-bucket', AWS_ACCOUNT_ID: '123456789012' });
     process.env['LCM_COGNITO_ADMIN_ENABLED'] = 'no';
+    process.env['LCM_COGNITO_ENROLLMENT_ENABLED'] = 'no';
     for (const table of ['USERS','CATEGORIES','PRODUCTS','SUPPLIERS','PURCHASES','INVENTORY','CUSTOMERS','SALES','COSTING','CASH','TRUCKS','DRIVERS','TRIPS','TRIP_LOADS','FUEL','DELIVERIES']) {
       process.env[`DYNAMODB_${table}_TABLE`] = `offline-production-${table.toLowerCase()}`;
     }
@@ -34,6 +35,7 @@ test('production entrypoint serves health without provisioning or local password
     assert.equal((await handler(event('/api/auth/login', 'POST', JSON.stringify({ username: 'admin', password: 'NeverUsed123!' })), context)).statusCode, 401);
     assert.equal((await handler(event('/api/users', 'POST', '{}'), context)).statusCode, 404);
     assert.equal((await handler(event('/api/users/cognito', 'POST', '{}'), context)).statusCode, 404);
+    assert.equal((await handler(event('/api/auth/enrollment/totp/begin', 'POST', '{}'), context)).statusCode, 404);
     assert.equal((await handler(event('/api/users/00000000-0000-4000-8000-000000000001/status', 'PATCH', '{}'), context)).statusCode, 404);
     assert.equal((await handler(event('/api/users'), context)).statusCode, 401);
     assert.equal((await handler(event('/api/health'), context)).statusCode, 200);

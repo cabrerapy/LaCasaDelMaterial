@@ -3,6 +3,8 @@ import { authGuard, guestGuard } from './core/auth/auth.guard';
 import { permissionGuard } from './core/permissions/permission.guard';
 
 export const routes: Routes = [
+  { path: 'auth/enrollment/callback', loadComponent: () => import('./features/login/totp-enrollment.component').then(m => m.TotpEnrollmentComponent) },
+  { path: 'auth/enrollment', loadComponent: () => import('./features/login/totp-enrollment.component').then(m => m.TotpEnrollmentComponent) },
   { path: 'auth/callback', loadComponent: () => import('./features/login/cognito-callback.component').then(m => m.CognitoCallbackComponent) },
   { path: 'reports/:type', canActivate: [authGuard, permissionGuard], data: { permission: 'reports.read' }, loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent) },
   { path: 'reports', canActivate: [authGuard, permissionGuard], data: { permission: 'reports.read' }, loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent) },

@@ -5,6 +5,36 @@ const config = { domain: 'https://offline.auth.us-east-1.amazoncognito.com', cli
 beforeEach(() => sessionStorage.clear());
 function client() { return new CognitoPkce(config, sessionStorage, webcrypto as unknown as Crypto); }
 
+it('isolates enrollment state, self-service scope and fresh login from commercial PKCE', async () => {
+  const login = client();
+  await login.begin();
+  const pending = sessionStorage.getItem('lcm.cognito.pending');
+  const enrollment = new CognitoPkce({ ...config, clientId: 'enrollment-client',
+    redirectUri: 'https://app.example.invalid/auth/enrollment/callback' }, sessionStorage, webcrypto as unknown as Crypto, 'enrollment');
+  const url = new URL(await enrollment.begin());
+  expect(url.searchParams.get('scope')).toBe('aws.cognito.signin.user.admin');
+  expect(url.searchParams.get('prompt')).toBe('login');
+  expect(url.searchParams.get('client_id')).toBe('enrollment-client');
+  expect(sessionStorage.getItem('lcm.cognito.pending.enrollment')).not.toBeNull();
+  enrollment.cancel();
+  expect(sessionStorage.getItem('lcm.cognito.pending')).toBe(pending);
+  expect(sessionStorage.getItem('lcm.cognito.pending.enrollment')).toBeNull();
+});
+
+it('rejects enrollment configured with the commercial callback', () => {
+  expect(() => new CognitoPkce(config, sessionStorage, webcrypto as unknown as Crypto, 'enrollment')).toThrow();
+});
+
+it('commercial callbacks cannot consume enrollment transactions or send token requests', async () => {
+  const enrollment = new CognitoPkce({ ...config, clientId: 'enrollment-client',
+    redirectUri: 'https://app.example.invalid/auth/enrollment/callback' }, sessionStorage, webcrypto as unknown as Crypto, 'enrollment');
+  const state = new URL(await enrollment.begin()).searchParams.get('state');
+  const fetcher = vi.fn<typeof fetch>();
+  await expect(client().complete(`${config.redirectUri}?code=test&state=${state}`, fetcher)).rejects.toThrow();
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(sessionStorage.getItem('lcm.cognito.pending.enrollment')).not.toBeNull();
+});
+
 it('uses random state and S256 PKCE without exposing verifier in authorization URL', async () => {
   const pkce = client();
   const url = new URL(await pkce.begin());

@@ -12,7 +12,8 @@ export class CognitoPkce {
   private readonly domain: URL;
   private readonly callback: URL;
   constructor(private readonly config: CognitoBrowserConfig, private readonly storage: Storage,
-    private readonly cryptoApi: Crypto = globalThis.crypto) {
+    private readonly cryptoApi: Crypto = globalThis.crypto,
+    private readonly purpose: 'login' | 'enrollment' = 'login') {
     this.domain = new URL(config.domain);
     this.callback = new URL(config.redirectUri);
     const logout = new URL(config.logoutUri);
@@ -24,6 +25,9 @@ export class CognitoPkce {
       logout.origin !== this.callback.origin) {
       throw new Error('Invalid Cognito browser configuration');
     }
+    if (purpose === 'enrollment' && this.callback.pathname !== '/auth/enrollment/callback') {
+      throw new Error('Enrollment requires an isolated callback');
+    }
   }
 
   async begin(): Promise<string> {
@@ -31,17 +35,18 @@ export class CognitoPkce {
     const state = this.random();
     const challenge = base64url(new Uint8Array(await this.cryptoApi.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
     const pending: PendingLogin = { state, verifier, startedAt: Date.now() };
-    this.storage.setItem(KEY, JSON.stringify(pending));
+    this.storage.setItem(this.key, JSON.stringify(pending));
     const url = new URL('/oauth2/authorize', this.domain);
     url.search = new URLSearchParams({ response_type: 'code', client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri, scope: 'openid email profile', state,
+      redirect_uri: this.config.redirectUri, scope: this.purpose === 'enrollment' ? 'aws.cognito.signin.user.admin' : 'openid email profile', state,
       code_challenge_method: 'S256', code_challenge: challenge }).toString();
+    if (this.purpose === 'enrollment') url.searchParams.set('prompt', 'login');
     return url.href;
   }
 
   async complete(callbackUrl: string, fetcher: typeof fetch = globalThis.fetch): Promise<string> {
-    const raw = this.storage.getItem(KEY);
-    this.storage.removeItem(KEY); // one-use, including errors and invalid callbacks
+    const raw = this.storage.getItem(this.key);
+    this.storage.removeItem(this.key); // one-use, including errors and invalid callbacks
     const url = new URL(callbackUrl);
     if (!raw || url.origin !== this.callback.origin || url.pathname !== this.callback.pathname || url.hash ||
       url.searchParams.has('error') || url.searchParams.getAll('state').length !== 1 || url.searchParams.getAll('code').length !== 1) {
@@ -71,7 +76,8 @@ export class CognitoPkce {
     return url.href;
   }
 
-  cancel(): void { this.storage.removeItem(KEY); }
+  cancel(): void { this.storage.removeItem(this.key); }
+  private get key(): string { return this.purpose === 'enrollment' ? KEY + '.enrollment' : KEY; }
   private random(): string { return base64url(this.cryptoApi.getRandomValues(new Uint8Array(32))); }
 }
 function base64url(bytes: Uint8Array): string {

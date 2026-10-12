@@ -19,3 +19,17 @@ test('rejects missing outputs, local fallback, secrets and unsafe URLs', () => {
     assert.throws(() => runtimeConfigFromOutputs({ Stack: { Config: JSON.stringify(invalid) } }, 'Stack', 'Config'));
   }
 });
+
+test('exports isolated enrollment without secrets and rejects unsafe enrollment configuration', () => {
+  const enrollment = { ...config.cognito, clientId: 'dedicated',
+    redirectUri: 'https://app.example.invalid/auth/enrollment/callback' };
+  const complete = { ...config, cognitoEnrollment: enrollment };
+  const extract = (value: unknown) => runtimeConfigFromOutputs({ Stack: { Config: JSON.stringify(value) } }, 'Stack', 'Config');
+  assert.deepEqual(JSON.parse(extract(complete)), complete);
+  for (const extra of [null, { ...enrollment, clientId: 'offline' }, { ...enrollment, clientId: '' },
+    { ...enrollment, clientSecret: 'forbidden' }, { ...enrollment, domain: 'https://foreign.invalid' },
+    { ...enrollment, logoutUri: 'https://foreign.invalid/login' },
+    { ...enrollment, redirectUri: config.cognito.redirectUri }]) {
+    assert.throws(() => extract({ ...config, cognitoEnrollment: extra }));
+  }
+});

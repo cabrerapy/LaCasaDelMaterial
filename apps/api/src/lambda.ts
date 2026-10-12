@@ -16,6 +16,8 @@ import { InviteCognitoUser } from './modules/users/application/invite-cognito-us
 import { ActivateCognitoUser } from './modules/users/application/activate-cognito-user.js';
 import { RequireCognitoAdminMfa } from './modules/users/application/require-cognito-admin-mfa.js';
 import { DeactivateCognitoUser } from './modules/users/application/deactivate-cognito-user.js';
+import { createPendingAdminTotp } from './modules/users/infrastructure/cognito-totp-enrollment.js';
+import { enrollmentClientId } from './config/enrollment-client.js';
 
 const disabledPasswords: PasswordHasher = {
   async hash() { throw new Error('Local passwords are disabled in production'); },
@@ -25,6 +27,7 @@ const disabledPasswords: PasswordHasher = {
 // Lazy initialization, SDK execution-role credentials; no listen, provisioning or bootstrap.
 export const handler = createLambdaHandler(async () => {
   const config = loadProductionConfig();
+  const enrollmentClient = enrollmentClientId(process.env, config.cognitoClientId);
   const bucket = process.env['DELIVERY_EVIDENCE_BUCKET']?.trim() ?? '';
   const owner = process.env['AWS_ACCOUNT_ID']?.trim() ?? '';
   // Validate S3 before constructing application services; no network operation here.
@@ -49,5 +52,7 @@ export const handler = createLambdaHandler(async () => {
     deactivate: new DeactivateCognitoUser(repositories.users, identities, links)
   } : undefined;
   return createApp(config, { ...repositories, authentication, passwordHasher: disabledPasswords,
+    ...(enrollmentClient ? { pendingAdminTotp: createPendingAdminTotp(config.awsRegion,
+      config.cognitoPoolId, enrollmentClient, repositories.users, links) } : {}),
     deliveryEvidenceStorage: storage, ...(cognitoUserLifecycle ? { cognitoUserLifecycle } : {}) });
 });

@@ -6,7 +6,8 @@ export function runtimeConfigFromOutputs(input: unknown, stackName: string, outp
     throw new Error('Runtime configuration output missing');
   }
   const value: unknown = JSON.parse(outputs[outputKey]);
-  if (!record(value) || !keys(value, ['authMode', 'cognito']) || value['authMode'] !== 'cognito') throw new Error('Invalid auth mode');
+  if (!record(value) || !keys(value, Object.hasOwn(value, 'cognitoEnrollment') ?
+    ['authMode', 'cognito', 'cognitoEnrollment'] : ['authMode', 'cognito']) || value['authMode'] !== 'cognito') throw new Error('Invalid auth mode');
   const config = value['cognito'];
   if (!record(config) || !keys(config, ['domain', 'clientId', 'redirectUri', 'logoutUri'])) throw new Error('Invalid public config');
   const { domain, clientId, redirectUri, logoutUri } = config;
@@ -16,6 +17,16 @@ export function runtimeConfigFromOutputs(input: unknown, stackName: string, outp
   if (urls.some(url => url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) ||
     urls[0]!.pathname !== '/' || urls[1]!.pathname !== '/auth/callback' || urls[1]!.origin !== urls[2]!.origin) {
     throw new Error('Invalid public URLs');
+  }
+  if (Object.hasOwn(value, 'cognitoEnrollment')) {
+    const enrollment = value['cognitoEnrollment'];
+    if (!record(enrollment) || !keys(enrollment, ['domain', 'clientId', 'redirectUri', 'logoutUri']) ||
+      enrollment['domain'] !== domain || enrollment['logoutUri'] !== logoutUri ||
+      typeof enrollment['clientId'] !== 'string' || !enrollment['clientId'].trim() ||
+      enrollment['clientId'].trim() === clientId.trim() ||
+      enrollment['redirectUri'] !== urls[1]!.origin + '/auth/enrollment/callback') {
+      throw new Error('Invalid enrollment public config');
+    }
   }
   return JSON.stringify(value, null, 2) + '\n';
 }

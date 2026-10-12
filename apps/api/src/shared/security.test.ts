@@ -20,8 +20,9 @@ test('production logger options redact synthetic secrets and omit arbitrary erro
   registerErrorHandler(app);
   const marker = 'QA_SYNTHETIC_SECRET_NOT_A_REAL_CREDENTIAL';
   app.log.info({ password: marker, passwordHash: marker, accessToken: marker,
+    secretCode: marker, SecretCode: marker, code: marker, UserCode: marker, AccessToken: marker, Session: marker,
     refreshToken: marker, token: marker, secret: marker,
-    payload: { password: marker, token: marker, secret: marker },
+    payload: { password: marker, token: marker, secret: marker, secretCode: marker, code: marker, AccessToken: marker },
     req: { headers: { authorization: marker, cookie: marker } },
     res: { headers: { 'set-cookie': marker } } }, 'Synthetic redaction check');
   app.get('/qa-error', () => { throw new Error(marker); });

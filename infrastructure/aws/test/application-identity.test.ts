@@ -52,3 +52,30 @@ test('identity rejects insecure callback before creating resources', () => {
     domainPrefix: 'offline-test', callbackUrl: 'http://wrong.invalid/auth/callback', logoutUrl: 'https://app.example.invalid/login'
   }), /HTTPS/);
 });
+
+test('enrollment has a separate short-lived public client and self-service scope only', () => {
+  const stack = new Stack(new App(), 'EnrollmentTest');
+  const identity = new ApplicationIdentity(stack, 'Identity', {
+    domainPrefix: 'offline-enrollment', callbackUrl: 'https://app.example.invalid/auth/callback',
+    logoutUrl: 'https://app.example.invalid/login', enrollmentCallbackUrl: 'https://app.example.invalid/auth/enrollment/callback'
+  });
+  assert.notEqual(identity.enrollmentClient?.userPoolClientId, identity.webClient.userPoolClientId);
+  const template = Template.fromStack(stack);
+  template.resourceCountIs('AWS::Cognito::UserPoolClient', 2);
+  assert.ok(JSON.stringify(template.toJSON().Outputs).includes('cognitoEnrollment'));
+  assert.ok(!JSON.stringify(template.toJSON().Outputs).includes('clientSecret'));
+  template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
+    GenerateSecret: false, AllowedOAuthFlows: ['code'], AllowedOAuthScopes: ['aws.cognito.signin.user.admin'],
+    CallbackURLs: ['https://app.example.invalid/auth/enrollment/callback'],
+    AccessTokenValidity: 10, IdTokenValidity: 10, ReadAttributes: ['email', 'name'], WriteAttributes: ['email', 'name']
+  });
+});
+
+test('enrollment rejects foreign origin or commercial callback', () => {
+  for (const callback of ['https://foreign.invalid/auth/enrollment/callback', 'https://app.example.invalid/auth/callback']) {
+    assert.throws(() => new ApplicationIdentity(new Stack(new App(), 'InvalidEnrollment'), 'Identity', {
+      domainPrefix: 'offline-enrollment', callbackUrl: 'https://app.example.invalid/auth/callback',
+      logoutUrl: 'https://app.example.invalid/login', enrollmentCallbackUrl: callback
+    }), /own same-origin/);
+  }
+});
