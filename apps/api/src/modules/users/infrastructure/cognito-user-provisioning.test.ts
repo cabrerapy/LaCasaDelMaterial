@@ -12,13 +12,14 @@ test('Cognito inspection accepts only CONFIRMED and enable targets the configure
   client.middlewareStack.add(() => async args => {
     commands.push(args.input as Record<string, unknown>);
     return { response: {}, output: { $metadata: {}, Username: 'qa-id',
-      UserStatus: status, UserAttributes: [{ Name: 'sub', Value: sub }, { Name: 'email', Value: 'qa@example.invalid' }] } };
+      UserStatus: status, Enabled: true, UserMFASettingList: status === 'CONFIRMED' ? ['SOFTWARE_TOKEN_MFA'] : [],
+      UserAttributes: [{ Name: 'sub', Value: sub }, { Name: 'email', Value: 'qa@example.invalid' }] } };
   }, { step: 'initialize', name: 'offlineCapture' });
   const adapter = new CognitoUserProvisioningAdapter(client, 'us-east-1_offline');
   try {
-    assert.deepEqual(await adapter.inspect('qa-id'), { sub, confirmed: false, email: 'qa@example.invalid', passwordChangeRequired: true });
+    assert.deepEqual(await adapter.inspect('qa-id'), { sub, confirmed: false, email: 'qa@example.invalid', passwordChangeRequired: true, enabled: true, totpEnabled: false });
     status = 'CONFIRMED';
-    assert.deepEqual(await adapter.inspect('qa-id'), { sub, confirmed: true, email: 'qa@example.invalid', passwordChangeRequired: false });
+    assert.deepEqual(await adapter.inspect('qa-id'), { sub, confirmed: true, email: 'qa@example.invalid', passwordChangeRequired: false, enabled: true, totpEnabled: true });
     await adapter.enable('qa-id');
     await adapter.resendInvitation('qa-id');
     assert.equal(commands.length, 4);

@@ -12,6 +12,7 @@ import type { AuthenticationProvider } from '../modules/auth/domain/authenticate
 import type { UserRepository } from '../modules/users/domain/user.repository.js';
 import { UsersService } from '../modules/users/application/users.service.js';
 import { usersRoutes } from '../modules/users/http/users.routes.js';
+import { cognitoUsersRoutes, type CognitoUserLifecycle } from '../modules/users/http/cognito-users.routes.js';
 import { registerErrorHandler } from '../shared/error-handler.js';
 import type { CategoryRepository } from '../modules/categories/domain/category.repository.js';
 import { CategoriesService } from '../modules/categories/application/categories.service.js';
@@ -66,6 +67,7 @@ import { ReportsService } from '../modules/reports/application/reports.service.j
 import { reportsRoutes } from '../modules/reports/http/reports.routes.js';
 
 export interface AppDependencies {
+  readonly cognitoUserLifecycle?: CognitoUserLifecycle;
   readonly users: UserRepository;
   readonly passwordHasher: PasswordHasher;
   readonly authentication: AuthenticationProvider;
@@ -121,8 +123,13 @@ export async function createApp(
     prefix: '/api/users',
     authService,
     usersService: new UsersService(dependencies.users, dependencies.passwordHasher),
-    readOnly: dependencies.authentication.supportsPasswordLogin === false
+    readOnly: dependencies.authentication.supportsPasswordLogin === false,
+    cognitoLifecycleEnabled: dependencies.cognitoUserLifecycle !== undefined
   });
+  if (dependencies.cognitoUserLifecycle) {
+    if (dependencies.authentication.supportsPasswordLogin !== false) throw new Error('Cognito lifecycle requires Cognito authentication');
+    await app.register(cognitoUsersRoutes, { prefix: '/api/users/cognito', authService, lifecycle: dependencies.cognitoUserLifecycle });
+  }
   await app.register(categoriesRoutes, {
     prefix: '/api/categories',
     authService,

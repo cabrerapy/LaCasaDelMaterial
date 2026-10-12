@@ -5,7 +5,7 @@ header a { color: var(--green-600); text-decoration: none; font-size: .85rem; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 0; color: var(--green-900); }
 .eyebrow { margin: 1rem 0 .25rem; color: var(--construction-700); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { border: 1px solid var(--border-control); border-radius: .55rem; padding: .6rem .8rem; background: var(--surface); cursor: pointer; }
 .primary { border-color: var(--green-700); background: var(--green-700); color: var(--surface); font-weight: 700; }
 button:disabled { cursor: wait; opacity: .65; }
@@ -26,7 +26,8 @@ tr.inactive { color: var(--text-muted); background: var(--surface-muted); }
 .modal { width: min(100%, 32rem); max-height: calc(100vh - 2rem); overflow-y: auto; padding: 1.5rem; border-radius: .9rem; background: var(--surface); box-shadow: 0 1.5rem 4rem var(--shadow); }
 .modal form { display: grid; gap: .85rem; }
 .modal label { display: grid; gap: .35rem; color: var(--text-primary); font-size: .82rem; font-weight: 700; }
-.modal input, .modal select { width: 100%; padding: .75rem; border: 1px solid var(--border-control); border-radius: .55rem; background: var(--surface); }
+.modal input, .modal select, .modal textarea { width: 100%; padding: .75rem; border: 1px solid var(--border-control); border-radius: .55rem; background: var(--surface); color: var(--text-primary); }
+.modal textarea { min-height: 6rem; resize: vertical; }
 .modal input:disabled { background: var(--disabled-background); color: var(--text-secondary); }
 .modal small { color: var(--text-secondary); }
 .modal .field-error { margin-top: -.65rem; color: var(--error); }

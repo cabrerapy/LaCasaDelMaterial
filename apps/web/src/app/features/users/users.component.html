@@ -5,11 +5,16 @@
       <p class="eyebrow">Administración</p>
       <h1>Usuarios</h1>
     </div>
-    <button class="primary" type="button" (click)="openCreate()">Nuevo usuario</button>
+    @if (capabilities()?.create) { <button class="primary" type="button" [disabled]="saving()" (click)="openCreate()">Nuevo usuario</button> }
   </header>
 
   @if (errorMessage()) {
     <p class="error" role="alert">{{ errorMessage() }}</p>
+  }
+  @if (feedback()) { <p role="status">{{ feedback() }}</p> }
+  @if (capabilities()?.mode === 'cognito') {
+    <p>Cognito administra las contraseñas. Crear, invitar y activar son pasos separados.</p>
+    @if (!capabilities()?.create) { <p>Administración Cognito no habilitada. Esta vista es de solo lectura.</p> }
   }
 
   <section class="table-card" aria-label="Listado de usuarios">
@@ -25,8 +30,11 @@
               <td data-label="Rol">{{ roleLabels[user.role] }}</td>
               <td data-label="Estado"><span class="status" [class.off]="user.status === 'INACTIVE'">{{ user.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</span></td>
               <td data-label="Acciones" class="actions">
-                <button type="button" (click)="openEdit(user)">Editar</button>
-                <button type="button" (click)="requestStatusChange(user)">{{ user.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }}</button>
+                @if (capabilities()?.edit) { <button type="button" [disabled]="saving()" (click)="openEdit(user)">Editar</button> }
+                @if (capabilities()?.status) { <button type="button" [disabled]="saving()" (click)="requestStatusChange(user)">{{ user.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }}</button> }
+                @if (user.status === 'INACTIVE' && !user.cognitoDeactivated && capabilities()?.invite) { <button type="button" [disabled]="saving()" (click)="requestLifecycle(user,'invite')">Invitar</button> }
+                @if (user.status === 'INACTIVE' && !user.cognitoDeactivated && capabilities()?.activate) { <button type="button" [disabled]="saving()" (click)="requestLifecycle(user,'activate')">Activar en Cognito</button> }
+                @if (capabilities()?.deactivate && user.role !== 'ADMIN') { <button type="button" [disabled]="saving()" (click)="requestLifecycle(user,'deactivate')">Desactivar en Cognito</button> }
               </td>
             </tr>
           } @empty {
@@ -52,7 +60,7 @@
         @if (form.controls.username.touched && form.controls.username.invalid) { <small class="field-error">Usa entre 3 y 40 letras, números, puntos, guiones o guion bajo.</small> }
         <label>Email<input formControlName="email" type="email" autocomplete="email"></label>
         @if (form.controls.email.touched && form.controls.email.invalid) { <small class="field-error">Ingresa un email válido.</small> }
-        @if (formMode() === 'create') {
+        @if (formMode() === 'create' && capabilities()?.mode === 'local') {
           <label>Contraseña inicial<input formControlName="password" type="password" autocomplete="new-password"></label>
           <small>Mínimo 10 caracteres, mayúscula, minúscula y número.</small>
           @if (form.controls.password.touched && form.controls.password.invalid) { <small class="field-error">La contraseña no cumple los requisitos.</small> }
@@ -67,6 +75,27 @@
           <button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</button>
         </div>
       </form>
+    </section>
+  </div>
+}
+
+@if (lifecycleTarget(); as target) {
+  <div class="modal-backdrop" role="presentation">
+    <section class="modal confirm" role="alertdialog" aria-modal="true" aria-labelledby="cognito-action-title">
+      <h2 id="cognito-action-title">{{ target.action === 'invite' ? 'Invitar' : target.action === 'activate' ? 'Activar' : 'Desactivar' }} usuario</h2>
+      <p>{{ target.user.name }} · {{ target.user.email }}</p>
+      @if (target.action === 'invite') {
+        <p>Se solicitará un correo con contraseña temporal. Un reenvío reemplaza la contraseña temporal anterior. Esperá cinco minutos entre intentos, incluso si hubo un error. El usuario seguirá sin acceso al sistema hasta su activación.</p>
+      } @else if (target.action === 'activate') {
+        <p>Solo se activará si la identidad está vinculada y la contraseña ya fue confirmada en Cognito.</p>
+      } @else {
+        <p>Se bloqueará el acceso interno y luego se deshabilitará Cognito. Si falla el segundo paso, el usuario puede quedar bloqueado y requerir reconciliación. No se reactivará automáticamente.</p>
+        <label>Motivo de desactivación<textarea [(ngModel)]="deactivationReason" name="deactivationReason" minlength="5" maxlength="500" [disabled]="saving()" required></textarea></label>
+      }
+      <div class="modal-actions">
+        <button type="button" [disabled]="saving()" (click)="cancelLifecycle()">Cancelar</button>
+        <button class="primary" type="button" [disabled]="saving()" (click)="confirmLifecycle()">{{ saving() ? 'Procesando…' : 'Confirmar' }}</button>
+      </div>
     </section>
   </div>
 }

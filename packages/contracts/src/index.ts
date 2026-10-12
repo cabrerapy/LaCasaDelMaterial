@@ -136,6 +136,7 @@ export interface LoginResponse {
 }
 
 export interface UserResponse extends AuthenticatedUserResponse {
+  readonly cognitoDeactivated?: boolean;
   readonly status: UserStatus;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -144,6 +145,16 @@ export interface UserResponse extends AuthenticatedUserResponse {
 export interface UsersPageResponse {
   readonly items: readonly UserResponse[];
   readonly nextToken?: string;
+}
+
+export interface UsersCapabilitiesResponse {
+  readonly deactivate: boolean;
+  readonly mode: 'local' | 'cognito';
+  readonly create: boolean;
+  readonly invite: boolean;
+  readonly activate: boolean;
+  readonly edit: boolean;
+  readonly status: boolean;
 }
 
 export interface CreateUserRequest {

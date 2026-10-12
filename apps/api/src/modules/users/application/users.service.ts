@@ -123,6 +123,7 @@ export class UsersService {
 
 function toUserResponse(user: User): UserResponse {
   return {
+    ...(user.cognitoDeactivatedAt ? { cognitoDeactivated: true } : {}),
     id: user.id,
     name: user.name,
     username: user.username,

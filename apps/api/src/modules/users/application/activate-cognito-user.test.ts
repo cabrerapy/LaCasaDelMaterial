@@ -9,16 +9,16 @@ const actorId = 'b2e086e2-47fd-4a56-90fd-3f9b772b0230';
 const sub = 'c2e086e2-47fd-4a56-90fd-3f9b772b0230';
 async function fixture(options: { confirmed?: boolean; linked?: boolean; failEnable?: boolean;
   failCommit?: boolean; failDisable?: boolean; failRollback?: boolean; actorRole?: User['role']; actorStatus?: User['status'];
-  targetStatus?: User['status']; local?: boolean } = {}) {
+  targetStatus?: User['status']; targetRole?: User['role']; totp?: boolean; local?: boolean } = {}) {
   const users = new InMemoryUserRepository();
   const base = { name: 'QA', email: 'qa@example.invalid', passwordHash: '!COGNITO_ONLY',
     createdAt: '2026-10-11T00:00:00Z', updatedAt: '2026-10-11T00:00:00Z' };
   await users.create({ ...base, id: actorId, username: 'admin', role: options.actorRole ?? 'ADMIN', status: options.actorStatus ?? 'ACTIVE' });
-  await users.create({ ...base, id: userId, username: 'cashier', role: 'CASHIER',
+  await users.create({ ...base, id: userId, username: 'cashier', role: options.targetRole ?? 'CASHIER',
     status: options.targetStatus ?? 'INACTIVE', passwordHash: options.local ? 'local-hash' : '!COGNITO_ONLY' });
   const order: string[] = [];
   const service = new ActivateCognitoUser(users, {
-    inspect: async () => { order.push('inspect'); return { sub, confirmed: options.confirmed ?? true }; },
+    inspect: async () => { order.push('inspect'); return { sub, confirmed: options.confirmed ?? true, totpEnabled: options.totp ?? false }; },
     enable: async () => { order.push('enable'); if (options.failEnable) throw new Error('enable timeout'); },
     disable: async () => { order.push('disable'); if (options.failDisable) throw new Error('disable failed'); }
   }, {
@@ -36,6 +36,13 @@ test('activation requires a confirmed linked identity and commits after enable',
   const { service, order } = await fixture();
   assert.deepEqual(await service.execute(userId, actorId), { userId, status: 'ACTIVE' });
   assert.deepEqual(order, ['inspect', 'enable', 'commit']);
+});
+test('administrator activation requires TOTP while cashier activation does not', async () => {
+  const blocked = await fixture({ targetRole: 'ADMIN' });
+  await assert.rejects(blocked.service.execute(userId, actorId), /TOTP/);
+  assert.deepEqual(blocked.order, ['inspect']);
+  const accepted = await fixture({ targetRole: 'ADMIN', totp: true });
+  assert.equal((await accepted.service.execute(userId, actorId)).status, 'ACTIVE');
 });
 test('unconfirmed or unlinked identities cannot be enabled', async () => {
   for (const options of [{ confirmed: false }, { linked: false }]) {

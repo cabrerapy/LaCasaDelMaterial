@@ -9,6 +9,13 @@ import { createCognitoUserResolver } from './modules/auth/infrastructure/resolve
 import { DynamoDbCognitoLinkRepository } from './modules/users/infrastructure/dynamodb-cognito-link.repository.js';
 import { createS3DeliveryEvidenceStorage } from './modules/deliveries/infrastructure/s3-delivery-evidence.storage.js';
 import type { PasswordHasher } from './modules/auth/application/password-hasher.js';
+import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoUserProvisioningAdapter } from './modules/users/infrastructure/cognito-user-provisioning.js';
+import { StageCognitoUser } from './modules/users/application/stage-cognito-user.js';
+import { InviteCognitoUser } from './modules/users/application/invite-cognito-user.js';
+import { ActivateCognitoUser } from './modules/users/application/activate-cognito-user.js';
+import { RequireCognitoAdminMfa } from './modules/users/application/require-cognito-admin-mfa.js';
+import { DeactivateCognitoUser } from './modules/users/application/deactivate-cognito-user.js';
 
 const disabledPasswords: PasswordHasher = {
   async hash() { throw new Error('Local passwords are disabled in production'); },
@@ -28,5 +35,19 @@ export const handler = createLambdaHandler(async () => {
   const links = new DynamoDbCognitoLinkRepository(documentClient, config.usersTableName);
   const authentication = createCognitoAuthentication(config.cognitoPoolId, config.cognitoClientId,
     createCognitoUserResolver(links, repositories.users));
-  return createApp(config, { ...repositories, authentication, passwordHasher: disabledPasswords, deliveryEvidenceStorage: storage });
+  const adminFlag = process.env['LCM_COGNITO_ADMIN_ENABLED'];
+  if (adminFlag !== undefined && adminFlag !== 'yes' && adminFlag !== 'no') throw new Error('Invalid Cognito admin flag');
+  // Disabled until invitation rate limits, MFA and bootstrap are accepted for beta.
+  const cognitoClient = adminFlag === 'yes' ? new CognitoIdentityProviderClient({ region: config.awsRegion,
+    maxAttempts: 1, ignoreConfiguredEndpointUrls: true }) : undefined;
+  const identities = cognitoClient ? new CognitoUserProvisioningAdapter(cognitoClient, config.cognitoPoolId) : undefined;
+  const cognitoUserLifecycle = identities ? {
+    requireAdministratorMfa: (userId: string) => new RequireCognitoAdminMfa(identities, links).execute(userId),
+    stage: new StageCognitoUser(repositories.users, identities, links),
+    invite: new InviteCognitoUser(repositories.users, identities, links),
+    activate: new ActivateCognitoUser(repositories.users, identities, links),
+    deactivate: new DeactivateCognitoUser(repositories.users, identities, links)
+  } : undefined;
+  return createApp(config, { ...repositories, authentication, passwordHasher: disabledPasswords,
+    deliveryEvidenceStorage: storage, ...(cognitoUserLifecycle ? { cognitoUserLifecycle } : {}) });
 });

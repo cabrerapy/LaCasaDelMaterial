@@ -14,6 +14,7 @@ interface UsersRouteOptions {
   readonly authService: AuthService;
   readonly usersService: UsersService;
   readonly readOnly?: boolean;
+  readonly cognitoLifecycleEnabled?: boolean;
 }
 
 interface IdParams { readonly id: string; }
@@ -32,6 +33,15 @@ const editableProperties = {
 } as const;
 
 export async function usersRoutes(app: FastifyInstance, options: UsersRouteOptions): Promise<void> {
+  app.get('/capabilities', {
+    preHandler: requirePermission(options.authService, 'users.read')
+  }, request => {
+    const admin = authenticatedUser(request).role === 'ADMIN';
+    const cognito = options.readOnly === true;
+    const lifecycle = cognito && options.cognitoLifecycleEnabled === true && admin;
+    return { mode: cognito ? 'cognito' : 'local', create: cognito ? lifecycle : admin,
+      invite: lifecycle, activate: lifecycle, deactivate: lifecycle, edit: !cognito && admin, status: !cognito && admin };
+  });
   app.get<{ Querystring: ListQuery }>(
     '/',
     {

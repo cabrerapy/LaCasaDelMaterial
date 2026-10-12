@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
   USER_ROLES,
@@ -9,14 +9,16 @@ import {
   type UserRole,
   type UserStatus
 } from '@lcm/contracts';
-import { finalize } from 'rxjs';
+import type { UsersCapabilitiesResponse } from '@lcm/contracts';
+import { finalize, type Observable } from 'rxjs';
 import { UsersApiService } from './users-api.service';
 
 type FormMode = 'create' | 'edit';
+type LifecycleAction = 'invite' | 'activate' | 'deactivate';
 
 @Component({
   selector: 'lcm-users',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, FormsModule, RouterLink],
   templateUrl: './users.component.html',
   styleUrl: './users.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -26,6 +28,10 @@ export class UsersComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
 
   readonly users = signal<readonly UserResponse[]>([]);
+  readonly capabilities = signal<UsersCapabilitiesResponse | null>(null);
+  readonly feedback = signal<string | null>(null);
+  readonly lifecycleTarget = signal<{ user: UserResponse; action: LifecycleAction } | null>(null);
+  deactivationReason = '';
   readonly nextToken = signal<string | null>(null);
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -45,6 +51,8 @@ export class UsersComponent {
 
   constructor() {
     this.load(true);
+    this.usersApi.capabilities().subscribe({ next: value => this.capabilities.set(value),
+      error: () => this.errorMessage.set('No se pudo comprobar qué acciones de usuarios están habilitadas. La vista queda en solo lectura.') });
   }
 
   load(reset = false): void {
@@ -63,15 +71,18 @@ export class UsersComponent {
   }
 
   openCreate(): void {
+    if (!this.capabilities()?.create || this.saving()) return;
     this.form.reset({ name: '', username: '', email: '', password: '', role: 'CASHIER' });
     this.form.controls.username.enable();
     this.form.controls.password.enable();
+    if (this.capabilities()?.mode === 'cognito') this.form.controls.password.disable();
     this.selectedUserId.set(null);
     this.formMode.set('create');
     this.errorMessage.set(null);
   }
 
   openEdit(user: UserResponse): void {
+    if (!this.capabilities()?.edit || this.saving()) return;
     this.form.reset({
       name: user.name,
       username: user.username,
@@ -91,6 +102,8 @@ export class UsersComponent {
   }
 
   save(): void {
+    const capabilities = this.capabilities();
+    if (this.saving() || !capabilities || (this.formMode() === 'create' ? !capabilities.create : !capabilities.edit)) return;
     if (this.form.invalid || !this.formMode()) {
       this.form.markAllAsTouched();
       return;
@@ -98,8 +111,10 @@ export class UsersComponent {
     this.saving.set(true);
     this.errorMessage.set(null);
     const value = this.form.getRawValue();
-    const request = this.formMode() === 'create'
-      ? this.usersApi.create(value as CreateUserRequest)
+    const request: Observable<unknown> = this.formMode() === 'create'
+      ? capabilities.mode === 'cognito'
+        ? this.usersApi.stageCognito({ name: value.name, username: value.username, email: value.email, role: value.role })
+        : this.usersApi.create(value as CreateUserRequest)
       : this.usersApi.update(this.selectedUserId() ?? '', {
           name: value.name,
           email: value.email,
@@ -107,6 +122,7 @@ export class UsersComponent {
         });
     request.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
+        if (capabilities.mode === 'cognito') this.feedback.set('Usuario creado inactivo. La invitación y la activación son pasos separados.');
         this.formMode.set(null);
         this.load(true);
       },
@@ -116,6 +132,7 @@ export class UsersComponent {
   }
 
   requestStatusChange(user: UserResponse): void {
+    if (!this.capabilities()?.status || this.saving()) return;
     this.statusTarget.set(user);
   }
 
@@ -124,6 +141,7 @@ export class UsersComponent {
   }
 
   confirmStatusChange(): void {
+    if (!this.capabilities()?.status || this.saving()) return;
     const target = this.statusTarget();
     if (!target) return;
     const status: UserStatus = target.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
@@ -140,5 +158,50 @@ export class UsersComponent {
         this.statusTarget.set(null);
       }
     });
+  }
+
+  requestLifecycle(user: UserResponse, action: LifecycleAction): void {
+    const capability = this.capabilities();
+    if (this.saving() || capability?.mode !== 'cognito' || !capability[action] ||
+      (action === 'deactivate' ? user.role === 'ADMIN' : user.status !== 'INACTIVE' || user.cognitoDeactivated)) return;
+    this.deactivationReason = '';
+    this.lifecycleTarget.set({ user, action });
+    this.feedback.set(null);
+    this.errorMessage.set(null);
+  }
+
+  cancelLifecycle(): void { if (!this.saving()) this.lifecycleTarget.set(null); }
+
+  confirmLifecycle(): void {
+    const target = this.lifecycleTarget();
+    const capabilities = this.capabilities();
+    if (!target || this.saving() || capabilities?.mode !== 'cognito' ||
+      !capabilities[target.action]) return;
+    if (target.action !== 'deactivate' && (target.user.status !== 'INACTIVE' || target.user.cognitoDeactivated)) return;
+    if (target.action === 'deactivate' && (target.user.role === 'ADMIN' ||
+      this.deactivationReason.trim().length < 5 || this.deactivationReason.trim().length > 500)) {
+      this.errorMessage.set('Ingresá un motivo de entre 5 y 500 caracteres.');
+      return;
+    }
+    this.saving.set(true);
+    this.errorMessage.set(null);
+    const request: Observable<unknown> = target.action === 'invite'
+      ? this.usersApi.inviteCognito(target.user.id) : target.action === 'activate'
+        ? this.usersApi.activateCognito(target.user.id)
+        : this.usersApi.deactivateCognito(target.user.id, this.deactivationReason.trim());
+    request.pipe(finalize(() => this.saving.set(false))).subscribe({ next: () => {
+      this.lifecycleTarget.set(null);
+      this.feedback.set(target.action === 'invite'
+        ? 'Se solicitó la invitación. El usuario continúa inactivo; esto no confirma la entrega del correo.'
+        : target.action === 'activate' ? 'Usuario activado correctamente.' : 'Usuario desactivado. La reactivación requiere un procedimiento separado.');
+      this.load(true);
+    }, error: (error: { error?: { message?: string } }) => {
+      this.lifecycleTarget.set(null);
+      if (target.action === 'deactivate') this.load(true);
+      const message = error.error?.message ?? 'No se pudo completar la acción. Verificá el estado antes de reintentar.';
+      this.errorMessage.set(target.action === 'deactivate'
+        ? message + ' El usuario puede haber quedado bloqueado. Revisá el estado antes de reintentar.'
+        : message);
+    } });
   }
 }

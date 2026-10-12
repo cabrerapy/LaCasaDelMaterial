@@ -2,7 +2,7 @@ import type { UserRepository } from '../domain/user.repository.js';
 import { UserApplicationError } from './user-application-error.js';
 
 export interface CognitoUserActivation {
-  inspect(username: string): Promise<{ sub: string; confirmed: boolean }>;
+  inspect(username: string): Promise<{ sub: string; confirmed: boolean; totpEnabled?: boolean }>;
   enable(username: string): Promise<void>;
   disable(username: string): Promise<void>;
 }
@@ -28,6 +28,9 @@ export class ActivateCognitoUser {
       throw new UserApplicationError('El usuario no está pendiente de activación Cognito', 409);
     }
     const identity = await this.identities.inspect(userId);
+    if (user.role === 'ADMIN' && identity.totpEnabled !== true) {
+      throw new UserApplicationError('Un administrador requiere TOTP habilitado antes de su activación.', 409);
+    }
     if (!uuid.test(identity.sub) || !identity.confirmed || await this.links.findUserId(identity.sub) !== userId) {
       throw new UserApplicationError('Identidad no confirmada o vínculo inválido', 409);
     }

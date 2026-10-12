@@ -1,6 +1,7 @@
 import type { UserRole, UserStatus } from '@lcm/contracts';
 
 export interface User {
+  readonly cognitoDeactivatedAt?: string;
   readonly id: string;
   readonly name: string;
   readonly username: string;

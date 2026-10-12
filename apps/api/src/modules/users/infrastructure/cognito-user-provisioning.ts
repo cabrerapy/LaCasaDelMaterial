@@ -27,7 +27,7 @@ export class CognitoUserProvisioningAdapter implements CognitoUserProvisioning {
     }
   }
 
-  async inspect(username: string): Promise<{ sub: string; confirmed: boolean; email: string; passwordChangeRequired: boolean }> {
+  async inspect(username: string): Promise<{ sub: string; confirmed: boolean; email: string; passwordChangeRequired: boolean; totpEnabled: boolean; enabled: boolean }> {
     const user = await this.client.send(new AdminGetUserCommand({ UserPoolId: this.poolId, Username: username }));
     const sub = user.UserAttributes?.find(attribute => attribute.Name === 'sub')?.Value;
     if (!sub || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sub)) {
@@ -35,7 +35,9 @@ export class CognitoUserProvisioningAdapter implements CognitoUserProvisioning {
     }
     return { sub, confirmed: user.UserStatus === 'CONFIRMED',
       email: user.UserAttributes?.find(attribute => attribute.Name === 'email')?.Value ?? '',
-      passwordChangeRequired: user.UserStatus === 'FORCE_CHANGE_PASSWORD' };
+      passwordChangeRequired: user.UserStatus === 'FORCE_CHANGE_PASSWORD',
+      enabled: user.Enabled === true,
+      totpEnabled: user.UserMFASettingList?.includes('SOFTWARE_TOKEN_MFA') === true };
   }
 
   async enable(username: string): Promise<void> {
