@@ -28,6 +28,9 @@ export async function bootstrapPreflight(target: BootstrapTarget,
     if (result.items.some(user => user.role === 'ADMIN')) {
       throw new Error('Existing administrator: bootstrap requires reconciliation');
     }
+    if (result.items.length !== 0) {
+      throw new Error('Bootstrap requires an environment without existing user profiles');
+    }
     if (!result.nextToken) return identity;
     if (cursors.has(result.nextToken)) throw new Error('Repeated bootstrap scan cursor');
     cursors.add(result.nextToken);

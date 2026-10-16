@@ -25,6 +25,9 @@ test('preflight rejects inactive admins too, repeated cursors and incomplete tra
     role: 'ADMIN', status: 'INACTIVE', passwordHash: '!COGNITO_ONLY', createdAt: '', updatedAt: '' };
   await assert.rejects(bootstrapPreflight(target, async () => identity, { list: async () => ({ items: [admin] }) }), /Existing/);
   await assert.rejects(bootstrapPreflight(target, async () => identity, {
+    list: async () => ({ items: [{ ...admin, role: 'CASHIER' }] })
+  }), /without existing user profiles/);
+  await assert.rejects(bootstrapPreflight(target, async () => identity, {
     list: async () => ({ items: [], nextToken: 'same' })
   }), /Repeated/);
   let pages = 0;

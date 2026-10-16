@@ -1,5 +1,5 @@
 import { Duration, RemovalPolicy, Stack, Token } from 'aws-cdk-lib';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Function, Runtime, Architecture, type Code } from 'aws-cdk-lib/aws-lambda';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import type { IBucket } from 'aws-cdk-lib/aws-s3';
@@ -17,6 +17,7 @@ interface ApplicationApiProps {
   readonly evidence: IBucket;
   readonly webOrigin: string;
   readonly httpApi?: HttpApi;
+  readonly runtimeGuardrail?: { readonly roleName: string; readonly boundaryArn: string };
 }
 
 // Candidate only. Not instantiated by app.ts; no deployed endpoint yet.
@@ -30,7 +31,22 @@ export class ApplicationApi extends Construct {
       if (origin.protocol !== 'https:' || origin.origin !== props.webOrigin) throw new Error('API requires an HTTPS web origin');
     }
     const logs = new LogGroup(this, 'Logs', { retention: RetentionDays.ONE_WEEK, removalPolicy: RemovalPolicy.RETAIN });
+    const guardrail = props.runtimeGuardrail;
+    if (guardrail && (!/^lcm-production-[a-z0-9-]{1,40}$/.test(guardrail.roleName) ||
+      !/^arn:aws:iam::\d{12}:policy\/lcm-production-[a-z0-9-]{1,40}$/.test(guardrail.boundaryArn) ||
+      Token.isUnresolved(Stack.of(this).account) || guardrail.boundaryArn.split(':')[4] !== Stack.of(this).account)) {
+      throw new Error('Runtime guardrail requires an explicit same-account LCM role and boundary ARN');
+    }
+    // Explicit role avoids the generated AWSLambdaBasicExecutionRole wildcard policy.
+    // Imported boundary is external: this stack neither creates nor edits it.
+    const role = new Role(this, 'RuntimeRole', {
+      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+      ...(guardrail ? { roleName: guardrail.roleName,
+        permissionsBoundary: ManagedPolicy.fromManagedPolicyArn(this, 'RuntimeBoundary', guardrail.boundaryArn) } : {})
+    });
+    logs.grantWrite(role);
     this.fn = new Function(this, 'Handler', {
+      role,
       code: props.code, handler: 'index.handler', runtime: Runtime.NODEJS_24_X,
       architecture: Architecture.X86_64, memorySize: 512, timeout: Duration.seconds(28),
       reservedConcurrentExecutions: 2, logGroup: logs,

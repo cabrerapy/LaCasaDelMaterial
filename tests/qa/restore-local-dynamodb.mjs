@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DynamoDBClient, DescribeTableCommand, CreateTableCommand, PutItemCommand, ScanCommand, waitUntilTableExists } from '@aws-sdk/client-dynamodb';
+import { backupScope, validateRestorePrefix } from './backup-scope.mjs';
 
 const mode = process.argv[2] ?? 'verify';
 assert.ok(['verify', 'restore'].includes(mode));
@@ -12,10 +13,13 @@ assert.equal(process.env.LCM_QA_WRITERS_PAUSED, 'yes');
 if (mode === 'restore') assert.equal(process.env.LCM_RESTORE_LOCAL_QA, 'yes');
 const qaPrefix = process.env.LCM_QA_BACKUP_PREFIX;
 const restorePrefix = process.env.LCM_QA_RESTORE_PREFIX;
-if (qaPrefix) { assert.match(qaPrefix, /^lcm-qa-[0-9a-f-]{36}$/); assert.match(restorePrefix ?? '', /^lcm-restore-[0-9a-f-]{36}$/); }
+const { apiPort } = backupScope(qaPrefix);
+if (qaPrefix) { validateRestorePrefix(restorePrefix); }
 else assert.equal(restorePrefix, undefined, 'Restore mapping requires isolated QA source');
-try { await fetch(qaPrefix ? 'http://localhost:3003/api/health' : 'http://localhost:3000/api/health', { signal: AbortSignal.timeout(3000) }); assert.fail('API must remain stopped'); }
+for (const port of new Set([apiPort, ...(qaPrefix ? [3003] : [])])) {
+try { await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(3000) }); assert.fail('API must remain stopped'); }
 catch (error) { assert.equal(error.cause?.code, 'ECONNREFUSED', 'API state uncertain or running'); }
+}
 const root = fileURLToPath(new URL('../../.data/dynamodb-backups/', import.meta.url));
 assert.ok(process.env.LCM_QA_SNAPSHOT);
 const path = resolve(process.env.LCM_QA_SNAPSHOT);

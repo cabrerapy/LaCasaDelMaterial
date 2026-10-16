@@ -11,7 +11,8 @@ import type { UserPage, UserRepository } from '../domain/user.repository.js';
 export class DynamoDbUserRepository implements UserRepository {
   constructor(
     private readonly client: DynamoDBDocumentClient,
-    private readonly tableName: string
+    private readonly tableName: string,
+    private readonly strongListReads = false
   ) {}
 
   async findById(id: string): Promise<User | null> {
@@ -52,6 +53,7 @@ export class DynamoDbUserRepository implements UserRepository {
       TableName: this.tableName,
       Limit: limit,
       FilterExpression: 'attribute_exists(username)',
+      ...(this.strongListReads ? { ConsistentRead: true } : {}),
       ...(nextToken ? { ExclusiveStartKey: decodeToken(nextToken) } : {})
     }));
     return {

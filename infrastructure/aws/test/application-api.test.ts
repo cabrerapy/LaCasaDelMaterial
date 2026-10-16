@@ -38,4 +38,40 @@ test('API candidate binds production settings with scoped object access and boun
   assert.equal(s3.Condition.Bool['aws:SecureTransport'], 'true');
   assert.ok(!JSON.stringify(statements).includes('cognito-idp:'));
   assert.ok(!JSON.stringify(statements).includes('s3:DeleteObject'));
+  const roles = Object.values(template.findResources('AWS::IAM::Role'));
+  assert.equal(roles.length, 1);
+  assert.equal(roles[0]!.Properties.ManagedPolicyArns, undefined);
+  const logStatements = statements.filter(s => JSON.stringify(s.Action).includes('logs:'));
+  assert.ok(logStatements.length > 0);
+  for (const statement of logStatements) {
+    assert.ok(!JSON.stringify(statement.Action).includes('CreateLogGroup'));
+    assert.notEqual(statement.Resource, '*');
+    assert.ok(JSON.stringify(statement.Resource).includes('Logs'));
+  }
+});
+
+test('explicit runtime boundary is imported and never created by application stack', () => {
+  const stack = new Stack(new App(), 'BoundedApi', { env: { account: '123456789012', region: 'us-east-1' } });
+  new ApplicationApi(stack, 'Api', { data: new ApplicationData(stack, 'Data'),
+    identity: new ApplicationIdentity(stack, 'Identity'), evidence: new Bucket(stack, 'Evidence'),
+    webOrigin: 'https://offline.invalid', code: Code.fromInline('exports.handler = async () => {};'),
+    runtimeGuardrail: { roleName: 'lcm-production-runtime',
+      boundaryArn: 'arn:aws:iam::123456789012:policy/lcm-production-runtime-boundary' } });
+  const template = Template.fromStack(stack);
+  template.hasResourceProperties('AWS::IAM::Role', { RoleName: 'lcm-production-runtime',
+    PermissionsBoundary: 'arn:aws:iam::123456789012:policy/lcm-production-runtime-boundary' });
+  template.resourceCountIs('AWS::IAM::ManagedPolicy', 0);
+});
+
+test('runtime boundary rejects foreign account and incompatible role before role creation', () => {
+  for (const runtimeGuardrail of [
+    { roleName: 'lcm-production-runtime', boundaryArn: 'arn:aws:iam::999999999999:policy/lcm-production-boundary' },
+    { roleName: 'unrestricted-role', boundaryArn: 'arn:aws:iam::123456789012:policy/lcm-production-boundary' }
+  ]) {
+    const stack = new Stack(new App(), 'RejectedApi', { env: { account: '123456789012', region: 'us-east-1' } });
+    assert.throws(() => new ApplicationApi(stack, 'Api', { data: new ApplicationData(stack, 'Data'),
+      identity: new ApplicationIdentity(stack, 'Identity'), evidence: new Bucket(stack, 'Evidence'),
+      webOrigin: 'https://offline.invalid', code: Code.fromInline('exports.handler = async () => {};'), runtimeGuardrail }));
+    Template.fromStack(stack).resourceCountIs('AWS::IAM::Role', 0);
+  }
 });

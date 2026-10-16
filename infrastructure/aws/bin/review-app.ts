@@ -3,6 +3,7 @@ import { Code } from 'aws-cdk-lib/aws-lambda';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ApplicationReviewStack } from '../lib/application-review-stack.js';
+import { runtimeGuardrailConfig } from '../lib/runtime-guardrail-config.js';
 
 const app = new App();
 const account: unknown = app.node.tryGetContext('account');
@@ -13,9 +14,11 @@ if (typeof account !== 'string' || !/^\d{12}$/.test(account) || typeof region !=
   throw new Error('Review requires explicit account, region and cognitoDomainPrefix contexts');
 }
 const asset = resolve('../../apps/api/dist/lambda-package');
+const runtimeGuardrail = runtimeGuardrailConfig(account,
+  app.node.tryGetContext('runtimeRoleName'), app.node.tryGetContext('runtimeBoundaryArn'));
 if (!existsSync(resolve(asset, 'index.js')) || !existsSync(resolve(asset, 'package.json'))) {
   throw new Error('Generate and review package:lambda before full synthesis');
 }
 new ApplicationReviewStack(app, 'LcmApplicationReview', {
-  env: { account, region }, cognitoDomainPrefix: domainPrefix, lambdaCode: Code.fromAsset(asset)
+  env: { account, region }, cognitoDomainPrefix: domainPrefix, lambdaCode: Code.fromAsset(asset), runtimeGuardrail
 });

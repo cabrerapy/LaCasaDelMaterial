@@ -11,6 +11,7 @@ import { ApplicationApi } from './application-api.js';
 interface ReviewStackProps extends StackProps {
   readonly lambdaCode: Code;
   readonly cognitoDomainPrefix: string;
+  readonly runtimeGuardrail?: { readonly roleName: string; readonly boundaryArn: string };
 }
 
 // Offline candidate, never selected by the default app/deploy workflow.
@@ -33,7 +34,8 @@ export class ApplicationReviewStack extends Stack {
       enrollmentCallbackUrl: `${webOrigin}/auth/enrollment/callback`
     });
     const data = new ApplicationData(this, 'Data');
-    new ApplicationApi(this, 'Api', { code: props.lambdaCode, data, identity, evidence: evidenceBucket, webOrigin, httpApi });
+    new ApplicationApi(this, 'Api', { code: props.lambdaCode, data, identity, evidence: evidenceBucket, webOrigin, httpApi,
+      ...(props.runtimeGuardrail ? { runtimeGuardrail: props.runtimeGuardrail } : {}) });
     new CfnOutput(this, 'WebOrigin', { value: webOrigin });
     new CfnOutput(this, 'FrontendBucketName', { value: frontendBucket.bucketName });
     new CfnOutput(this, 'EvidenceBucketName', { value: evidenceBucket.bucketName });

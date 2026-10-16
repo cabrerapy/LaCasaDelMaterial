@@ -1,6 +1,7 @@
 import { createApp } from './app/create-app.js';
 import { ensureInventoryTable } from './infrastructure/dynamodb/inventory-table.js';
 import { loadConfig } from './config/environment.js';
+import { localEvidenceRoot } from './config/local-evidence-root.js';
 import { createDynamoDbClient } from './infrastructure/dynamodb/client.js';
 import { ensureUsersTable } from './infrastructure/dynamodb/users-table.js';
 import { bootstrapAdmin } from './modules/auth/application/bootstrap-admin.js';
@@ -34,7 +35,7 @@ async function start(): Promise<void> {
   const authentication = new LocalJwtAuthentication(config.jwtSecret, config.jwtExpiresIn);
   const app = await createApp(config, {
     ...repositories, passwordHasher, authentication,
-    deliveryEvidenceStorage: new LocalDeliveryEvidenceStorage('.data/delivery-evidence')
+    deliveryEvidenceStorage: new LocalDeliveryEvidenceStorage(localEvidenceRoot())
   });
 
   await ensureUsersTable(dynamoDb, config.usersTableName);

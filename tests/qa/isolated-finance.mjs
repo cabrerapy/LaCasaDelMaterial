@@ -4,13 +4,16 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createInterface } from 'node:readline';
 import { createConnection } from 'node:net';
+import { DynamoDBClient, ListTablesCommand } from '@aws-sdk/client-dynamodb';
 
 // Only new prefixed local tables. No reset, deletion or operational cash session.
 assert.equal(process.env.LCM_RUN_LOCAL_QA, 'yes', 'Explicit local QA opt-in required');
 assert.notEqual(process.env.NODE_ENV, 'production', 'Production execution refused');
 const browserMode = process.env.LCM_QA_BROWSER === 'yes';
 if (browserMode) assert.ok(process.env.LCM_QA_PASSWORD, 'Browser mode requires a local QA password in LCM_QA_PASSWORD');
-const base = 'http://localhost:3001/api';
+if (browserMode) assert.ok(process.env.LCM_QA_PASSWORD.length >= 10 && process.env.LCM_QA_PASSWORD.length <= 128,
+  'QA password must contain 10 to 128 characters; credentials omitted');
+const base = 'http://127.0.0.1:3001/api';
 // Match the exact IPv4 bind address; localhost may resolve to ::1 instead.
 await new Promise((resolve, reject) => {
   const socket = createConnection({ host: '127.0.0.1', port: 3001 });
@@ -22,15 +25,23 @@ await new Promise((resolve, reject) => {
   socket.once('error', error => { socket.destroy(); if (error.code === 'ECONNREFUSED') resolve(); else reject(error); });
   socket.once('timeout', () => { socket.destroy(); reject(new Error('Port 3001 preflight timed out; refusing to create QA data')); });
 });
+// Read-only dependency check before spawning table provisioning.
+const dependency = new DynamoDBClient({ region: 'us-east-1', endpoint: 'http://127.0.0.1:8000',
+  credentials: { accessKeyId: 'local', secretAccessKey: 'local' }, maxAttempts: 1 });
+try {
+  await dependency.send(new ListTablesCommand({ Limit: 1 }), { abortSignal: AbortSignal.timeout(10000) });
+  console.log(JSON.stringify({ step: 'local-dynamodb', result: 'AVAILABLE', readOnly: true }));
+} finally { dependency.destroy(); }
 const prefix = `lcm-qa-finance-${randomUUID()}`;
 const env = {
   ...process.env, NODE_ENV: 'development', API_HOST: '127.0.0.1', API_PORT: '3001',
-  DYNAMODB_ENDPOINT: 'http://localhost:8000', AWS_REGION: 'us-east-1',
+  DYNAMODB_ENDPOINT: 'http://127.0.0.1:8000', AWS_REGION: 'us-east-1',
   AWS_ACCESS_KEY_ID: 'local', AWS_SECRET_ACCESS_KEY: 'local',
   INITIAL_ADMIN_PASSWORD: `Qa!${randomBytes(20).toString('hex')}`,
   JWT_SECRET: randomBytes(32).toString('hex'),
   LCM_QA_PASSWORD: browserMode ? process.env.LCM_QA_PASSWORD : `Qa!${randomBytes(20).toString('hex')}`, LCM_QA_BASE_URL: base
 };
+delete env.AWS_SESSION_TOKEN;
 for (const name of ['USERS', 'CATEGORIES', 'PRODUCTS', 'SUPPLIERS', 'CUSTOMERS', 'PURCHASES',
   'INVENTORY', 'SALES', 'COSTING', 'CASH', 'TRUCKS', 'DRIVERS', 'TRIPS', 'TRIP_LOADS', 'FUEL', 'DELIVERIES']) {
   env[`DYNAMODB_${name}_TABLE`] = `${prefix}-${name.toLowerCase()}`;
@@ -80,7 +91,9 @@ function metric(report, key) {
 financeRun: try {
   console.log(JSON.stringify({ step: 'isolated-environment', prefix, retainedTables: true }));
   let ready = false;
-  for (let attempt = 0; attempt < 50; attempt++) {
+  const deadline = Date.now() + 120000;
+  let lastProgress = Date.now();
+  while (Date.now() < deadline) {
     try {
       const response = await fetch(`${base}/health`, { signal: AbortSignal.timeout(2000) });
       if (response.ok) {
@@ -90,6 +103,10 @@ financeRun: try {
       }
     } catch {}
     assert.equal(server.exitCode, null, `Isolated API exited before health:\n${startupDiagnostic()}`);
+    if (Date.now() - lastProgress >= 10000) {
+      console.log(JSON.stringify({ step: 'waiting-for-isolated-api', port: 3001, processRunning: true }));
+      lastProgress = Date.now();
+    }
     await new Promise(resolve => setTimeout(resolve, 200));
   }
   assert.ok(ready, `Isolated API not ready; inspect local DynamoDB availability:\n${startupDiagnostic()}`);
