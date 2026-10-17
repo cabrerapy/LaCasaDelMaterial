@@ -42,12 +42,13 @@ export type DataTableName = keyof typeof DATA_SCHEMA;
 // Candidate only: not wired to app.ts until complete application and approval gates.
 export class ApplicationData extends Construct {
   readonly tables: Readonly<Record<DataTableName, Table>>;
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, tableNames?: Readonly<Record<DataTableName, string>>) {
     super(scope, id);
     const tables: Partial<Record<DataTableName, Table>> = {};
     for (const name of Object.keys(DATA_SCHEMA) as DataTableName[]) {
       const schema = DATA_SCHEMA[name];
       const table = new Table(this, name, {
+        ...(tableNames ? { tableName: tableNames[name] } : {}),
         partitionKey: { name: schema.partition, type: AttributeType.STRING },
         billingMode: BillingMode.PAY_PER_REQUEST, encryption: TableEncryption.AWS_MANAGED,
         pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },

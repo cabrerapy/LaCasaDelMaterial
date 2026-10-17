@@ -18,6 +18,8 @@ interface ApplicationApiProps {
   readonly webOrigin: string;
   readonly httpApi?: HttpApi;
   readonly runtimeGuardrail?: { readonly roleName: string; readonly boundaryArn: string };
+  readonly logGroupName?: string;
+  readonly functionName?: string;
 }
 
 // Candidate only. Not instantiated by app.ts; no deployed endpoint yet.
@@ -30,7 +32,8 @@ export class ApplicationApi extends Construct {
       const origin = new URL(props.webOrigin);
       if (origin.protocol !== 'https:' || origin.origin !== props.webOrigin) throw new Error('API requires an HTTPS web origin');
     }
-    const logs = new LogGroup(this, 'Logs', { retention: RetentionDays.ONE_WEEK, removalPolicy: RemovalPolicy.RETAIN });
+    const logs = new LogGroup(this, 'Logs', { retention: RetentionDays.ONE_WEEK, removalPolicy: RemovalPolicy.RETAIN,
+      ...(props.logGroupName ? { logGroupName: props.logGroupName } : {}) });
     const guardrail = props.runtimeGuardrail;
     if (guardrail && (!/^lcm-production-[a-z0-9-]{1,40}$/.test(guardrail.roleName) ||
       !/^arn:aws:iam::\d{12}:policy\/lcm-production-[a-z0-9-]{1,40}$/.test(guardrail.boundaryArn) ||
@@ -47,6 +50,7 @@ export class ApplicationApi extends Construct {
     logs.grantWrite(role);
     this.fn = new Function(this, 'Handler', {
       role,
+      ...(props.functionName ? { functionName: props.functionName } : {}),
       code: props.code, handler: 'index.handler', runtime: Runtime.NODEJS_24_X,
       architecture: Architecture.X86_64, memorySize: 512, timeout: Duration.seconds(28),
       reservedConcurrentExecutions: 2, logGroup: logs,
