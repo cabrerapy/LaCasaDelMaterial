@@ -50,6 +50,10 @@ test('bounded candidate names match external boundary resources without changing
   template.hasResourceProperties('AWS::S3::Bucket', { BucketName: names.evidenceBucket });
   template.hasResourceProperties('AWS::Logs::LogGroup', { LogGroupName: names.logGroup });
   template.hasResourceProperties('AWS::Lambda::Function', { FunctionName: names.functionName });
+  template.hasResourceProperties('AWS::CloudFront::Function', { Name: names.edgeFunctionName,
+    Tags: [{ Key: 'Environment', Value: 'production' }, { Key: 'Project', Value: 'LaCasaDelMaterial' }] });
+  template.hasResourceProperties('AWS::CloudFront::Distribution', {
+    Tags: [{ Key: 'Environment', Value: 'production' }, { Key: 'Project', Value: 'LaCasaDelMaterial' }] });
   template.hasResourceProperties('AWS::ApiGatewayV2::Api', { Name: names.apiName,
     Tags: { Project: 'LaCasaDelMaterial', Environment: 'production' } });
   template.hasResourceProperties('AWS::Cognito::UserPool', {

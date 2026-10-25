@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ApplicationReviewStack } from '../lib/application-review-stack.js';
 import { runtimeGuardrailConfig } from '../lib/runtime-guardrail-config.js';
+import { reviewSynthesizer } from '../lib/review-synthesizer.js';
 
 const app = new App();
 const account: unknown = app.node.tryGetContext('account');
@@ -20,5 +21,6 @@ if (!existsSync(resolve(asset, 'index.js')) || !existsSync(resolve(asset, 'packa
   throw new Error('Generate and review package:lambda before full synthesis');
 }
 new ApplicationReviewStack(app, 'LcmApplicationReview', {
-  env: { account, region }, cognitoDomainPrefix: domainPrefix, lambdaCode: Code.fromAsset(asset), runtimeGuardrail
+  env: { account, region }, synthesizer: reviewSynthesizer(account, region),
+  cognitoDomainPrefix: domainPrefix, lambdaCode: Code.fromAsset(asset), runtimeGuardrail
 });

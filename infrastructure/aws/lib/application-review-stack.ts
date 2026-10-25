@@ -34,7 +34,7 @@ export class ApplicationReviewStack extends Stack {
     // its hostname without depending on identity or Lambda environment (no cycle).
     const httpApi = new HttpApi(this, 'HttpApi', { createDefaultStage: true,
       ...(names ? { apiName: names.apiName } : {}) });
-    const frontend = new FrontendDelivery(this, 'Web', frontendBucket, httpApi);
+    const frontend = new FrontendDelivery(this, 'Web', frontendBucket, httpApi, names?.edgeFunctionName);
     const webOrigin = `https://${frontend.distribution.distributionDomainName}`;
     const identity = new ApplicationIdentity(this, 'Identity', {
       domainPrefix: props.cognitoDomainPrefix, callbackUrl: `${webOrigin}/auth/callback`, logoutUrl: `${webOrigin}/login`,

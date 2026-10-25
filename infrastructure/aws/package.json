@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare:executor-authority": "npm run build && node dist/bin/prepare-executor-authority.js",
+    "prepare:publisher-delegation": "npm run build && node dist/bin/prepare-publisher-delegation.js",
+    "prepare:asset-publisher": "npm run build && node dist/bin/prepare-asset-publisher.js",
+    "prepare:asset-publication": "npm run build && node dist/bin/prepare-asset-publication.js",
+    "prepare:asset-read": "npm run build && node dist/bin/prepare-asset-read.js",
+    "prepare:executor-review": "npm run build && node dist/bin/prepare-executor-review.js",
+    "prepare:edge-maintenance": "npm run build && node dist/bin/prepare-edge-maintenance.js",
     "prepare:edge-create": "npm run build && node dist/bin/prepare-edge-creation.js",
     "prepare:boundary": "npm run build && node dist/bin/prepare-runtime-boundary.js",
     "build": "tsc -p tsconfig.json",

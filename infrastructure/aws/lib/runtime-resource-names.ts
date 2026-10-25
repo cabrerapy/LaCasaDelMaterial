@@ -7,5 +7,5 @@ export function runtimeResourceNames(account: string, region: string) {
     [key, `lcm-production-${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`])) as Record<DataTableName, string>;
   return { account, region, tables, evidenceBucket: `lcm-production-evidence-${account}-${region}`,
     frontendBucket: `lcm-production-frontend-${account}-${region}`, logGroup: '/aws/lambda/lcm-production-api',
-    functionName: 'lcm-production-api', apiName: 'lcm-production-api' };
+    functionName: 'lcm-production-api', apiName: 'lcm-production-api', edgeFunctionName: 'lcm-production-spa' };
 }

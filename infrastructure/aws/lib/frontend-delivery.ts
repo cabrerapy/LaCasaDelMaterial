@@ -12,10 +12,11 @@ import { SPA_ROUTING_CODE } from './spa-routing.js';
 export class FrontendDelivery extends Construct {
   readonly distribution: Distribution;
 
-  constructor(scope: Construct, id: string, bucket: IBucket, api?: HttpApi) {
+  constructor(scope: Construct, id: string, bucket: IBucket, api?: HttpApi, functionName?: string) {
     super(scope, id);
     const routing = new Function(this, 'SpaRouting', {
       code: FunctionCode.fromInline(SPA_ROUTING_CODE), runtime: FunctionRuntime.JS_2_0,
+      ...(functionName ? { functionName } : {}),
     });
     const origin = S3BucketOrigin.withOriginAccessControl(bucket);
     const headers = ResponseHeadersPolicy.SECURITY_HEADERS;
