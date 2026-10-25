@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare:execution-review": "npm run build && node dist/bin/prepare-execution-review.js",
     "prepare:executor-authority": "npm run build && node dist/bin/prepare-executor-authority.js",
     "prepare:publisher-delegation": "npm run build && node dist/bin/prepare-publisher-delegation.js",
     "prepare:asset-publisher": "npm run build && node dist/bin/prepare-asset-publisher.js",

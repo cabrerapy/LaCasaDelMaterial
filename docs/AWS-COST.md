@@ -1,5 +1,17 @@
 # Estimación AWS — pendiente de cálculo
 
+## Auditoría del candidato y alertas — 2026-10-24
+
+Decisión posterior del cliente: conforme con el presupuesto presentado y conservar únicamente la notificación existente del 75 %. No crear las alertas 50/100/150/250 % ni considerarlas un bloqueo. La conformidad acepta los supuestos/riesgos e incertidumbre del estimado, no convierte el subtotal parcial en tarifa total garantizada ni autoriza gastos ilimitados o contratación de servicios extra. No se modificó AWS Budgets.
+
+Consulta real de solo lectura: presupuesto mensual COST «La casa del material», USD 10, sin CostFilters devueltos. Una sola notificación ACTUAL GREATER_THAN 75 (USD 7,50), estado OK, un suscriptor EMAIL; no se expuso ni cambió su dirección. Faltan las alertas acordadas 50/100/150/250 %. CalculatedSpend devuelve USD 0 al consultar, no garantiza ausencia de cargos aún no procesados ni presupuesto como límite duro. No se modificaron notificaciones.
+
+Template actual: ambos buckets de aplicación usan AES256/SSE-S3, mientras el bucket bootstrap existente usa SSE-KMS aws/s3; no atribuir KMS a cada GET de evidencias de aplicación. Las 16 tablas sí usan AWS_MANAGED/SSEEnabled=true: aws/dynamodb, no AWS owned. Según [DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/encryption.tutorial.html), ese tipo puede generar cargos KMS; no multiplicar automáticamente cada operación DynamoDB por una llamada KMS: existe caché de claves por caller y recuperación tras inactividad, según [notas de cifrado](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/encryption.usagenotes.html).
+
+[KMS pricing](https://aws.amazon.com/kms/pricing/) no cobra almacenamiento mensual de claves administradas/propiedad de AWS, pero sí solicitudes a claves administradas. Ejemplo oficial de solicitudes simétricas: USD 0,03/10000; sensibilidad bruta sin free tier: 10000/100000/1000000 llamadas = USD 0,03/0,30/3,00. No son volúmenes medidos ni cotización total. No añadir USD 1 por cada tabla o por alias aws/s3; no se definieron claves customer-managed nuevas en el candidato. Franquicia de 20000 llamadas compartida no descontada, sin asumir disponibilidad en la cuenta.
+
+El subtotal histórico USD 6,0776675 sigue incompleto: requiere volumen KMS real/supuesto explícito, bootstrap/publicaciones/versiones y restauraciones, correo y confirmación regional de transferencia S3. No se cerró el gate de costo ni se cambió cifrado para abaratar, porque eso modificaría el template/change set aprobado. Priorizar un escenario mensual completo y otro extraordinario de despliegue/recuperación; no prometer USD 10 a partir del subtotal.
+
 ## Transferencia directa de evidencias — 2026-10-11
 
 Subtotal EXPECTED ampliado actual: **USD 6,0776675/mes**, todavía parcial. Campo s3DirectDownloadGb explícito, separado de evidenceGb almacenados y cloudFrontViewerGb. Supuesto 5 GB/mes × USD 0,09/GB = USD 0,45 sin franquicias gratuitas; reemplaza USD 5,6276675 como salida del modelo. Repetir descargas incrementa transferencia sin aumentar necesariamente almacenamiento. No incluir tráfico S3→CloudFront en este campo; sí descargas firmadas directas, incluidos bytes facturables de reintentos. Transfer Acceleration no está habilitado.
