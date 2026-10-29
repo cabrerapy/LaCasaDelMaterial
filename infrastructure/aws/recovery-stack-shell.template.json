@@ -1,0 +1,15 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Recovery shell candidate: establishes stack options before a separate import; no active resources",
+  "Conditions": {
+    "NeverCreateRecoveryPlaceholder": { "Fn::Equals": ["disabled", "enabled"] }
+  },
+  "Resources": {
+    "RecoveryPlaceholder": {
+      "Type": "AWS::CloudFormation::WaitConditionHandle",
+      "Condition": "NeverCreateRecoveryPlaceholder",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    }
+  }
+}
